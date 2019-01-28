@@ -8,6 +8,17 @@ go get -u github.com/aws/aws-sdk-go/service/s3
 go get -u github.com/spf13/cobra
 go build
 ```
+#### 4. config
+Edit ~/.awd/credentails
+```
+[default]
+aws_access_key_id=YOUR_ACCESS_KEY_ID
+aws_secret_access_key=YOUR_SECRET_ACCESS_KEY
+
+[ecs]
+aws_access_key_id=YOUR_ACCESS_KEY_ID
+aws_secret_access_key=YOUR_SECRET_ACCESS_KEY
+```
 
 ## Usage
 ```
