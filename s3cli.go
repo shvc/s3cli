@@ -39,7 +39,9 @@ type S3Client struct {
 	// secretKey(password)
 	secretKey string
 	// debug log
-	debug  bool
+	debug bool
+	// region
+	region string
 	useSSL bool
 }
 
@@ -59,7 +61,7 @@ func (clt *S3Client) newS3Client() (*s3.S3, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Credentials:      cred,
 		Endpoint:         aws.String(clt.endpoint),
-		Region:           aws.String("cn-north-1"),
+		Region:           aws.String(clt.region),
 		LogLevel:         logLevel,
 		S3ForcePathStyle: aws.Bool(true),
 	})
@@ -272,13 +274,14 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&clt.endpoint, "endpoint", "e", Endpoint, "endpoint")
 	rootCmd.PersistentFlags().StringVarP(&clt.accessKey, "accessKey", "a", "", "accessKey")
 	rootCmd.PersistentFlags().StringVarP(&clt.secretKey, "secretKey", "s", "", "secretKey")
+	rootCmd.PersistentFlags().StringVarP(&clt.region, "region", "g", "cn-north-1", "region")
 	rootCmd.Flags().BoolP("version", "v", false, "print version")
 
 	createBucketCmd := &cobra.Command{
 		Use:     "createBucket <name>",
 		Aliases: []string{"cb"},
-		Short:   "create bucket",
-		Long:    "create bucket",
+		Short:   "create Bucket",
+		Long:    "create Bucket",
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			clt.createBucket(&args[0])
@@ -289,8 +292,8 @@ func main() {
 	listBucketCmd := &cobra.Command{
 		Use:     "listBucket",
 		Aliases: []string{"lb"},
-		Short:   "list bucket",
-		Long:    "list all buckets",
+		Short:   "list Bucket",
+		Long:    "list all Buckets",
 		Args:    cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			clt.listBucket()
@@ -314,7 +317,7 @@ func main() {
 		Use:     "upload <bucket> <local-file>",
 		Aliases: []string{"up"},
 		Short:   "upload Object",
-		Long:    "upload Object to bucket",
+		Long:    "upload Object to Bucket",
 		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			key := cmd.Flag("key").Value.String()
@@ -329,7 +332,7 @@ func main() {
 		Use:     "mpu <bucket> <local-file>",
 		Aliases: []string{"mp", "mu"},
 		Short:   "mpu Object",
-		Long:    "mutiPartUpload Object to bucket",
+		Long:    "mutiPartUpload Object to Bucket",
 		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			key := cmd.Flag("key").Value.String()
@@ -344,7 +347,7 @@ func main() {
 		Use:     "list <bucket>",
 		Aliases: []string{"ls"},
 		Short:   "list Object",
-		Long:    "list Objects in bucket",
+		Long:    "list Objects in Bucket",
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			clt.listObject(&args[0])
@@ -356,7 +359,7 @@ func main() {
 		Use:     "download <bucket> <key> [destination]",
 		Aliases: []string{"get", "down", "d"},
 		Short:   "download Object",
-		Long:    "downlaod Object from bucket",
+		Long:    "downlaod Object from Bucket",
 		Args:    cobra.RangeArgs(2, 3),
 		Run: func(cmd *cobra.Command, args []string) {
 			destination := ""
@@ -375,7 +378,7 @@ func main() {
 		Use:     "delete <bucket> <key>",
 		Aliases: []string{"db"},
 		Short:   "delete Object",
-		Long:    "delete Object in bucket",
+		Long:    "delete Object in Bucket",
 		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := clt.deleteObject(&args[0], &args[1]); err != nil {
