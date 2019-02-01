@@ -378,16 +378,20 @@ func main() {
 	rootCmd.AddCommand(getObjectCmd)
 
 	deleteObjectCmd := &cobra.Command{
-		Use:     "delete <bucket> <key>",
-		Aliases: []string{"db"},
-		Short:   "delete Object",
-		Long:    "delete Object in Bucket",
-		Args:    cobra.ExactArgs(2),
+		Use:     "delete <bucket> [key]",
+		Aliases: []string{"del"},
+		Short:   "delete Bucket or Object",
+		Long:    "delete Bucket or Object in Bucket",
+		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := clt.deleteObject(&args[0], &args[1]); err != nil {
-				fmt.Println("delete Object error: ", err)
+			if len(args) == 2 {
+				if err := clt.deleteObject(&args[0], &args[1]); err != nil {
+					fmt.Println("delete Object error: ", err)
+				} else {
+					fmt.Println("success")
+				}
 			} else {
-				fmt.Println("success")
+				clt.deleteBucket(&args[0])
 			}
 		},
 	}
@@ -395,7 +399,7 @@ func main() {
 
 	presignObjectCmd := &cobra.Command{
 		Use:     "presign <bucket> <key>",
-		Aliases: []string{"psn"},
+		Aliases: []string{"psn", "psg"},
 		Short:   "presign Object",
 		Long:    "presign Object URL",
 		Args:    cobra.ExactArgs(2),
