@@ -216,7 +216,6 @@ func (clt *S3Client) getObject(bucket, key, oRange, filename *string) {
 	input := &s3.GetObjectInput{
 		Bucket: bucket,
 		Key:    key,
-		Range:  oRange,
 	}
 	if *oRange != "" {
 		input.SetRange(fmt.Sprintf("bytes=%s", *oRange))
@@ -344,13 +343,17 @@ func main() {
 	rootCmd.AddCommand(mpuObjectCmd)
 
 	listObjectCmd := &cobra.Command{
-		Use:     "list <bucket>",
+		Use:     "list [bucket]",
 		Aliases: []string{"ls"},
-		Short:   "list Object",
-		Long:    "list Objects in Bucket",
-		Args:    cobra.ExactArgs(1),
+		Short:   "list Buckets or Objects",
+		Long:    "list Buckets or Objects",
+		Args:    cobra.RangeArgs(0, 1),
 		Run: func(cmd *cobra.Command, args []string) {
-			clt.listObject(&args[0])
+			if len(args) == 1 {
+				clt.listObject(&args[0])
+			} else {
+				clt.listBucket()
+			}
 		},
 	}
 	rootCmd.AddCommand(listObjectCmd)
