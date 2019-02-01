@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/request"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -242,17 +244,25 @@ func (clt *S3Client) deleteObject(bucket *string, key *string) error {
 	return err
 }
 
-func (clt *S3Client) presignObject(bucket *string, key *string, hr int) (string, error) {
+func (clt *S3Client) presignObject(bucket *string, key *string, exp int, put bool) (string, error) {
 	svc, err := clt.newS3Client()
 	if err != nil {
 		log.Println("NewSession: ", err)
 		return "", err
 	}
-	req, _ := svc.GetObjectRequest(&s3.GetObjectInput{
-		Bucket: aws.String(*bucket),
-		Key:    aws.String(*key),
-	})
-	url, err := req.Presign(time.Duration(hr) * time.Hour)
+	var req *request.Request
+	if put {
+		req, _ = svc.PutObjectRequest(&s3.PutObjectInput{
+			Bucket: aws.String(*bucket),
+			Key:    aws.String(*key),
+		})
+	} else {
+		req, _ = svc.GetObjectRequest(&s3.GetObjectInput{
+			Bucket: aws.String(*bucket),
+			Key:    aws.String(*key),
+		})
+	}
+	url, err := req.Presign(time.Duration(exp) * time.Hour)
 	if err != nil {
 		log.Println("Failed to pprsign Object", err)
 	}
@@ -397,6 +407,7 @@ func main() {
 	}
 	rootCmd.AddCommand(deleteObjectCmd)
 
+	// TODO: presign PUT url to Upload File
 	presignObjectCmd := &cobra.Command{
 		Use:     "presign <bucket> <key>",
 		Aliases: []string{"psn", "psg"},
@@ -404,8 +415,12 @@ func main() {
 		Long:    "presign Object URL",
 		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			hr, _ := strconv.Atoi(cmd.Flag("hour").Value.String())
-			url, err := clt.presignObject(&args[0], &args[1], hr)
+			exp, err := strconv.Atoi(cmd.Flag("hour").Value.String())
+			if err != nil {
+				fmt.Println("invalid expire time")
+				return
+			}
+			url, err := clt.presignObject(&args[0], &args[1], exp, cmd.Flag("put").Changed)
 			if err != nil {
 				fmt.Println("presign failed: ", err)
 			} else {
@@ -414,6 +429,7 @@ func main() {
 		},
 	}
 	presignObjectCmd.Flags().IntP("hour", "H", 12, "URL expire time(hour)")
+	presignObjectCmd.Flags().BoolP("put", "", false, "generate a put URL")
 	rootCmd.AddCommand(presignObjectCmd)
 
 	if err := rootCmd.Execute(); err != nil {
