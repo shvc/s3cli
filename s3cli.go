@@ -74,21 +74,21 @@ func (clt *S3Client) newS3Client() (*s3.S3, error) {
 	return s3.New(sess), nil
 }
 
-func (clt *S3Client) createBucket(bucketName *string) {
+func (clt *S3Client) createBucket(bucketName string) {
 	svc, err := clt.newS3Client()
 	if err != nil {
 		log.Println("NewSession: ", err)
 		return
 	}
 	cparams := &s3.CreateBucketInput{
-		Bucket: aws.String(*bucketName),
+		Bucket: aws.String(bucketName),
 	}
 	_, err = svc.CreateBucket(cparams)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	fmt.Printf("Created bucket %s\n", *bucketName)
+	fmt.Printf("Created bucket %s\n", bucketName)
 }
 
 func (clt *S3Client) listBucket() {
@@ -106,8 +106,8 @@ func (clt *S3Client) listBucket() {
 	fmt.Printf("Bucket %v\n", *bks)
 }
 
-func (clt *S3Client) deleteBucket(bucket *string) {
-	if *bucket == "" {
+func (clt *S3Client) deleteBucket(bucket string) {
+	if bucket == "" {
 		log.Fatal("invalid bucket", bucket)
 	}
 	svc, err := clt.newS3Client()
@@ -117,24 +117,24 @@ func (clt *S3Client) deleteBucket(bucket *string) {
 	// Create Object
 	_, err = svc.DeleteBucket(
 		&s3.DeleteBucketInput{
-			Bucket: aws.String(*bucket),
+			Bucket: aws.String(bucket),
 		})
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Printf("bucket %s deleted\n", *bucket)
+		fmt.Printf("bucket %s deleted\n", bucket)
 	}
 }
 
-func (clt *S3Client) putObject(bucket *string, key *string, filename *string, overwrite bool) {
-	file, err := os.Open(*filename)
+func (clt *S3Client) putObject(bucket, key, filename string, overwrite bool) {
+	file, err := os.Open(filename)
 	if err != nil {
 		fmt.Println("Failed to open file", filename, err)
 		os.Exit(1)
 	}
 	defer file.Close()
-	if *key == "" {
-		*key = filepath.Base(*filename)
+	if key == "" {
+		key = filepath.Base(filename)
 	}
 	svc, err := clt.newS3Client()
 	if err != nil {
@@ -143,25 +143,25 @@ func (clt *S3Client) putObject(bucket *string, key *string, filename *string, ov
 	}
 	_, err = svc.PutObject(&s3.PutObjectInput{
 		Body:   file,
-		Bucket: aws.String(*bucket),
-		Key:    key,
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
 	})
 	if err != nil {
-		fmt.Printf("Failed to upload Object %s/%s, %s\n", *bucket, *key, err.Error())
+		fmt.Printf("Failed to upload Object %s/%s, %s\n", bucket, key, err.Error())
 		return
 	}
-	fmt.Printf("Uploaded Object %s\n", *key)
+	fmt.Printf("Uploaded Object %s\n", key)
 }
 
-func (clt *S3Client) mpuObject(bucket *string, key *string, filename *string, overwrite bool) {
-	file, err := os.Open(*filename)
+func (clt *S3Client) mpuObject(bucket, key, filename string, overwrite bool) {
+	file, err := os.Open(filename)
 	if err != nil {
 		fmt.Println("Failed to open file", filename, err)
 		os.Exit(1)
 	}
 	defer file.Close()
-	if *key == "" {
-		*key = filepath.Base(*filename)
+	if key == "" {
+		key = filepath.Base(filename)
 	}
 
 	svc, err := clt.newS3Client()
@@ -172,40 +172,41 @@ func (clt *S3Client) mpuObject(bucket *string, key *string, filename *string, ov
 
 	uploader := s3manager.NewUploaderWithClient(svc)
 	_, err = uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(*bucket),
-		Key:    aws.String(*key),
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
 		Body:   file,
 	})
 	if err != nil {
-		fmt.Printf("Failed to upload Object %s/%s, %s\n", *bucket, *key, err.Error())
+		fmt.Printf("Failed to upload Object %s/%s, %s\n", bucket, key, err.Error())
 		return
 	}
-	fmt.Printf("Uploaded Object %s\n", *key)
+	fmt.Printf("Uploaded Object %s\n", key)
 }
 
-func (clt *S3Client) listObject(bucket *string) {
+func (clt *S3Client) listObject(bucket, prefix string) {
 	svc, err := clt.newS3Client()
 	if err != nil {
 		log.Println("NewSession: ", err)
 		return
 	}
 	obj, err := svc.ListObjects(&s3.ListObjectsInput{
-		Bucket: aws.String(*bucket),
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(prefix),
 	})
 	if err != nil {
-		fmt.Println("Failed to download Object", err)
+		fmt.Println("Failed to list Object", err)
 		return
 	}
 	fmt.Println(obj)
 }
 
-func (clt *S3Client) getObject(bucket, key, oRange, filename *string) {
-	if *filename == "" {
+func (clt *S3Client) getObject(bucket, key, oRange, filename string) {
+	if filename == "" {
 		filename = key
 	}
-	file, err := os.Create(*filename)
+	file, err := os.Create(filename)
 	if err != nil {
-		log.Printf("Unable to open file %q, %v", *filename, err)
+		log.Printf("Unable to open file %s, %v", filename, err)
 		return
 	}
 	defer file.Close()
@@ -216,11 +217,11 @@ func (clt *S3Client) getObject(bucket, key, oRange, filename *string) {
 		return
 	}
 	input := &s3.GetObjectInput{
-		Bucket: bucket,
-		Key:    key,
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
 	}
-	if *oRange != "" {
-		input.SetRange(fmt.Sprintf("bytes=%s", *oRange))
+	if oRange != "" {
+		input.SetRange(fmt.Sprintf("bytes=%s", oRange))
 	}
 	obj, err := svc.GetObject(input)
 	if err != nil {
@@ -228,38 +229,65 @@ func (clt *S3Client) getObject(bucket, key, oRange, filename *string) {
 		return
 	}
 	io.Copy(file, obj.Body)
-	fmt.Printf("Downloaded Object %s\n", *key)
+	fmt.Printf("Download Object %s\n", key)
 }
 
-func (clt *S3Client) deleteObject(bucket *string, key *string) error {
+func (clt *S3Client) deleteObject(bucket, key string) error {
 	svc, err := clt.newS3Client()
 	if err != nil {
-		log.Println("NewSession: ", err)
 		return err
 	}
 	_, err = svc.DeleteObject(&s3.DeleteObjectInput{
-		Bucket: aws.String(*bucket),
-		Key:    aws.String(*key),
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
 	})
 	return err
 }
 
-func (clt *S3Client) presignObject(bucket *string, key *string, exp int, put bool) (string, error) {
+func (clt *S3Client) deleteObjects(bucket, prefix string) error {
 	svc, err := clt.newS3Client()
 	if err != nil {
-		log.Println("NewSession: ", err)
+		return err
+	}
+	for {
+		objects := make([]*s3.ObjectIdentifier, 0, 1000)
+		objs, err := svc.ListObjects(&s3.ListObjectsInput{
+			Bucket: aws.String(bucket),
+			Prefix: aws.String(prefix),
+		})
+		if err != nil {
+			return err
+		}
+		if len(objs.Contents) == 0 {
+			return nil
+		}
+		for _, obj := range objs.Contents {
+			objects = append(objects, &s3.ObjectIdentifier{Key: obj.Key})
+		}
+		_, err = svc.DeleteObjects(&s3.DeleteObjectsInput{
+			Bucket: aws.String(bucket),
+			Delete: &s3.Delete{Objects: objects, Quiet: aws.Bool(true)},
+		})
+		return err
+	}
+}
+
+func (clt *S3Client) presignObject(bucket, key string, exp int, put bool) (string, error) {
+	svc, err := clt.newS3Client()
+	if err != nil {
 		return "", err
 	}
 	var req *request.Request
 	if put {
+		// presign a PUT URL to upload Object
 		req, _ = svc.PutObjectRequest(&s3.PutObjectInput{
-			Bucket: aws.String(*bucket),
-			Key:    aws.String(*key),
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
 		})
 	} else {
 		req, _ = svc.GetObjectRequest(&s3.GetObjectInput{
-			Bucket: aws.String(*bucket),
-			Key:    aws.String(*key),
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
 		})
 	}
 	url, err := req.Presign(time.Duration(exp) * time.Hour)
@@ -293,7 +321,7 @@ func main() {
 		Long:    "create Bucket",
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			clt.createBucket(&args[0])
+			clt.createBucket(args[0])
 		},
 	}
 	rootCmd.AddCommand(createBucketCmd)
@@ -317,7 +345,7 @@ func main() {
 		Long:    "delete a bucket",
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			clt.deleteBucket(&args[0])
+			clt.deleteBucket(args[0])
 		},
 	}
 	rootCmd.AddCommand(deleteBucketCmd)
@@ -330,7 +358,7 @@ func main() {
 		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			key := cmd.Flag("key").Value.String()
-			clt.putObject(&args[0], &key, &args[1], cmd.Flag("overwrite").Changed)
+			clt.putObject(args[0], key, args[1], cmd.Flag("overwrite").Changed)
 		},
 	}
 	putObjectCmd.Flags().StringP("key", "k", "", "key name")
@@ -345,7 +373,7 @@ func main() {
 		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			key := cmd.Flag("key").Value.String()
-			clt.mpuObject(&args[0], &key, &args[1], cmd.Flag("overwrite").Changed)
+			clt.mpuObject(args[0], key, args[1], cmd.Flag("overwrite").Changed)
 		},
 	}
 	mpuObjectCmd.Flags().StringP("key", "k", "", "key name")
@@ -353,14 +381,16 @@ func main() {
 	rootCmd.AddCommand(mpuObjectCmd)
 
 	listObjectCmd := &cobra.Command{
-		Use:     "list [bucket]",
+		Use:     "list [bucket] <prefix>",
 		Aliases: []string{"ls"},
 		Short:   "list Buckets or Objects",
 		Long:    "list Buckets or Objects",
-		Args:    cobra.RangeArgs(0, 1),
+		Args:    cobra.RangeArgs(0, 2),
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) == 1 {
-				clt.listObject(&args[0])
+			if len(args) == 2 {
+				clt.listObject(args[0], args[1])
+			} else if len(args) == 1 {
+				clt.listObject(args[0], "")
 			} else {
 				clt.listBucket()
 			}
@@ -380,7 +410,7 @@ func main() {
 				destination = args[2]
 			}
 			objRange := cmd.Flag("range").Value.String()
-			clt.getObject(&args[0], &args[1], &objRange, &destination)
+			clt.getObject(args[0], args[1], objRange, destination)
 		},
 	}
 	getObjectCmd.Flags().StringP("range", "r", "", "Object range to download, 0-64 means [0, 64]")
@@ -395,19 +425,40 @@ func main() {
 		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 2 {
-				if err := clt.deleteObject(&args[0], &args[1]); err != nil {
+				if err := clt.deleteObject(args[0], args[1]); err != nil {
 					fmt.Println("delete Object error: ", err)
 				} else {
 					fmt.Println("success")
 				}
 			} else {
-				clt.deleteBucket(&args[0])
+				clt.deleteBucket(args[0])
 			}
 		},
 	}
 	rootCmd.AddCommand(deleteObjectCmd)
 
-	// TODO: presign PUT url to Upload File
+	deleteObjectsCmd := &cobra.Command{
+		Use:     "deleteprefix <bucket> [prefix]",
+		Aliases: []string{"dp"},
+		Short:   "delete Objects",
+		Long:    "delete all Objects with prefix",
+		Args:    cobra.RangeArgs(1, 2),
+		Run: func(cmd *cobra.Command, args []string) {
+			var err error
+			if len(args) == 1 {
+				err = clt.deleteObjects(args[0], "")
+			} else {
+				err = clt.deleteObjects(args[0], args[1])
+			}
+			if err != nil {
+				fmt.Println("delete Objects error: ", err)
+			} else {
+				fmt.Println("success")
+			}
+		},
+	}
+	rootCmd.AddCommand(deleteObjectsCmd)
+
 	presignObjectCmd := &cobra.Command{
 		Use:     "presign <bucket> <key>",
 		Aliases: []string{"psn", "psg"},
@@ -420,7 +471,7 @@ func main() {
 				fmt.Println("invalid expire time")
 				return
 			}
-			url, err := clt.presignObject(&args[0], &args[1], exp, cmd.Flag("put").Changed)
+			url, err := clt.presignObject(args[0], args[1], exp, cmd.Flag("put").Changed)
 			if err != nil {
 				fmt.Println("presign failed: ", err)
 			} else {
