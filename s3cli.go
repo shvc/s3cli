@@ -244,10 +244,11 @@ func (clt *S3Client) deleteObject(bucket, key string) error {
 	return err
 }
 
-func (clt *S3Client) deleteObjects(bucket, prefix string) error {
+func (clt *S3Client) deleteObjects(bucket, prefix string) (int64, error) {
+	var cnt int64
 	svc, err := clt.newS3Client()
 	if err != nil {
-		return err
+		return cnt, err
 	}
 	for {
 		objects := make([]*s3.ObjectIdentifier, 0, 1000)
@@ -256,10 +257,11 @@ func (clt *S3Client) deleteObjects(bucket, prefix string) error {
 			Prefix: aws.String(prefix),
 		})
 		if err != nil {
-			return err
+			return cnt, err
 		}
-		if len(objs.Contents) == 0 {
-			return nil
+		objsCnt := len(objs.Contents)
+		if objsCnt == 0 {
+			return cnt, nil
 		}
 		for _, obj := range objs.Contents {
 			objects = append(objects, &s3.ObjectIdentifier{Key: obj.Key})
@@ -268,7 +270,10 @@ func (clt *S3Client) deleteObjects(bucket, prefix string) error {
 			Bucket: aws.String(bucket),
 			Delete: &s3.Delete{Objects: objects, Quiet: aws.Bool(true)},
 		})
-		return err
+		if err != nil {
+			return cnt, err
+		}
+		cnt = cnt + int64(objsCnt)
 	}
 }
 
@@ -444,16 +449,17 @@ func main() {
 		Long:    "delete all Objects with prefix",
 		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
+			var cnt int64
 			var err error
 			if len(args) == 1 {
-				err = clt.deleteObjects(args[0], "")
+				cnt, err = clt.deleteObjects(args[0], "")
 			} else {
-				err = clt.deleteObjects(args[0], args[1])
+				cnt, err = clt.deleteObjects(args[0], args[1])
 			}
 			if err != nil {
-				fmt.Println("delete Objects error: ", err)
+				fmt.Printf("delete %d Objects meet error: %s\n", cnt, err)
 			} else {
-				fmt.Println("success")
+				fmt.Printf("delete %d Objects success\n", cnt)
 			}
 		},
 	}
