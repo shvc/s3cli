@@ -33,12 +33,13 @@ Usage:
 
 Available Commands:
   createBucket create Bucket
-  delete       delete Object
+  delete       delete Bucket or Object
   deleteBucket delete bucket
+  deleteprefix delete Objects with prefix
   download     download Object
   help         Help about any command
-  list         list Object
-  listBucket   list Bucket
+  list         list Buckets or Objects in Bucket
+  listBucket   list Buckets
   mpu          mpu Object
   presign      presign Object
   upload       upload Object
@@ -55,4 +56,33 @@ Flags:
   -v, --version             print version
 
 Use "s3cli [command] --help" for more information about a command.
+```
+
+## eg
+Delete all Objects with specified prefix(API/) in a bucket(bk1)  
+```
+$ ./s3cli -p myecs -e http://10.10.15.98:9020 deleteprefix -h
+delete all Objects with prefix
+
+Usage:
+  s3cli deleteprefix <bucket> [prefix] [flags]
+
+Aliases:
+  deleteprefix, dp
+
+Flags:
+  -h, --help   help for deleteprefix
+
+Global Flags:
+  -a, --accessKey string    accessKey
+  -c, --credential string   credentail file
+  -d, --debug               print debug log
+  -e, --endpoint string     endpoint (default "http://s3test.myshare.io:9090")
+  -p, --profile string      credentail profile
+  -g, --region string       region (default "cn-north-1")
+  -s, --secretKey string    secretKey
+
+
+$ ./s3cli -p myecs -e http://10.10.15.98:9020 deleteprefix bk1 API/
+delete 437 Objects success
 ```

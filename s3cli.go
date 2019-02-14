@@ -335,7 +335,7 @@ func main() {
 	listBucketCmd := &cobra.Command{
 		Use:     "listBucket",
 		Aliases: []string{"lb"},
-		Short:   "list Bucket",
+		Short:   "list Buckets",
 		Long:    "list all Buckets",
 		Args:    cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -389,8 +389,8 @@ func main() {
 	listObjectCmd := &cobra.Command{
 		Use:     "list [bucket]",
 		Aliases: []string{"ls"},
-		Short:   "list Buckets or Objects",
-		Long:    "list Buckets or Objects",
+		Short:   "list Buckets or Objects in Bucket",
+		Long:    "list Buckets or Objects in Bucket",
 		Args:    cobra.RangeArgs(0, 1),
 		Run: func(cmd *cobra.Command, args []string) {
 			prefix := cmd.Flag("prefix").Value.String()
@@ -448,7 +448,7 @@ func main() {
 	deleteObjectsCmd := &cobra.Command{
 		Use:     "deleteprefix <bucket> [prefix]",
 		Aliases: []string{"dp"},
-		Short:   "delete Objects",
+		Short:   "delete Objects with prefix",
 		Long:    "delete all Objects with prefix",
 		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
