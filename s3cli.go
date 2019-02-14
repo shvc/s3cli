@@ -183,15 +183,16 @@ func (clt *S3Client) mpuObject(bucket, key, filename string, overwrite bool) {
 	fmt.Printf("Uploaded Object %s\n", key)
 }
 
-func (clt *S3Client) listObject(bucket, prefix string) {
+func (clt *S3Client) listObject(bucket, prefix, delimiter string) {
 	svc, err := clt.newS3Client()
 	if err != nil {
 		log.Println("NewSession: ", err)
 		return
 	}
 	obj, err := svc.ListObjects(&s3.ListObjectsInput{
-		Bucket: aws.String(bucket),
-		Prefix: aws.String(prefix),
+		Bucket:    aws.String(bucket),
+		Prefix:    aws.String(prefix),
+		Delimiter: aws.String(delimiter),
 	})
 	if err != nil {
 		fmt.Println("Failed to list Object", err)
@@ -386,21 +387,23 @@ func main() {
 	rootCmd.AddCommand(mpuObjectCmd)
 
 	listObjectCmd := &cobra.Command{
-		Use:     "list [bucket] <prefix>",
+		Use:     "list [bucket]",
 		Aliases: []string{"ls"},
 		Short:   "list Buckets or Objects",
 		Long:    "list Buckets or Objects",
-		Args:    cobra.RangeArgs(0, 2),
+		Args:    cobra.RangeArgs(0, 1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) == 2 {
-				clt.listObject(args[0], args[1])
-			} else if len(args) == 1 {
-				clt.listObject(args[0], "")
+			prefix := cmd.Flag("prefix").Value.String()
+			delimiter := cmd.Flag("delimiter").Value.String()
+			if len(args) == 1 {
+				clt.listObject(args[0], prefix, delimiter)
 			} else {
 				clt.listBucket()
 			}
 		},
 	}
+	listObjectCmd.Flags().StringP("prefix", "", "", "Object prefix")
+	listObjectCmd.Flags().StringP("delimiter", "", "", "Object delimiter")
 	rootCmd.AddCommand(listObjectCmd)
 
 	getObjectCmd := &cobra.Command{
