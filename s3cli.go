@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -34,7 +33,7 @@ type S3Client struct {
 	credential string
 	// profile in credential file
 	profile string
-	// Server URL
+	// Server endpoine(URL)
 	endpoint string
 	// accessKey(username)
 	accessKey string
@@ -89,6 +88,38 @@ func (clt *S3Client) createBucket(bucketName string) {
 		return
 	}
 	fmt.Printf("Created bucket %s\n", bucketName)
+}
+
+func (clt *S3Client) headBucket(bucket string) {
+	svc, err := clt.newS3Client()
+	if err != nil {
+		log.Println("NewSession: ", err)
+		return
+	}
+	head, err := svc.HeadBucket(&s3.HeadBucketInput{
+		Bucket: aws.String(bucket),
+	})
+	if err != nil {
+		fmt.Printf("Failed to head Bucket %s, %s\n", bucket, err.Error())
+		return
+	}
+	fmt.Println(head)
+}
+
+func (clt *S3Client) getBucketACL(bucket string) {
+	svc, err := clt.newS3Client()
+	if err != nil {
+		log.Println("NewSession: ", err)
+		return
+	}
+	acl, err := svc.GetBucketAcl(&s3.GetBucketAclInput{
+		Bucket: aws.String(bucket),
+	})
+	if err != nil {
+		fmt.Printf("Failed to get Bucket %s ACL, %s\n", bucket, err.Error())
+		return
+	}
+	fmt.Println(acl)
 }
 
 func (clt *S3Client) listBucket() {
@@ -148,9 +179,43 @@ func (clt *S3Client) putObject(bucket, key, filename string, overwrite bool) {
 	})
 	if err != nil {
 		fmt.Printf("Failed to upload Object %s/%s, %s\n", bucket, key, err.Error())
+	} else {
+		fmt.Printf("Uploaded Object %s\n", key)
+	}
+}
+
+func (clt *S3Client) headObject(bucket, key string) {
+	svc, err := clt.newS3Client()
+	if err != nil {
+		log.Println("NewSession: ", err)
 		return
 	}
-	fmt.Printf("Uploaded Object %s\n", key)
+	head, err := svc.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		fmt.Printf("Failed to head Object %s/%s, %s\n", bucket, key, err.Error())
+		return
+	}
+	fmt.Println(head)
+}
+
+func (clt *S3Client) getObjectACL(bucket, key string) {
+	svc, err := clt.newS3Client()
+	if err != nil {
+		log.Println("NewSession: ", err)
+		return
+	}
+	acl, err := svc.GetObjectAcl(&s3.GetObjectAclInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		fmt.Printf("Failed to get Object %s/%s ACL, %s\n", bucket, key, err.Error())
+		return
+	}
+	fmt.Println(acl)
 }
 
 func (clt *S3Client) mpuObject(bucket, key, filename string, overwrite bool) {
@@ -233,52 +298,89 @@ func (clt *S3Client) getObject(bucket, key, oRange, filename string) {
 	fmt.Printf("Download Object %s\n", key)
 }
 
-func (clt *S3Client) deleteObject(bucket, key string) error {
+func (clt *S3Client) deleteObject(bucket, key string, prefix bool) (int64, error) {
 	svc, err := clt.newS3Client()
 	if err != nil {
-		return err
+		return 0, err
 	}
-	_, err = svc.DeleteObject(&s3.DeleteObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	})
-	return err
-}
-
-func (clt *S3Client) deleteObjects(bucket, prefix string) (int64, error) {
 	var cnt int64
-	svc, err := clt.newS3Client()
-	if err != nil {
-		return cnt, err
-	}
-	for {
-		objects := make([]*s3.ObjectIdentifier, 0, 1000)
-		objs, err := svc.ListObjects(&s3.ListObjectsInput{
+	if prefix {
+		for {
+			objects := make([]*s3.ObjectIdentifier, 0, 1000)
+			objs, err := svc.ListObjects(&s3.ListObjectsInput{
+				Bucket: aws.String(bucket),
+				Prefix: aws.String(key),
+			})
+			if err != nil {
+				return cnt, err
+			}
+			objCnt := len(objs.Contents)
+			if objCnt == 0 {
+				return cnt, nil
+			}
+			for _, obj := range objs.Contents {
+				objects = append(objects, &s3.ObjectIdentifier{Key: obj.Key})
+			}
+			_, err = svc.DeleteObjects(&s3.DeleteObjectsInput{
+				Bucket: aws.String(bucket),
+				Delete: &s3.Delete{Objects: objects, Quiet: aws.Bool(true)},
+			})
+			if err != nil {
+				return cnt, err
+			}
+			cnt = cnt + int64(objCnt)
+		}
+	} else {
+		_, err = svc.DeleteObject(&s3.DeleteObjectInput{
 			Bucket: aws.String(bucket),
-			Prefix: aws.String(prefix),
+			Key:    aws.String(key),
 		})
-		if err != nil {
-			return cnt, err
-		}
-		objsCnt := len(objs.Contents)
-		if objsCnt == 0 {
-			return cnt, nil
-		}
-		for _, obj := range objs.Contents {
-			objects = append(objects, &s3.ObjectIdentifier{Key: obj.Key})
-		}
-		_, err = svc.DeleteObjects(&s3.DeleteObjectsInput{
-			Bucket: aws.String(bucket),
-			Delete: &s3.Delete{Objects: objects, Quiet: aws.Bool(true)},
-		})
-		if err != nil {
-			return cnt, err
-		}
-		cnt = cnt + int64(objsCnt)
 	}
+	return 0, err
 }
 
-func (clt *S3Client) presignObject(bucket, key string, exp int, put bool) (string, error) {
+func (clt *S3Client) aclObject(bucket, key string, prefix bool) (int64, error) {
+	svc, err := clt.newS3Client()
+	if err != nil {
+		return 0, err
+	}
+	var cnt int64
+	if prefix {
+		for {
+			objects := make([]*s3.ObjectIdentifier, 0, 1000)
+			objs, err := svc.ListObjects(&s3.ListObjectsInput{
+				Bucket: aws.String(bucket),
+				Prefix: aws.String(key),
+			})
+			if err != nil {
+				return cnt, err
+			}
+			objCnt := len(objs.Contents)
+			if objCnt == 0 {
+				return cnt, nil
+			}
+			for _, obj := range objs.Contents {
+				objects = append(objects, &s3.ObjectIdentifier{Key: obj.Key})
+			}
+			_, err = svc.DeleteObjects(&s3.DeleteObjectsInput{
+				Bucket: aws.String(bucket),
+				Delete: &s3.Delete{Objects: objects, Quiet: aws.Bool(true)},
+			})
+			if err != nil {
+				return cnt, err
+			}
+			cnt = cnt + int64(objCnt)
+		}
+	} else {
+		_, err = svc.DeleteObject(&s3.DeleteObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		})
+	}
+	return 0, err
+}
+
+func (clt *S3Client) presignObject(bucket, key string, exp time.Duration, put bool) (string, error) {
 	svc, err := clt.newS3Client()
 	if err != nil {
 		return "", err
@@ -296,7 +398,7 @@ func (clt *S3Client) presignObject(bucket, key string, exp int, put bool) (strin
 			Key:    aws.String(key),
 		})
 	}
-	url, err := req.Presign(time.Duration(exp) * time.Hour)
+	url, err := req.Presign(exp)
 	if err != nil {
 		log.Println("Failed to pprsign Object", err)
 	}
@@ -356,6 +458,38 @@ func main() {
 	}
 	rootCmd.AddCommand(deleteBucketCmd)
 
+	headCmd := &cobra.Command{
+		Use:     "head <bucket> [key]",
+		Aliases: []string{"head"},
+		Short:   "head Bucket/Object",
+		Long:    "get Bucket/Object metadata",
+		Args:    cobra.RangeArgs(1, 2),
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) == 2 {
+				clt.headObject(args[0], args[1])
+			} else {
+				clt.headBucket(args[0])
+			}
+		},
+	}
+	rootCmd.AddCommand(headCmd)
+
+	getaclCmd := &cobra.Command{
+		Use:     "getacl <bucket> [key]",
+		Aliases: []string{"ga"},
+		Short:   "get Bucket/Object acl",
+		Long:    "get Bucket/Object ACL",
+		Args:    cobra.RangeArgs(1, 2),
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) == 2 {
+				clt.getObjectACL(args[0], args[1])
+			} else {
+				clt.getBucketACL(args[0])
+			}
+		},
+	}
+	rootCmd.AddCommand(getaclCmd)
+
 	putObjectCmd := &cobra.Command{
 		Use:     "upload <bucket> <local-file>",
 		Aliases: []string{"up"},
@@ -402,7 +536,7 @@ func main() {
 			}
 		},
 	}
-	listObjectCmd.Flags().StringP("prefix", "", "", "Object prefix")
+	listObjectCmd.Flags().StringP("prefix", "P", "", "Object prefix")
 	listObjectCmd.Flags().StringP("delimiter", "", "", "Object delimiter")
 	rootCmd.AddCommand(listObjectCmd)
 
@@ -426,47 +560,32 @@ func main() {
 	rootCmd.AddCommand(getObjectCmd)
 
 	deleteObjectCmd := &cobra.Command{
-		Use:     "delete <bucket> [key]",
-		Aliases: []string{"del"},
+		Use:     "delete <bucket> [key|prefix]",
+		Aliases: []string{"del", "rm"},
 		Short:   "delete Bucket or Object",
-		Long:    "delete Bucket or Object in Bucket",
+		Long:    "delete Bucket or Object(s) in Bucket",
 		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
+			prefix := cmd.Flag("prefix").Changed
 			if len(args) == 2 {
-				if err := clt.deleteObject(args[0], args[1]); err != nil {
+				if cnt, err := clt.deleteObject(args[0], args[1], prefix); err != nil {
 					fmt.Println("delete Object error: ", err)
 				} else {
-					fmt.Println("success")
+					fmt.Printf("delete %d Objects success\n", cnt)
+				}
+			} else if prefix {
+				if cnt, err := clt.deleteObject(args[0], "", prefix); err != nil {
+					fmt.Println("delete Object error: ", err)
+				} else {
+					fmt.Printf("delete %d Objects success\n", cnt)
 				}
 			} else {
 				clt.deleteBucket(args[0])
 			}
 		},
 	}
+	deleteObjectCmd.Flags().BoolP("prefix", "P", false, "delete all Objects with specified prefix(key)")
 	rootCmd.AddCommand(deleteObjectCmd)
-
-	deleteObjectsCmd := &cobra.Command{
-		Use:     "deleteprefix <bucket> [prefix]",
-		Aliases: []string{"dp"},
-		Short:   "delete Objects with prefix",
-		Long:    "delete all Objects with prefix",
-		Args:    cobra.RangeArgs(1, 2),
-		Run: func(cmd *cobra.Command, args []string) {
-			var cnt int64
-			var err error
-			if len(args) == 1 {
-				cnt, err = clt.deleteObjects(args[0], "")
-			} else {
-				cnt, err = clt.deleteObjects(args[0], args[1])
-			}
-			if err != nil {
-				fmt.Printf("delete %d Objects meet error: %s\n", cnt, err)
-			} else {
-				fmt.Printf("delete %d Objects success\n", cnt)
-			}
-		},
-	}
-	rootCmd.AddCommand(deleteObjectsCmd)
 
 	presignObjectCmd := &cobra.Command{
 		Use:     "presign <bucket> <key>",
@@ -475,9 +594,9 @@ func main() {
 		Long:    "presign Object URL",
 		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			exp, err := strconv.Atoi(cmd.Flag("hour").Value.String())
+			exp, err := time.ParseDuration(cmd.Flag("expire").Value.String())
 			if err != nil {
-				fmt.Println("invalid expire time")
+				fmt.Println("invalid expire : ", err)
 				return
 			}
 			url, err := clt.presignObject(args[0], args[1], exp, cmd.Flag("put").Changed)
@@ -488,9 +607,35 @@ func main() {
 			}
 		},
 	}
-	presignObjectCmd.Flags().IntP("hour", "H", 12, "URL expire time(hour)")
+	presignObjectCmd.Flags().DurationP("expire", "E", 12*time.Hour, "URL expire time")
 	presignObjectCmd.Flags().BoolP("put", "", false, "generate a put URL")
 	rootCmd.AddCommand(presignObjectCmd)
+
+	aclObjectCmd := &cobra.Command{
+		Use:     "acl <bucket> [key|prefix]",
+		Aliases: []string{"del", "rm"},
+		Short:   "acl Bucket or Object",
+		Long:    "acl Bucket or Object(s) in Bucket",
+		Args:    cobra.RangeArgs(1, 2),
+		Run: func(cmd *cobra.Command, args []string) {
+			prefix := cmd.Flag("prefix").Changed
+			if len(args) == 2 {
+				if cnt, err := clt.aclObject(args[0], args[1], prefix); err != nil {
+					fmt.Println("acl Object error: ", err)
+				} else {
+					fmt.Printf("acl %d Objects success\n", cnt)
+				}
+			} else {
+				if cnt, err := clt.aclObject(args[0], "", prefix); err != nil {
+					fmt.Println("acl Object error: ", err)
+				} else {
+					fmt.Printf("acl %d Objects success\n", cnt)
+				}
+			}
+		},
+	}
+	aclObjectCmd.Flags().BoolP("prefix", "P", false, "acl all Objects with specified prefix(key)")
+	rootCmd.AddCommand(aclObjectCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
