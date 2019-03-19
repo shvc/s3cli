@@ -307,6 +307,7 @@ func (clt *S3Client) deleteObject(bucket, key string, prefix bool) (int64, error
 	if prefix {
 		for {
 			objects := make([]*s3.ObjectIdentifier, 0, 1000)
+			// use svc.ListObjectsPages() ?
 			objs, err := svc.ListObjects(&s3.ListObjectsInput{
 				Bucket: aws.String(bucket),
 				Prefix: aws.String(key),
@@ -613,25 +614,22 @@ func main() {
 
 	aclObjectCmd := &cobra.Command{
 		Use:     "acl <bucket> [key|prefix]",
-		Aliases: []string{"del", "rm"},
+		Aliases: []string{"pa"},
 		Short:   "acl Bucket or Object",
 		Long:    "acl Bucket or Object(s) in Bucket",
 		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
 			prefix := cmd.Flag("prefix").Changed
+			key := ""
 			if len(args) == 2 {
-				if cnt, err := clt.aclObject(args[0], args[1], prefix); err != nil {
-					fmt.Println("acl Object error: ", err)
-				} else {
-					fmt.Printf("acl %d Objects success\n", cnt)
-				}
-			} else {
-				if cnt, err := clt.aclObject(args[0], "", prefix); err != nil {
-					fmt.Println("acl Object error: ", err)
-				} else {
-					fmt.Printf("acl %d Objects success\n", cnt)
-				}
+				key = args[1]
 			}
+			if cnt, err := clt.aclObject(args[0], key, prefix); err != nil {
+				fmt.Println("acl Object error: ", err)
+			} else {
+				fmt.Printf("acl %d Objects success\n", cnt)
+			}
+
 		},
 	}
 	aclObjectCmd.Flags().BoolP("prefix", "P", false, "acl all Objects with specified prefix(key)")
