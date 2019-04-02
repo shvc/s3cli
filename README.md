@@ -12,7 +12,7 @@ go get -u github.com/spf13/cobra
 go build
 ```
 #### 4. config
-Edit ~/.aws/credentails
+Edit ~/.aws/credentials
 ```
 [default]
 aws_access_key_id=YOUR_ACCESS_KEY_ID
