@@ -11,13 +11,13 @@ then
 fi
 
 echo "Building Linux amd64 ..."
-GOOS=linux GOARCH=amd64 go build -ldflags "-X main.BuildDate=$BuildDate -X main.Version=$Version -X main.Endpoint=$Endpoint"
+GOOS=linux GOARCH=amd64 go build -ldflags "-X main.buildDate=$BuildDate -X main.version=$Version -X main.endpoint=$Endpoint"
 zip -m s3cli-$Version-linux-amd64.zip s3cli
 
 echo "Building Macos amd64 ..."
-GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.BuildDate=$BuildDate -X main.Version=$Version -X main.Endpoint=$Endpoint"
+GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.buildDate=$BuildDate -X main.version=$Version -X main.endpoint=$Endpoint"
 zip -m s3cli-$Version-macos-amd64.zip s3cli
 
 echo "Building Windows amd64 ..."
-GOOS=windows GOARCH=amd64 go build -ldflags "-X main.BuildDate=$BuildDate -X main.Version=$Version -X main.Endpoint=$Endpoint"
+GOOS=windows GOARCH=amd64 go build -ldflags "-X main.buildDate=$BuildDate -X main.version=$Version -X main.endpoint=$Endpoint"
 zip -m s3cli-$Version-win-x64.zip s3cli.exe

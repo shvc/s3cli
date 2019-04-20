@@ -15,14 +15,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// BuildDate to record build date
-var BuildDate = "2018-08-08 08:08:08"
+// buildDate to record build date
+var buildDate = "2018-08-08 08:08:08"
 
-// Version to record build bersion
-var Version = "1.0.3"
+// version to record build bersion
+var version = "1.0.3"
 
-// Endpoint default Server URL
-var Endpoint = "http://s3test.myshare.io:9090"
+// endpoint default Server URL
+var endpoint = "http://s3test.myshare.io:9090"
 
 // S3Cli represent a S3 Client
 type S3Cli struct {
@@ -43,13 +43,26 @@ type S3Cli struct {
 	useSSL bool
 }
 
-func (sc *S3Cli) listObject(bucket, prefix, delimiter string) error {
-	cfg, err := external.LoadDefaultAWSConfig()
+func (sc *S3Cli) loadS3Cfg() (*aws.Config, error) {
+	//external.LoadSharedConfig(external.WithSharedConfigProfile(sc.profile))
+	cfg, err := external.LoadDefaultAWSConfig(external.WithSharedConfigProfile(sc.profile))
 	if err != nil {
-		return fmt.Errorf("failed to load config, %v", err)
+		return nil, fmt.Errorf("failed to load config, %v", err)
 	}
+	cfg.Region = sc.region
+	cfg.EndpointResolver = aws.ResolveWithEndpoint{
+		URL: sc.endpoint,
+	}
+	return &cfg, nil
+}
 
-	svc := s3.New(cfg)
+func (sc *S3Cli) listObject(bucket, prefix, delimiter string) error {
+	cfg, err := sc.loadS3Cfg()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("cfg: %v\n\n\n", *cfg)
+	svc := s3.New(*cfg)
 	req := svc.ListObjectsRequest(&s3.ListObjectsInput{Bucket: &bucket})
 	p := req.Paginate()
 	for p.Next(context.TODO()) {
@@ -67,11 +80,13 @@ func (sc *S3Cli) listObject(bucket, prefix, delimiter string) error {
 }
 
 func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
-	// The config the S3 Downloader will use
-	cfg, err := external.LoadDefaultAWSConfig()
+	cfg, err := sc.loadS3Cfg()
+	if err != nil {
+		return err
+	}
 
 	// Create a downloader with the config and default options
-	downloader := s3manager.NewDownloader(cfg)
+	downloader := s3manager.NewDownloader(*cfg)
 
 	// Create a file to write the S3 Object contents to.
 	f, err := os.Create(filename)
@@ -91,12 +106,14 @@ func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
 	return nil
 }
 
-func (sc *S3Cli) uploadObject(bucket, key, filename string, overwrite bool) error {
-	// The config the S3 Uploader will use
-	cfg, err := external.LoadDefaultAWSConfig()
+func (sc *S3Cli) putObject(bucket, key, filename string, overwrite bool) error {
+	cfg, err := sc.loadS3Cfg()
+	if err != nil {
+		return err
+	}
 
 	// Create an uploader with the config and default options
-	uploader := s3manager.NewUploader(cfg)
+	uploader := s3manager.NewUploader(*cfg)
 
 	if filename == "" {
 		filename = key
@@ -170,15 +187,15 @@ func main() {
 		Use:     "s3cli",
 		Short:   "s3cli client tool",
 		Long:    "s3cli client tool for S3 Bucket/Object operation",
-		Version: fmt.Sprintf("[%s @ %s]", Version, BuildDate),
+		Version: fmt.Sprintf("[%s @ %s]", version, buildDate),
 	}
 	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "d", false, "print debug log")
 	rootCmd.PersistentFlags().StringVarP(&sc.credential, "credential", "c", "", "credentail file")
 	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "credentail profile")
-	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", Endpoint, "endpoint")
+	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", endpoint, "endpoint")
 	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "accessKey", "a", "", "accessKey")
 	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "secretKey", "s", "", "secretKey")
-	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "g", "cn-north-1", "region")
+	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "r", "", "region")
 	rootCmd.Flags().BoolP("version", "v", false, "print version")
 
 	createBucketCmd := &cobra.Command{
@@ -257,7 +274,7 @@ func main() {
 		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			key := cmd.Flag("key").Value.String()
-			sc.uploadObject(args[0], key, args[1], cmd.Flag("overwrite").Changed)
+			sc.putObject(args[0], key, args[1], cmd.Flag("overwrite").Changed)
 		},
 	}
 	putObjectCmd.Flags().StringP("key", "k", "", "key name")
@@ -330,13 +347,13 @@ func main() {
 				if cnt, err := sc.deleteObjects(args[0], args[1], prefix); err != nil {
 					fmt.Println("delete Object error: ", err)
 				} else {
-					fmt.Printf("delete %d Objects success\n", cnt)
+					fmt.Printf("deleted %d Objects\n", cnt)
 				}
 			} else if prefix {
 				if cnt, err := sc.deleteObjects(args[0], "", prefix); err != nil {
 					fmt.Println("delete Object error: ", err)
 				} else {
-					fmt.Printf("delete %d Objects success\n", cnt)
+					fmt.Printf("deleted %d Objects\n", cnt)
 				}
 			} else {
 				sc.deleteBucket(args[0])

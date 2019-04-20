@@ -11,4 +11,4 @@ then
 fi
 
 echo "Building s3cli-$Version"
-go build -ldflags "-X main.BuildDate=$BuildDate -X main.Version=$Version -X main.Endpoint=$Endpoint"
+go build -ldflags "-X main.buildDate=$BuildDate -X main.version=$Version -X main.endpoint=$Endpoint"
