@@ -62,6 +62,7 @@ func (sc *S3Cli) listObject(bucket, prefix, delimiter string) error {
 		return err
 	}
 	fmt.Printf("cfg: %v\n\n\n", *cfg)
+	fmt.Printf("bucket: %s, prefix: %s, delimiter: %s\n", bucket, prefix, delimiter)
 	svc := s3.New(*cfg)
 	req := svc.ListObjectsRequest(&s3.ListObjectsInput{Bucket: &bucket})
 	p := req.Paginate()
