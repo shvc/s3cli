@@ -1,23 +1,22 @@
 #!/bin/sh
 #
-BuildDate=$(date +'%Y/%m/%d-%H:%M:%S')
 
-Version="1.0.$(git rev-list --all --count)"
+version="1.0.$(git rev-list --all --count)-$(date +'%m%d%H')"
 
-Endpoint='http://s3test.myshare.io:9090'
+endpoint='http://s3test.myshare.io:9090'
 if [ "X$1" != "X" ]
 then
-  Endpoint=$1
+  endpoint=$1
 fi
 
 echo "Building Linux amd64 ..."
-GOOS=linux GOARCH=amd64 go build -ldflags "-X main.BuildDate=$BuildDate -X main.Version=$Version -X main.Endpoint=$Endpoint"
-zip -m s3cli-$Version-linux-amd64.zip s3cli
+GOOS=linux GOARCH=amd64 go build -ldflags " -X main.version=$version -X main.endpoint=$endpoint"
+zip -m s3cli-$version-linux-amd64.zip s3cli
 
 echo "Building Macos amd64 ..."
-GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.BuildDate=$BuildDate -X main.Version=$Version -X main.Endpoint=$Endpoint"
-zip -m s3cli-$Version-macos-amd64.zip s3cli
+GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.version=$version -X main.endpoint=$endpoint"
+zip -m s3cli-$version-macos-amd64.zip s3cli
 
 echo "Building Windows amd64 ..."
-GOOS=windows GOARCH=amd64 go build -ldflags "-X main.BuildDate=$BuildDate -X main.Version=$Version -X main.Endpoint=$Endpoint"
-zip -m s3cli-$Version-win-x64.zip s3cli.exe
+GOOS=windows GOARCH=amd64 go build -ldflags " -X main.version=$version -X main.endpoint=$endpoint"
+zip -m s3cli-$version-win-x64.zip s3cli.exe

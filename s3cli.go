@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
+
 	"github.com/aws/aws-sdk-go/aws/request"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -18,14 +20,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// BuildDate to record build date
-var BuildDate = "2018-08-08 08:08:08"
+// version to record build version
+var version = "1.0.3"
 
-// Version to record build bersion
-var Version = "1.0.3"
-
-// Endpoint default Server URL
-var Endpoint = "http://s3test.myshare.io:9090"
+// endpoint default Server URL
+var endpoint = "http://s3test.myshare.io:9090"
 
 // S3Client represent a Client
 type S3Client struct {
@@ -412,15 +411,15 @@ func main() {
 		Use:     "s3cli",
 		Short:   "s3cli client tool",
 		Long:    "s3cli client tool for S3 Bucket/Object operation",
-		Version: fmt.Sprintf("[%s @ %s]", Version, BuildDate),
+		Version: fmt.Sprintf("[%s]", version),
 	}
 	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "d", false, "print debug log")
 	rootCmd.PersistentFlags().StringVarP(&sc.credential, "credential", "c", "", "credentail file")
 	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "credentail profile")
-	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", Endpoint, "endpoint")
-	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "accessKey", "a", "", "accessKey")
-	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "secretKey", "s", "", "secretKey")
-	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "g", "cn-north-1", "region")
+	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", endpoint, "endpoint")
+	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "accesskey", "a", "", "access key")
+	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "secretkey", "s", "", "secret key")
+	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "r", endpoints.CnNorth1RegionID, "region")
 	rootCmd.Flags().BoolP("version", "v", false, "print version")
 
 	createBucketCmd := &cobra.Command{
