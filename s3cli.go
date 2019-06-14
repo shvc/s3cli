@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/endpoints"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -50,9 +51,28 @@ func (sc *S3Cli) loadS3Cfg() (*aws.Config, error) {
 		return nil, fmt.Errorf("failed to load config, %v", err)
 	}
 	cfg.Region = sc.region
-	cfg.EndpointResolver = aws.ResolveWithEndpoint{
-		URL: sc.endpoint,
+	//cfg.EndpointResolver = aws.ResolveWithEndpoint{
+	//	URL: sc.endpoint,
+	//}
+
+	///
+	defaultResolver := endpoints.NewDefaultResolver()
+	myCustomResolver := func(service, region string) (aws.Endpoint, error) {
+		fmt.Printf("service: %s\n", service)
+		fmt.Printf("region : %s\n", region)
+		if service == s3.EndpointsID {
+			return aws.Endpoint{
+				URL: sc.endpoint,
+				//SigningRegion: "custom-signing-region",
+				SigningNameDerived: true,
+			}, nil
+		}
+		return defaultResolver.ResolveEndpoint(service, region)
 	}
+
+	cfg.EndpointResolver = aws.EndpointResolverFunc(myCustomResolver)
+
+	///
 	return &cfg, nil
 }
 
@@ -61,22 +81,26 @@ func (sc *S3Cli) listObject(bucket, prefix, delimiter string) error {
 	if err != nil {
 		return err
 	}
+
 	fmt.Printf("cfg: %v\n\n\n", *cfg)
 	fmt.Printf("bucket: %s, prefix: %s, delimiter: %s\n", bucket, prefix, delimiter)
 	svc := s3.New(*cfg)
 	req := svc.ListObjectsRequest(&s3.ListObjectsInput{Bucket: &bucket})
-	p := req.Paginate()
+	fmt.Printf("req: %v\n", req.Request)
+	p := s3.NewListObjectsPaginator(req)
+	fmt.Printf("page: %v\n", p)
 	for p.Next(context.TODO()) {
+		fmt.Println("page 001")
 		page := p.CurrentPage()
 		for _, obj := range page.Contents {
 			fmt.Println("Object: ", *obj.Key)
 		}
 	}
-
+	fmt.Println("page 002")
 	if err := p.Err(); err != nil {
 		return fmt.Errorf("failed to list objects, %v", err)
 	}
-
+	fmt.Println("page 003")
 	return nil
 }
 
@@ -196,7 +220,8 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", endpoint, "endpoint")
 	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "accessKey", "a", "", "accessKey")
 	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "secretKey", "s", "", "secretKey")
-	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "r", "", "region")
+	//rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "r", endpoints.CnNorth1RegionID, "region")
+	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "r", endpoints.UsGovEast1RegionID, "region")
 	rootCmd.Flags().BoolP("version", "v", false, "print version")
 
 	createBucketCmd := &cobra.Command{
@@ -307,7 +332,9 @@ func main() {
 			prefix := cmd.Flag("prefix").Value.String()
 			delimiter := cmd.Flag("delimiter").Value.String()
 			if len(args) == 1 {
-				sc.listObject(args[0], prefix, delimiter)
+				if err := sc.listObject(args[0], prefix, delimiter); err != nil {
+					fmt.Printf("list Object failed: %v\n", err)
+				}
 			} else {
 				sc.listBucket()
 			}
