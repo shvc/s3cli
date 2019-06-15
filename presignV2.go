@@ -19,7 +19,6 @@ func Presign2(u *url.URL, method, ak, sk string, exp time.Duration) (string, err
 	q.Set("Expires", expTime)
 	contentType := ""
 	strToSign := fmt.Sprintf("%s\n%s\n%s\n%s\n%s", method, "", contentType, expTime, u.Path)
-	fmt.Printf("sign: %s\n", strToSign)
 	signature := signature(strToSign, sk)
 
 	q.Set("Signature", signature)
