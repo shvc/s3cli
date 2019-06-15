@@ -1,9 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -398,11 +401,26 @@ func (sc *S3Client) presignObject(bucket, key string, exp time.Duration, put boo
 			Key:    aws.String(key),
 		})
 	}
-	url, err := req.Presign(exp)
-	if err != nil {
-		log.Println("Failed to pprsign Object", err)
+	return req.Presign(exp)
+}
+
+func (sc *S3Client) presignObjectV2(bucket, key string, exp time.Duration, put bool) (string, error) {
+	if sc.accessKey == "" {
+		return "", errors.New("unknow access key")
+	} else if sc.secretKey == "" {
+		return "", errors.New("unknow secret key")
+	} else if sc.endpoint == "" {
+		return "", errors.New("unknow endpoint")
 	}
-	return url, err
+	u, err := url.Parse(fmt.Sprintf("%s/%s/%s", sc.endpoint, bucket, key))
+	if err != nil {
+		return "", err
+	}
+	method := http.MethodGet
+	if put {
+		method = http.MethodPut
+	}
+	return Presign2(u, method, sc.accessKey, sc.secretKey, exp)
 }
 
 func main() {
@@ -599,7 +617,12 @@ func main() {
 				fmt.Println("invalid expire : ", err)
 				return
 			}
-			url, err := sc.presignObject(args[0], args[1], exp, cmd.Flag("put").Changed)
+			url := ""
+			if cmd.Flag("v2").Changed {
+				url, err = sc.presignObjectV2(args[0], args[1], exp, cmd.Flag("put").Changed)
+			} else {
+				url, err = sc.presignObject(args[0], args[1], exp, cmd.Flag("put").Changed)
+			}
 			if err != nil {
 				fmt.Println("presign failed: ", err)
 			} else {
@@ -609,6 +632,7 @@ func main() {
 	}
 	presignObjectCmd.Flags().DurationP("expire", "E", 12*time.Hour, "URL expire time")
 	presignObjectCmd.Flags().BoolP("put", "", false, "generate a put URL")
+	presignObjectCmd.Flags().BoolP("v2", "2", false, "s3v2 signature")
 	rootCmd.AddCommand(presignObjectCmd)
 
 	aclObjectCmd := &cobra.Command{
