@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-version="1.0.$(git rev-list --all --count)-$(date +'%m%d%H')"
+version="1.0.$(git rev-list HEAD --count)-$(date +'%m%d%H')"
 
 endpoint='http://s3test.myshare.io:9090'
 if [ "X$1" != "X" ]
