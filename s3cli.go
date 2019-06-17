@@ -437,7 +437,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", endpoint, "endpoint")
 	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "accesskey", "a", "", "access key")
 	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "secretkey", "s", "", "secret key")
-	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "r", endpoints.CnNorth1RegionID, "region")
+	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", endpoints.CnNorth1RegionID, "s3 region")
 	rootCmd.Flags().BoolP("version", "v", false, "print version")
 
 	createBucketCmd := &cobra.Command{
