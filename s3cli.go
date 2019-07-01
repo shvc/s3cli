@@ -339,7 +339,7 @@ func (sc *S3Client) deleteObject(bucket, key string, prefix bool) (int64, error)
 			Key:    aws.String(key),
 		})
 	}
-	return 0, err
+	return cnt, err
 }
 
 func (sc *S3Client) aclObject(bucket, key string, prefix bool) (int64, error) {
@@ -588,12 +588,16 @@ func main() {
 			if len(args) == 2 {
 				if cnt, err := sc.deleteObject(args[0], args[1], prefix); err != nil {
 					fmt.Println("delete Object error: ", err)
+				} else if cnt == 0 {
+					fmt.Printf("delete Object success\n")
 				} else {
 					fmt.Printf("delete %d Objects success\n", cnt)
 				}
 			} else if prefix {
 				if cnt, err := sc.deleteObject(args[0], "", prefix); err != nil {
 					fmt.Println("delete Object error: ", err)
+				} else if cnt == 0 {
+					fmt.Printf("delete Object success\n")
 				} else {
 					fmt.Printf("delete %d Objects success\n", cnt)
 				}
