@@ -250,7 +250,7 @@ func (sc *S3Client) mpuObject(bucket, key, filename string, overwrite bool) {
 	fmt.Printf("Uploaded Object %s\n", key)
 }
 
-func (sc *S3Client) listObject(bucket, prefix, delimiter string) {
+func (sc *S3Client) listObject(bucket, prefix, delimiter string, maxKeys int64) {
 	svc, err := sc.newS3Client()
 	if err != nil {
 		log.Println("NewSession: ", err)
@@ -260,6 +260,7 @@ func (sc *S3Client) listObject(bucket, prefix, delimiter string) {
 		Bucket:    aws.String(bucket),
 		Prefix:    aws.String(prefix),
 		Delimiter: aws.String(delimiter),
+		MaxKeys:   aws.Int64(maxKeys),
 	})
 	if err != nil {
 		fmt.Println("Failed to list Object", err)
@@ -547,8 +548,12 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			prefix := cmd.Flag("prefix").Value.String()
 			delimiter := cmd.Flag("delimiter").Value.String()
+			maxKeys, err := cmd.Flags().GetInt64("maxkeys")
+			if err != nil {
+				maxKeys = 1000
+			}
 			if len(args) == 1 {
-				sc.listObject(args[0], prefix, delimiter)
+				sc.listObject(args[0], prefix, delimiter, maxKeys)
 			} else {
 				sc.listBucket()
 			}
@@ -556,6 +561,7 @@ func main() {
 	}
 	listObjectCmd.Flags().StringP("prefix", "P", "", "Object prefix")
 	listObjectCmd.Flags().StringP("delimiter", "", "", "Object delimiter")
+	listObjectCmd.Flags().Int64P("maxkeys", "M", 1000, "Max keys")
 	rootCmd.AddCommand(listObjectCmd)
 
 	getObjectCmd := &cobra.Command{
