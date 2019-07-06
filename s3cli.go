@@ -17,11 +17,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// buildDate to record build date
-var buildDate = "2018-08-08 08:08:08"
-
-// version to record build bersion
-var version = "1.0.3"
+// version to record s3cli version
+var version = "1.2.3"
 
 // endpoint default Server URL
 var endpoint = "http://s3test.myshare.io:9090"
@@ -38,7 +35,6 @@ type S3Cli struct {
 	debug bool
 	// region
 	region string
-	useSSL bool
 }
 
 func (sc *S3Cli) loadS3Cfg() (*aws.Config, error) {
@@ -402,7 +398,7 @@ func main() {
 		Use:     "s3cli",
 		Short:   "s3cli client tool",
 		Long:    "s3cli client tool for S3 Bucket/Object operation",
-		Version: fmt.Sprintf("[%s @ %s]", version, buildDate),
+		Version: version,
 	}
 	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "d", false, "print debug log")
 	rootCmd.PersistentFlags().StringVarP(&sc.credential, "credential", "c", "", "credentail file")

@@ -1,14 +1,13 @@
 #!/bin/sh
+# Sat Jul  6 22:15:04 CST 2019
 #
-BuildDate=$(date +'%Y/%m/%d-%H:%M:%S')
+version="1.0.$(git rev-list HEAD --count)-$(date +'%m%d%H')"
 
-Version="1.0.$(git rev-list --all --count)"
-
-Endpoint='http://s3test.myshare.io:9090'
+endpoint='http://s3test.myshare.io:9090'
 if [ "X$1" != "X" ]
 then
-  Endpoint=$1
+  endpoint=$1
 fi
 
-echo "Building s3cli-$Version"
-go build -ldflags "-X main.buildDate=$BuildDate -X main.version=$Version -X main.endpoint=$Endpoint"
+echo "Building s3cli-$version"
+go build -ldflags "-X main.version=$version -X main.endpoint=$endpoint"
