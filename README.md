@@ -1,26 +1,17 @@
-## Build
-#### 1. Install golang and git
-#### 2. Clone s3cli code
-```
-git clone https://github.com/cchare/s3cli
-```
-#### 3. Build
-```
-go get -u github.com/aws/aws-sdk-go/aws
-go get -u github.com/aws/aws-sdk-go/service/s3
-go get -u github.com/spf13/cobra
-go build
-```
-#### 4. config
+## S3cli
+#### 1. Download prebuild binary
+https://github.com/vager/s3cli/releases
+
+#### 4. Configuration
 Edit ~/.aws/credentials
 ```
 [default]
-aws_access_key_id=YOUR_ACCESS_KEY_ID
-aws_secret_access_key=YOUR_SECRET_ACCESS_KEY
+aws_access_key_id=AK
+aws_secret_access_key=SK
 
 [ecs]
-aws_access_key_id=YOUR_ACCESS_KEY_ID
-aws_secret_access_key=YOUR_SECRET_ACCESS_KEY
+aws_access_key_id=AK
+aws_secret_access_key=SK
 ```
 
 ## Usage
@@ -32,57 +23,110 @@ Usage:
   s3cli [command]
 
 Available Commands:
+  acl          acl Bucket or Object
   createBucket create Bucket
-  delete       delete Bucket or Object
+  delete       delete Bucket or Object(s)
   deleteBucket delete bucket
-  deleteprefix delete Objects with prefix
   download     download Object
+  getacl       get Bucket/Object acl
+  head         head Bucket/Object
   help         Help about any command
-  list         list Buckets or Objects in Bucket
-  listBucket   list Buckets
+  list         list Buckets or Objects
+  listBuckets  list Buckets
   mpu          mpu Object
   presign      presign Object
   upload       upload Object
 
 Flags:
-  -a, --accessKey string    accessKey
-  -c, --credential string   credentail file
-  -d, --debug               print debug log
-  -e, --endpoint string     endpoint (default "http://s3test.myshare.io:9090")
-  -h, --help                help for s3cli
-  -p, --profile string      credentail profile
-  -g, --region string       region (default "cn-north-1")
-  -s, --secretKey string    secretKey
-  -v, --version             print version
+  -d, --debug             print debug log
+  -e, --endpoint string   endpoint (default "http://s3test.myshare.io:9090")
+  -h, --help              help for s3cli
+  -p, --profile string    profile in credential file
+  -R, --region string     region (default "cn-north-1")
+  -v, --version           print version
 
 Use "s3cli [command] --help" for more information about a command.
 ```
 
-## eg
-Delete all Objects with specified prefix(API/) in a bucket(bk1)  
+## Example
+##### Create Bucket
 ```
-$ ./s3cli -p myecs -e http://10.10.15.98:9020 deleteprefix -h
-delete all Objects with prefix
+./s3cli -e http://192.168.55.2:9020 -p ecs cb bucket1
+```
+##### List Buckets
+```
+./s3cli -e http://192.168.55.2:9020 -p ecs lb
+{
+  Buckets: [{
+      CreationDate: 2019-07-07 07:05:08.796 +0000 UTC,
+      Name: "bucket1"
+    }],
+  Owner: {
+    DisplayName: "",
+    ID: "02d6176db174dc93cb1b899f7c6078f08654445fe8cf1b6ce98d8855f66bdbf4"
+  }
+}
+```
+##### Delete Buckets
+```
+./s3cli -e http://192.168.55.2:9020 -p ecs db bucket1
+```
 
-Usage:
-  s3cli deleteprefix <bucket> [prefix] [flags]
+##### Upload file
+```
+./s3cli -e http://192.168.55.2:9020 -p ecs cb bucket2
+./s3cli -e http://192.168.55.2:9020 -p ecs up bucket2 /etc/hosts
+upload /etc/hosts to bucket2/hosts success
+./s3cli -e http://192.168.55.2:9020 -p ecs up bucket2 /etc/resolv.conf -k key2
+upload /etc/resolv.conf to bucket2/key2 success
+```
 
-Aliases:
-  deleteprefix, dp
+##### Download file
+```
+./s3cli -e http://192.168.55.2:9020 -p ecs down bucket2 hosts
+download hosts to hosts
+./s3cli -e http://192.168.55.2:9020 -p ecs down bucket2 key2 resolv.conf
+download key2 to resolv.conf
+```
 
-Flags:
-  -h, --help   help for deleteprefix
+##### Presign put Object 
+```
+./s3cli -e http://192.168.55.2:9020 -p ecs psg bucket2 putkey --put
+```
 
-Global Flags:
-  -a, --accessKey string    accessKey
-  -c, --credential string   credentail file
-  -d, --debug               print debug log
-  -e, --endpoint string     endpoint (default "http://s3test.myshare.io:9090")
-  -p, --profile string      credentail profile
-  -g, --region string       region (default "cn-north-1")
-  -s, --secretKey string    secretKey
+##### Presign get Object
+```
+./s3cli -e http://192.168.55.2:9020 -p ecs psg bucket2 hosts
+```
 
+##### List Objects
+```
+./s3cli -e http://192.168.55.2:9020 -p ecs ls bucket2
+size:         305, key: host
+size:         305, key: hosts
+size:         357, key: key1
+size:         357, key: key2
+size:         357, key: key3
+```
 
-$ ./s3cli -p myecs -e http://10.10.15.98:9020 deleteprefix bk1 API/
-delete 437 Objects success
+##### List Objects with specified prefix
+```
+./s3cli -e http://192.168.55.2:9020 -p ecs ls bucket2 -P key
+size:         357, key: key1
+size:         357, key: key2
+size:         357, key: key3
+```
+
+##### Delete Objects with specified prefix
+```
+./s3cli -e http://192.168.55.2:9020 -p ecs delete bucket2 key -P
+3 Objects deleted
+all 3 Objects deleted
+```
+
+##### Delete Bucket and all Objects
+```
+./s3cli -e http://192.168.55.2:9020 -p ecs delete bucket2
+2 Objects deleted
+Bucket bucket2 and 2 Objects deleted
 ```
