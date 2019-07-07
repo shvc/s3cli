@@ -25,8 +25,6 @@ var endpoint = "http://s3test.myshare.io:9090"
 
 // S3Cli represent a S3 Client
 type S3Cli struct {
-	// credential file
-	credential string
 	// profile in credential file
 	profile string
 	// Server endpoine(URL)
@@ -38,7 +36,6 @@ type S3Cli struct {
 }
 
 func (sc *S3Cli) loadS3Cfg() (*aws.Config, error) {
-	//external.LoadSharedConfig(external.WithSharedConfigProfile(sc.profile))
 	cfg, err := external.LoadDefaultAWSConfig(external.WithSharedConfigProfile(sc.profile))
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config, %v", err)
@@ -117,7 +114,7 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter string, maxkeys int64) er
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
-		return fmt.Errorf("list object failed: %v", err)
+		return fmt.Errorf("list objects failed: %v", err)
 	}
 	for _, obj := range resp.Contents {
 		fmt.Printf("size: %11d, key: %s\n", *obj.Size, *obj.Key)
@@ -232,6 +229,14 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 		}
 	}
 	return objNum, nil
+}
+
+func (sc *S3Cli) deleteBucketAndObjects(bucket string) (int64, error) {
+	n, err := sc.deleteObjects(bucket, "")
+	if err != nil {
+		return n, err
+	}
+	return n, sc.deleteBucket(bucket)
 }
 
 func (sc *S3Cli) deleteObject(bucket, key string) error {
@@ -377,19 +382,18 @@ func (sc *S3Cli) deleteBucket(bucket string) error {
 	return err
 }
 
-func (sc *S3Cli) listBuckets() {
+func (sc *S3Cli) listBuckets() error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		fmt.Printf("init s3 Client failed: %v\n", err)
-		return
+		return fmt.Errorf("init s3 Client failed: %v", err)
 	}
 	req := client.ListBucketsRequest(&s3.ListBucketsInput{})
-	if resp, err := req.Send(context.Background()); err != nil {
-		fmt.Printf("list buckets failed: %s\n", err)
-	} else {
-		fmt.Println(resp.ListBucketsOutput)
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
 	}
-	return
+	fmt.Println(resp.ListBucketsOutput)
+	return nil
 }
 
 func main() {
@@ -401,8 +405,7 @@ func main() {
 		Version: version,
 	}
 	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "d", false, "print debug log")
-	rootCmd.PersistentFlags().StringVarP(&sc.credential, "credential", "c", "", "credentail file")
-	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "credentail profile")
+	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credential file")
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", endpoint, "endpoint")
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", endpoints.CnNorth1RegionID, "region")
 	rootCmd.Flags().BoolP("version", "v", false, "print version")
@@ -541,28 +544,30 @@ func main() {
 	listObjectCmd := &cobra.Command{
 		Use:     "list [bucket]",
 		Aliases: []string{"ls"},
-		Short:   "list Buckets or Objects in Bucket",
-		Long:    "list Buckets or Objects in Bucket",
+		Short:   "list Buckets or Objects",
+		Long:    "list Buckets or Objects",
 		Args:    cobra.RangeArgs(0, 1),
 		Run: func(cmd *cobra.Command, args []string) {
 			prefix := cmd.Flag("prefix").Value.String()
 			delimiter := cmd.Flag("delimiter").Value.String()
 			if len(args) == 1 {
-				var err error
 				if cmd.Flag("all").Changed {
-					err = sc.listAllObjects(args[0], prefix, delimiter)
+					if err := sc.listAllObjects(args[0], prefix, delimiter); err != nil {
+						fmt.Println(err)
+					}
 				} else {
 					maxKeys, err := cmd.Flags().GetInt64("maxkeys")
 					if err != nil {
 						maxKeys = 1000
 					}
-					err = sc.listObjects(args[0], prefix, delimiter, maxKeys)
-				}
-				if err != nil {
-					fmt.Println(err)
+					if err := sc.listObjects(args[0], prefix, delimiter, maxKeys); err != nil {
+						fmt.Println(err)
+					}
 				}
 			} else {
-				sc.listBuckets()
+				if err := sc.listBuckets(); err != nil {
+					fmt.Println(err)
+				}
 			}
 		},
 	}
@@ -600,8 +605,8 @@ func main() {
 	deleteObjectCmd := &cobra.Command{
 		Use:     "delete <bucket> [key|prefix]",
 		Aliases: []string{"del", "rm"},
-		Short:   "delete Bucket or Object",
-		Long:    "delete Bucket or Object(s) in Bucket",
+		Short:   "delete Bucket or Object(s)",
+		Long:    "delete Bucket or Object(s)",
 		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
 			prefix := cmd.Flag("prefix").Changed
@@ -614,14 +619,16 @@ func main() {
 				if len(args) == 2 {
 					prefix = args[1]
 				}
-				if cnt, err := sc.deleteObjects(args[0], prefix); err != nil {
+				if n, err := sc.deleteObjects(args[0], prefix); err != nil {
 					fmt.Println("delete Objects failed: ", err)
 				} else {
-					fmt.Printf("all %d Objects deleted\n", cnt)
+					fmt.Printf("all %d Objects deleted\n", n)
 				}
 			} else {
-				if err := sc.deleteBucket(args[0]); err != nil {
-					fmt.Printf("delete bucket %s failed: %s\n", args[0], err)
+				if n, err := sc.deleteBucketAndObjects(args[0]); err != nil {
+					fmt.Printf("delete %d Objects, Bucket %s failed: %s\n", n, args[0], err)
+				} else {
+					fmt.Printf("Bucket %s and %d Objects deleted\n", args[0], n)
 				}
 			}
 		},
