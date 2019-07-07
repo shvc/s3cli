@@ -1,4 +1,4 @@
-## S3cli
+## s3cli
 #### 1. Download prebuild binary
 https://github.com/vager/s3cli/releases
 
@@ -67,41 +67,37 @@ Use "s3cli [command] --help" for more information about a command.
   }
 }
 ```
-##### Delete Buckets
-```
-./s3cli -e http://192.168.55.2:9020 -p ecs db bucket1
-```
 
 ##### Upload file
 ```
-./s3cli -e http://192.168.55.2:9020 -p ecs cb bucket2
-./s3cli -e http://192.168.55.2:9020 -p ecs up bucket2 /etc/hosts
-upload /etc/hosts to bucket2/hosts success
-./s3cli -e http://192.168.55.2:9020 -p ecs up bucket2 /etc/resolv.conf -k key2
-upload /etc/resolv.conf to bucket2/key2 success
+./s3cli -e http://192.168.55.2:9020 -p ecs cb bucket1
+./s3cli -e http://192.168.55.2:9020 -p ecs up bucket1 /etc/hosts
+upload /etc/hosts to bucket1/hosts success
+./s3cli -e http://192.168.55.2:9020 -p ecs up bucket1 /etc/resolv.conf -k key2
+upload /etc/resolv.conf to bucket1/key2 success
 ```
 
 ##### Download file
 ```
-./s3cli -e http://192.168.55.2:9020 -p ecs down bucket2 hosts
+./s3cli -e http://192.168.55.2:9020 -p ecs down bucket1 hosts
 download hosts to hosts
-./s3cli -e http://192.168.55.2:9020 -p ecs down bucket2 key2 resolv.conf
+./s3cli -e http://192.168.55.2:9020 -p ecs down bucket1 key2 resolv.conf
 download key2 to resolv.conf
-```
-
-##### Presign put Object 
-```
-./s3cli -e http://192.168.55.2:9020 -p ecs psg bucket2 putkey --put
 ```
 
 ##### Presign get Object
 ```
-./s3cli -e http://192.168.55.2:9020 -p ecs psg bucket2 hosts
+./s3cli -e http://192.168.55.2:9020 -p ecs psg bucket1 hosts
+```
+
+##### Presign put Object 
+```
+./s3cli -e http://192.168.55.2:9020 -p ecs psg bucket1 host --put
 ```
 
 ##### List Objects
 ```
-./s3cli -e http://192.168.55.2:9020 -p ecs ls bucket2
+./s3cli -e http://192.168.55.2:9020 -p ecs ls bucket1
 size:         305, key: host
 size:         305, key: hosts
 size:         357, key: key1
@@ -111,7 +107,7 @@ size:         357, key: key3
 
 ##### List Objects with specified prefix
 ```
-./s3cli -e http://192.168.55.2:9020 -p ecs ls bucket2 -P key
+./s3cli -e http://192.168.55.2:9020 -p ecs ls bucket1 -P key
 size:         357, key: key1
 size:         357, key: key2
 size:         357, key: key3
@@ -119,14 +115,14 @@ size:         357, key: key3
 
 ##### Delete Objects with specified prefix
 ```
-./s3cli -e http://192.168.55.2:9020 -p ecs delete bucket2 key -P
+./s3cli -e http://192.168.55.2:9020 -p ecs delete bucket1 key -P
 3 Objects deleted
 all 3 Objects deleted
 ```
 
 ##### Delete Bucket and all Objects
 ```
-./s3cli -e http://192.168.55.2:9020 -p ecs delete bucket2
+./s3cli -e http://192.168.55.2:9020 -p ecs delete bucket1
 2 Objects deleted
-Bucket bucket2 and 2 Objects deleted
+Bucket bucket1 and 2 Objects deleted
 ```
