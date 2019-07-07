@@ -73,8 +73,7 @@ func (sc *S3Cli) newS3Client() (*s3.Client, error) {
 }
 
 // listAllObjects list all Objects in spcified bucket
-func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string) error {
-	//fmt.Printf("bucket: %s, prefix: %s, delimiter: %s\n", bucket, prefix, delimiter)
+func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, verbose, index bool) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %v", err)
@@ -88,9 +87,17 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string) error {
 	p := s3.NewListObjectsPaginator(req)
 	for p.Next(context.TODO()) {
 		page := p.CurrentPage()
+		if verbose {
+			fmt.Println(page)
+			continue
+		}
 		for _, obj := range page.Contents {
-			i++
-			fmt.Printf("index: %6d, size: %11d, key: %s\n", i, *obj.Size, *obj.Key)
+			if index {
+				fmt.Printf("%d\t%s\n", i, *obj.Key)
+				i++
+			} else {
+				fmt.Println(*obj.Key)
+			}
 		}
 	}
 	if err := p.Err(); err != nil {
@@ -99,9 +106,8 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string) error {
 	return nil
 }
 
-// listObjects list all Object in spcified bucket
-func (sc *S3Cli) listObjects(bucket, prefix, delimiter string, maxkeys int64) error {
-	//fmt.Printf("bucket: %s, prefix: %s, delimiter: %s\n", bucket, prefix, delimiter)
+// listObjects list Objects in spcified bucket
+func (sc *S3Cli) listObjects(bucket, prefix, delimiter string, maxkeys int64, verbose, index bool) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %v", err)
@@ -116,12 +122,21 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter string, maxkeys int64) er
 	if err != nil {
 		return fmt.Errorf("list objects failed: %v", err)
 	}
-	for _, obj := range resp.Contents {
-		fmt.Printf("size: %11d, key: %s\n", *obj.Size, *obj.Key)
+	if verbose {
+		fmt.Println(resp)
+		return nil
+	}
+	for i, obj := range resp.Contents {
+		if index {
+			fmt.Printf("%d\t%s\n", i, *obj.Key)
+		} else {
+			fmt.Println(*obj.Key)
+		}
 	}
 	return nil
 }
 
+// getObject downlaod a Object from bucket
 func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
@@ -150,6 +165,7 @@ func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
 	return err
 }
 
+// putObject upload a Object
 func (sc *S3Cli) putObject(bucket, key, filename string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
@@ -231,6 +247,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 	return objNum, nil
 }
 
+// deleteBucketAndObjects force delete a bucket
 func (sc *S3Cli) deleteBucketAndObjects(bucket string) (int64, error) {
 	n, err := sc.deleteObjects(bucket, "")
 	if err != nil {
@@ -265,6 +282,7 @@ func (sc *S3Cli) aclObject(bucket, key string) error {
 }
 
 // mpuObject Multi-Part-Upload a Object
+// TODO: impl
 func (sc *S3Cli) mpuObject(bucket, key, filename string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
@@ -285,6 +303,7 @@ func (sc *S3Cli) mpuObject(bucket, key, filename string) error {
 	return err
 }
 
+// presignGetObject presign a URL to download Object
 func (sc *S3Cli) presignGetObject(bucket, key string, exp time.Duration) (string, error) {
 	client, err := sc.newS3Client()
 	if err != nil {
@@ -297,6 +316,7 @@ func (sc *S3Cli) presignGetObject(bucket, key string, exp time.Duration) (string
 	return req.Presign(exp)
 }
 
+// presignPutObject presing a URL to uploda Object
 func (sc *S3Cli) presignPutObject(bucket, key string, exp time.Duration) (string, error) {
 	client, err := sc.newS3Client()
 	if err != nil {
@@ -404,11 +424,10 @@ func main() {
 		Long:    "s3cli client tool for S3 Bucket/Object operation",
 		Version: version,
 	}
-	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "d", false, "print debug log")
+	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "print debug log")
 	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credential file")
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", endpoint, "endpoint")
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", endpoints.CnNorth1RegionID, "region")
-	rootCmd.Flags().BoolP("version", "v", false, "print version")
 
 	createBucketCmd := &cobra.Command{
 		Use:     "createBucket <name>",
@@ -548,11 +567,13 @@ func main() {
 		Long:    "list Buckets or Objects",
 		Args:    cobra.RangeArgs(0, 1),
 		Run: func(cmd *cobra.Command, args []string) {
+			verbose := cmd.Flag("verbose").Changed
+			index := cmd.Flag("index").Changed
 			prefix := cmd.Flag("prefix").Value.String()
 			delimiter := cmd.Flag("delimiter").Value.String()
 			if len(args) == 1 {
 				if cmd.Flag("all").Changed {
-					if err := sc.listAllObjects(args[0], prefix, delimiter); err != nil {
+					if err := sc.listAllObjects(args[0], prefix, delimiter, verbose, index); err != nil {
 						fmt.Println(err)
 					}
 				} else {
@@ -560,7 +581,7 @@ func main() {
 					if err != nil {
 						maxKeys = 1000
 					}
-					if err := sc.listObjects(args[0], prefix, delimiter, maxKeys); err != nil {
+					if err := sc.listObjects(args[0], prefix, delimiter, maxKeys, verbose, index); err != nil {
 						fmt.Println(err)
 					}
 				}
@@ -571,10 +592,12 @@ func main() {
 			}
 		},
 	}
-	listObjectCmd.Flags().StringP("prefix", "P", "", "Object prefix")
-	listObjectCmd.Flags().StringP("delimiter", "", "", "Object delimiter")
-	listObjectCmd.Flags().Int64P("maxkeys", "", 1000, "max keys")
-	listObjectCmd.Flags().BoolP("all", "", false, "list all Objects")
+	listObjectCmd.Flags().StringP("prefix", "x", "", "only show Object(w) with prefix")
+	listObjectCmd.Flags().StringP("delimiter", "d", "", "Object delimiter")
+	listObjectCmd.Flags().Int64P("maxkeys", "m", 1000, "max keys")
+	listObjectCmd.Flags().BoolP("verbose", "v", false, "show verbose Object info")
+	listObjectCmd.Flags().BoolP("index", "i", false, "show Object index ")
+	listObjectCmd.Flags().BoolP("all", "a", false, "list all Objects")
 	rootCmd.AddCommand(listObjectCmd)
 
 	getObjectCmd := &cobra.Command{
@@ -685,7 +708,7 @@ func main() {
 
 		},
 	}
-	aclObjectCmd.Flags().BoolP("prefix", "P", false, "acl all Objects with specified prefix(key)")
+	aclObjectCmd.Flags().BoolP("prefix", "x", false, "acl all Objects with specified prefix(key)")
 	rootCmd.AddCommand(aclObjectCmd)
 
 	if err := rootCmd.Execute(); err != nil {

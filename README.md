@@ -98,24 +98,24 @@ download key2 to resolv.conf
 ##### List Objects
 ```
 ./s3cli -e http://192.168.55.2:9020 -p ecs ls bucket1
-size:         305, key: host
-size:         305, key: hosts
-size:         357, key: key1
-size:         357, key: key2
-size:         357, key: key3
+host
+hosts
+key1
+key2
+key3
 ```
 
 ##### List Objects with specified prefix
 ```
-./s3cli -e http://192.168.55.2:9020 -p ecs ls bucket1 -P key
-size:         357, key: key1
-size:         357, key: key2
-size:         357, key: key3
+./s3cli -e http://192.168.55.2:9020 -p ecs ls bucket1 -x ke
+key1
+key2
+key3
 ```
 
 ##### Delete Objects with specified prefix
 ```
-./s3cli -e http://192.168.55.2:9020 -p ecs delete bucket1 key -P
+./s3cli -e http://192.168.55.2:9020 -p ecs delete bucket1 key -x
 3 Objects deleted
 all 3 Objects deleted
 ```
