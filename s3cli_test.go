@@ -11,7 +11,7 @@ import (
 //
 //	# Secret Access Key
 //	AWS_SECRET_ACCESS_KEY=SECRET
-//	AWS_SECRET_KEY=SECRET=SECRET # only read if AWS_SECRET_ACCESS_KEY is not set.
+//	AWS_SECRET_KEY=SECRET # only read if AWS_SECRET_ACCESS_KEY is not set.
 
 var s3cli = S3Cli{}
 
