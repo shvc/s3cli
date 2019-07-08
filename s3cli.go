@@ -104,7 +104,7 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool) er
 }
 
 // listObjects list Objects in spcified bucket
-func (sc *S3Cli) listObjects(bucket, prefix, delimiter string, maxkeys int64, index bool) error {
+func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys int64, index bool) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %v", err)
@@ -112,6 +112,7 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter string, maxkeys int64, in
 	req := client.ListObjectsRequest(&s3.ListObjectsInput{
 		Bucket:    aws.String(bucket),
 		Prefix:    aws.String(prefix),
+		Marker:    aws.String(marker),
 		Delimiter: aws.String(delimiter),
 		MaxKeys:   aws.Int64(maxkeys),
 	})
@@ -586,7 +587,8 @@ func main() {
 					if err != nil {
 						maxKeys = 1000
 					}
-					if err := sc.listObjects(args[0], prefix, delimiter, maxKeys, index); err != nil {
+					marker := cmd.Flag("marker").Value.String()
+					if err := sc.listObjects(args[0], prefix, delimiter, marker, maxKeys, index); err != nil {
 						fmt.Println(err)
 					}
 				}
@@ -597,9 +599,10 @@ func main() {
 			}
 		},
 	}
+	listObjectCmd.Flags().StringP("marker", "m", "", "marker")
+	listObjectCmd.Flags().Int64P("maxkeys", "M", 1000, "max keys")
 	listObjectCmd.Flags().StringP("prefix", "x", "", "only show Object(w) with prefix")
 	listObjectCmd.Flags().StringP("delimiter", "d", "", "Object delimiter")
-	listObjectCmd.Flags().Int64P("maxkeys", "m", 1000, "max keys")
 	listObjectCmd.Flags().BoolP("index", "i", false, "show Object index ")
 	listObjectCmd.Flags().BoolP("all", "a", false, "list all Objects")
 	rootCmd.AddCommand(listObjectCmd)
