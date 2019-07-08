@@ -20,19 +20,16 @@ import (
 // version to record s3cli version
 var version = "1.2.3"
 
-// endpoint default Server URL
+// endpoint default Server URL(endpoint)
 var endpoint = "http://s3test.myshare.io:9090"
 
-// S3Cli represent a S3 Client
+// S3Cli represent a S3Cli Client
 type S3Cli struct {
-	// profile in credential file
-	profile string
-	// Server endpoine(URL)
-	endpoint string
-	// debug log
-	debug bool
-	// region
-	region string
+	profile  string // profile in credential file
+	endpoint string // Server endpoine(URL)
+	region   string
+	verbose  bool
+	debug    bool
 }
 
 func (sc *S3Cli) loadS3Cfg() (*aws.Config, error) {
@@ -73,7 +70,7 @@ func (sc *S3Cli) newS3Client() (*s3.Client, error) {
 }
 
 // listAllObjects list all Objects in spcified bucket
-func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, verbose, index bool) error {
+func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %v", err)
@@ -87,7 +84,7 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, verbose, index
 	p := s3.NewListObjectsPaginator(req)
 	for p.Next(context.TODO()) {
 		page := p.CurrentPage()
-		if verbose {
+		if sc.verbose {
 			fmt.Println(page)
 			continue
 		}
@@ -107,7 +104,7 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, verbose, index
 }
 
 // listObjects list Objects in spcified bucket
-func (sc *S3Cli) listObjects(bucket, prefix, delimiter string, maxkeys int64, verbose, index bool) error {
+func (sc *S3Cli) listObjects(bucket, prefix, delimiter string, maxkeys int64, index bool) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %v", err)
@@ -122,7 +119,7 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter string, maxkeys int64, ve
 	if err != nil {
 		return fmt.Errorf("list objects failed: %v", err)
 	}
-	if verbose {
+	if sc.verbose {
 		fmt.Println(resp)
 		return nil
 	}
@@ -236,7 +233,9 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 		if _, err = deleteReq.Send(context.Background()); err != nil {
 			return objNum, err
 		}
-		fmt.Printf("%d Objects deleted\n", contentsLen)
+		if sc.verbose {
+			fmt.Printf("%d Objects deleted\n", contentsLen)
+		}
 		objNum += int64(contentsLen)
 		if resp.NextMarker != nil {
 			loi.Marker = aws.String(*resp.NextMarker)
@@ -412,7 +411,13 @@ func (sc *S3Cli) listBuckets() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(resp.ListBucketsOutput)
+	if sc.verbose {
+		fmt.Println(resp.ListBucketsOutput)
+		return nil
+	}
+	for _, b := range resp.ListBucketsOutput.Buckets {
+		fmt.Println(*b.Name)
+	}
 	return nil
 }
 
@@ -425,8 +430,9 @@ func main() {
 		Version: version,
 	}
 	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "print debug log")
-	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credential file")
+	rootCmd.PersistentFlags().BoolVarP(&sc.verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", endpoint, "endpoint")
+	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credential file")
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", endpoints.CnNorth1RegionID, "region")
 
 	createBucketCmd := &cobra.Command{
@@ -567,13 +573,12 @@ func main() {
 		Long:    "list Buckets or Objects",
 		Args:    cobra.RangeArgs(0, 1),
 		Run: func(cmd *cobra.Command, args []string) {
-			verbose := cmd.Flag("verbose").Changed
 			index := cmd.Flag("index").Changed
 			prefix := cmd.Flag("prefix").Value.String()
 			delimiter := cmd.Flag("delimiter").Value.String()
 			if len(args) == 1 {
 				if cmd.Flag("all").Changed {
-					if err := sc.listAllObjects(args[0], prefix, delimiter, verbose, index); err != nil {
+					if err := sc.listAllObjects(args[0], prefix, delimiter, index); err != nil {
 						fmt.Println(err)
 					}
 				} else {
@@ -581,7 +586,7 @@ func main() {
 					if err != nil {
 						maxKeys = 1000
 					}
-					if err := sc.listObjects(args[0], prefix, delimiter, maxKeys, verbose, index); err != nil {
+					if err := sc.listObjects(args[0], prefix, delimiter, maxKeys, index); err != nil {
 						fmt.Println(err)
 					}
 				}
@@ -595,7 +600,6 @@ func main() {
 	listObjectCmd.Flags().StringP("prefix", "x", "", "only show Object(w) with prefix")
 	listObjectCmd.Flags().StringP("delimiter", "d", "", "Object delimiter")
 	listObjectCmd.Flags().Int64P("maxkeys", "m", 1000, "max keys")
-	listObjectCmd.Flags().BoolP("verbose", "v", false, "show verbose Object info")
 	listObjectCmd.Flags().BoolP("index", "i", false, "show Object index ")
 	listObjectCmd.Flags().BoolP("all", "a", false, "list all Objects")
 	rootCmd.AddCommand(listObjectCmd)
