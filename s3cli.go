@@ -663,7 +663,7 @@ func main() {
 			}
 		},
 	}
-	deleteObjectCmd.Flags().BoolP("prefix", "P", false, "delete Objects start with specified prefix(key)")
+	deleteObjectCmd.Flags().BoolP("prefix", "x", false, "delete Objects start with specified prefix(key)")
 	rootCmd.AddCommand(deleteObjectCmd)
 
 	presignObjectCmd := &cobra.Command{
