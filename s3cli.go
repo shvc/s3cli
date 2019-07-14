@@ -462,9 +462,9 @@ func main() {
 
 	deleteBucketCmd := &cobra.Command{
 		Use:     "deleteBucket <bucket>",
-		Aliases: []string{"db"},
-		Short:   "delete bucket",
-		Long:    "delete a bucket",
+		Aliases: []string{"db", "rb"},
+		Short:   "delete(remove) bucket",
+		Long:    "delete(remove) bucket",
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := sc.deleteBucket(args[0]); err != nil {
