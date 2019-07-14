@@ -438,9 +438,9 @@ func main() {
 
 	createBucketCmd := &cobra.Command{
 		Use:     "createBucket <name>",
-		Aliases: []string{"cb"},
-		Short:   "create Bucket",
-		Long:    "create Bucket",
+		Aliases: []string{"cb", "mb"},
+		Short:   "create(make) Bucket",
+		Long:    "create(make) Bucket",
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			sc.createBucket(args[0])
