@@ -240,6 +240,8 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 		objNum += int64(contentsLen)
 		if resp.NextMarker != nil {
 			loi.Marker = aws.String(*resp.NextMarker)
+		} else if resp.IsTruncated != nil && *resp.IsTruncated {
+			loi.Marker = resp.Contents[contentsLen-1].Key
 		} else {
 			break
 		}
