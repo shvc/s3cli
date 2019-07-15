@@ -591,10 +591,6 @@ Credential ENV:
 			index := cmd.Flag("index").Changed
 			prefix := cmd.Flag("prefix").Value.String()
 			delimiter := cmd.Flag("delimiter").Value.String()
-			maxKeys, err := cmd.Flags().GetInt64("maxkeys")
-			if err != nil {
-				maxKeys = 1000
-			}
 			if len(args) == 1 {
 				if cmd.Flag("all").Changed {
 					if err := sc.listAllObjects(args[0], prefix, delimiter, index); err != nil {
