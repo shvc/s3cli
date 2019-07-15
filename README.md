@@ -49,23 +49,21 @@ Use "s3cli [command] --help" for more information about a command.
 ```
 
 ## Example
-##### Create Bucket
+##### Create(make) Bucket
 ```
 ./s3cli -e http://192.168.55.2:9020 -p ecs cb bucket1
 ```
+
 ##### List Buckets
 ```
 ./s3cli -e http://192.168.55.2:9020 -p ecs lb
-{
-  Buckets: [{
-      CreationDate: 2019-07-07 07:05:08.796 +0000 UTC,
-      Name: "bucket1"
-    }],
-  Owner: {
-    DisplayName: "",
-    ID: "02d6176db174dc93cb1b899f7c6078f08654445fe8cf1b6ce98d8855f66bdbf4"
-  }
-}
+bucket1"
+```
+or  
+```
+export S3CLI_ENDPOINT=http://192.168.55.2:9020
+./s3cli -p ecs lb
+bucket1
 ```
 
 ##### Upload file

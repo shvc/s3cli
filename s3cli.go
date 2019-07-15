@@ -20,9 +20,6 @@ import (
 // version to record s3cli version
 var version = "1.2.3"
 
-// endpoint default Server URL(endpoint)
-var endpoint = "http://s3test.myshare.io:9090"
-
 // S3Cli represent a S3Cli Client
 type S3Cli struct {
 	profile  string // profile in credential file
@@ -63,6 +60,9 @@ func (sc *S3Cli) newS3Client() (*s3.Client, error) {
 		return nil, err
 	}
 	client := s3.New(*cfg)
+	if sc.endpoint == "" {
+		sc.endpoint = os.Getenv("S3CLI_ENDPOINT")
+	}
 	if sc.endpoint != "" {
 		client.ForcePathStyle = true
 	}
@@ -432,7 +432,7 @@ func main() {
 	}
 	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "print debug log")
 	rootCmd.PersistentFlags().BoolVarP(&sc.verbose, "verbose", "v", false, "verbose output")
-	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", endpoint, "endpoint")
+	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", "endpoint")
 	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credential file")
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", endpoints.CnNorth1RegionID, "region")
 
