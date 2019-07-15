@@ -238,7 +238,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 			return objNum, err
 		}
 		if sc.verbose {
-			fmt.Printf("%d Objects deleted\n", contentsLen)
+			fmt.Printf("%5d Objects deleted\n", contentsLen)
 		}
 		objNum += int64(contentsLen)
 		if resp.NextMarker != nil {
@@ -661,9 +661,9 @@ func main() {
 				}
 			} else {
 				if n, err := sc.deleteBucketAndObjects(args[0]); err != nil {
-					fmt.Printf("delete %d Objects, Bucket %s failed: %s\n", n, args[0], err)
+					fmt.Printf("%d Objects deleted but delete Bucket %s failed: %s\n", n, args[0], err)
 				} else {
-					fmt.Printf("Bucket %s and %d Objects deleted\n", args[0], n)
+					fmt.Printf("all %d Objects and Bucket %s deleted\n", n, args[0])
 				}
 			}
 		},
