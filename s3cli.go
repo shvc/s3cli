@@ -434,7 +434,7 @@ func main() {
 		Short: "s3cli client tool",
 		Long: `s3cli client tool for S3 Bucket/Object operation
 Endpoint ENV:
-		S3CLI_ENDPOINT=http://endpoint:port
+		S3CLI_ENDPOINT=http://endpoint:port (only read flag -e is not set)
 
 Credential ENV:
 		AWS_ACCESS_KEY_ID=AK
