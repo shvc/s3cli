@@ -2,7 +2,7 @@
 #
 version="1.0.$(git rev-list HEAD --count)-$(date +'%m%d%H')"
 
-endpoint='http://s3test.myshare.io:9090'
+endpoint='https://play.min.io:9000'
 if [ "X$1" != "X" ]
 then
   endpoint=$1
