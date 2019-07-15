@@ -56,11 +56,12 @@ Use "s3cli [command] --help" for more information about a command.
 ```
 
 ##### List Buckets
+pass endpint with -e flag  
 ```
 ./s3cli -e http://192.168.55.2:9020 -p ecs lb
 bucket1"
 ```
-or  
+or pass endpoint with ENV  
 ```
 export S3CLI_ENDPOINT=http://192.168.55.2:9020
 ./s3cli -p ecs lb
