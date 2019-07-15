@@ -1,4 +1,4 @@
-## Build
+## Configuration
 #### 1. download prebuild binary
 https://github.com/vager/s3cli/releases  
 
