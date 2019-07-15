@@ -430,9 +430,17 @@ func (sc *S3Cli) listBuckets() error {
 func main() {
 	sc := S3Cli{}
 	var rootCmd = &cobra.Command{
-		Use:     "s3cli",
-		Short:   "s3cli client tool",
-		Long:    "s3cli client tool for S3 Bucket/Object operation",
+		Use:   "s3cli",
+		Short: "s3cli client tool",
+		Long: `s3cli client tool for S3 Bucket/Object operation
+Endpoint ENV:
+		S3CLI_ENDPOINT=http://endpoint:port
+
+Credential ENV:
+		AWS_ACCESS_KEY_ID=AK
+	  	AWS_ACCESS_KEY=AK (only read if AWS_ACCESS_KEY_ID is not set)
+	  	AWS_SECRET_ACCESS_KEY=SK
+	  	AWS_SECRET_KEY=SK (only read if AWS_SECRET_ACCESS_KEY is not set)`,
 		Version: version,
 	}
 	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "print debug log")
