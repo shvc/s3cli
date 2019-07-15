@@ -20,6 +20,9 @@ import (
 // version to record s3cli version
 var version = "1.2.3"
 
+// endpoint ENV Var
+var endpointEnvVar = "S3CLI_ENDPOINT"
+
 // S3Cli represent a S3Cli Client
 type S3Cli struct {
 	profile  string // profile in credential file
@@ -61,7 +64,7 @@ func (sc *S3Cli) newS3Client() (*s3.Client, error) {
 	}
 	client := s3.New(*cfg)
 	if sc.endpoint == "" {
-		sc.endpoint = os.Getenv("S3CLI_ENDPOINT")
+		sc.endpoint = os.Getenv(endpointEnvVar)
 	}
 	if sc.endpoint != "" {
 		client.ForcePathStyle = true
@@ -434,7 +437,7 @@ func main() {
 	}
 	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "print debug log")
 	rootCmd.PersistentFlags().BoolVarP(&sc.verbose, "verbose", "v", false, "verbose output")
-	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", "endpoint")
+	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", fmt.Sprintf("endpoint(ENV %s)", endpointEnvVar))
 	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credential file")
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", endpoints.CnNorth1RegionID, "region")
 
@@ -465,8 +468,8 @@ func main() {
 	deleteBucketCmd := &cobra.Command{
 		Use:     "deleteBucket <bucket>",
 		Aliases: []string{"db", "rb"},
-		Short:   "delete(remove) bucket",
-		Long:    "delete(remove) bucket",
+		Short:   "delete(remove) Bucket",
+		Long:    "delete(remove) Bucket",
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := sc.deleteBucket(args[0]); err != nil {
@@ -637,8 +640,8 @@ func main() {
 	deleteObjectCmd := &cobra.Command{
 		Use:     "delete <bucket> [key|prefix]",
 		Aliases: []string{"del", "rm"},
-		Short:   "delete Bucket or Object(s)",
-		Long:    "delete Bucket or Object(s)",
+		Short:   "delete(remove) Object or Bucket(Bucket and Objects)",
+		Long:    "delete(remove) Object or Bucket(Bucket and Objects)",
 		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
 			prefix := cmd.Flag("prefix").Changed

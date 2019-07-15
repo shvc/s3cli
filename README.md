@@ -24,9 +24,9 @@ Usage:
 
 Available Commands:
   acl          acl Bucket or Object
-  createBucket create Bucket
-  delete       delete Bucket or Object(s)
-  deleteBucket delete bucket
+  createBucket create(make) Bucket
+  delete       delete(remove) Object or Bucket(Bucket and Objects)
+  deleteBucket delete(remove) Bucket
   download     download Object
   getacl       get Bucket/Object acl
   head         head Bucket/Object
@@ -38,12 +38,13 @@ Available Commands:
   upload       upload Object
 
 Flags:
-  -d, --debug             print debug log
-  -e, --endpoint string   endpoint (default "http://s3test.myshare.io:9090")
+      --debug             print debug log
+  -e, --endpoint string   endpoint(ENV S3CLI_ENDPOINT)
   -h, --help              help for s3cli
   -p, --profile string    profile in credential file
   -R, --region string     region (default "cn-north-1")
-  -v, --version           print version
+  -v, --verbose           verbose output
+      --version           version for s3cli
 
 Use "s3cli [command] --help" for more information about a command.
 ```
