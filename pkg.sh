@@ -15,3 +15,4 @@ zip -m s3cli-$version-macos-amd64.zip s3cli
 echo "Building Windows amd64 s3cli-$version"
 GOOS=windows GOARCH=amd64 go build -ldflags " -X main.version=$version"
 zip -m s3cli-$version-win-x64.zip s3cli.exe
+

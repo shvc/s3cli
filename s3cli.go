@@ -339,6 +339,7 @@ func (sc *S3Cli) getObjectACL(bucket, key string) (*s3.GetObjectAclOutput, error
 	if err != nil {
 		return nil, fmt.Errorf("init s3 Client failed: %v", err)
 	}
+
 	req := client.GetObjectAclRequest(&s3.GetObjectAclInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
@@ -590,6 +591,10 @@ Credential ENV:
 			index := cmd.Flag("index").Changed
 			prefix := cmd.Flag("prefix").Value.String()
 			delimiter := cmd.Flag("delimiter").Value.String()
+			maxKeys, err := cmd.Flags().GetInt64("maxkeys")
+			if err != nil {
+				maxKeys = 1000
+			}
 			if len(args) == 1 {
 				if cmd.Flag("all").Changed {
 					if err := sc.listAllObjects(args[0], prefix, delimiter, index); err != nil {
@@ -612,6 +617,7 @@ Credential ENV:
 			}
 		},
 	}
+
 	listObjectCmd.Flags().StringP("marker", "m", "", "marker")
 	listObjectCmd.Flags().Int64P("maxkeys", "M", 1000, "max keys")
 	listObjectCmd.Flags().StringP("prefix", "x", "", "only show Object(w) with prefix")
@@ -706,6 +712,7 @@ Credential ENV:
 	}
 	presignObjectCmd.Flags().DurationP("expire", "E", 12*time.Hour, "URL expire time")
 	presignObjectCmd.Flags().BoolP("put", "", false, "generate a put URL")
+	presignObjectCmd.Flags().BoolP("v2", "2", false, "s3v2 signature")
 	rootCmd.AddCommand(presignObjectCmd)
 
 	aclObjectCmd := &cobra.Command{
