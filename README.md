@@ -1,17 +1,8 @@
 ## Build
-#### 1. Install golang and git
-#### 2. Clone s3cli code
-```
-git clone https://github.com/cchare/s3cli
-```
-#### 3. Build
-```
-go get -u github.com/aws/aws-sdk-go/aws
-go get -u github.com/aws/aws-sdk-go/service/s3
-go get -u github.com/spf13/cobra
-go build
-```
-#### 4. config
+#### 1. download prebuild binary
+https://github.com/vager/s3cli/releases  
+
+#### 2. config
 Edit ~/.aws/credentials
 ```
 [default]
@@ -21,8 +12,6 @@ aws_secret_access_key=YOUR_SECRET_ACCESS_KEY
 [minio]
 aws_access_key_id=Q3AM3UQ867SPQQA43P2F
 aws_secret_access_key=zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG
-
-
 ```
 
 ## Usage
