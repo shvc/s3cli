@@ -434,13 +434,13 @@ func main() {
 		Short: "s3cli client tool",
 		Long: `s3cli client tool for S3 Bucket/Object operation
 Endpoint ENV:
-		S3CLI_ENDPOINT=http://endpoint:port (only read if flag -e is not set)
+		S3CLI_ENDPOINT=http://host:port (only read if flag -e is not set)
 
 Credential ENV:
-		AWS_ACCESS_KEY_ID=AK     (only read if flag -p is not set)
-	  	AWS_ACCESS_KEY=AK        (only read if AWS_ACCESS_KEY_ID is not set)
-	  	AWS_SECRET_ACCESS_KEY=SK (only read if flag -p is not set)
-	  	AWS_SECRET_KEY=SK        (only read if AWS_SECRET_ACCESS_KEY is not set)`,
+		AWS_ACCESS_KEY_ID=AK      (only read if flag -p is not set)
+	  	AWS_ACCESS_KEY=AK         (only read if AWS_ACCESS_KEY_ID is not set)
+	  	AWS_SECRET_ACCESS_KEY=SK  (only read if flag -p is not set)
+	  	AWS_SECRET_KEY=SK         (only read if AWS_SECRET_ACCESS_KEY is not set)`,
 		Version: version,
 	}
 	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "print debug log")

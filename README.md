@@ -2,7 +2,7 @@
 #### 1. Download prebuild binary
 https://github.com/vager/s3cli/releases
 
-#### 4. Configuration
+#### 2. Configuration credential
 Edit ~/.aws/credentials
 ```
 [default]
@@ -18,6 +18,14 @@ aws_secret_access_key=SK
 ```
 ./s3cli -h
 s3cli client tool for S3 Bucket/Object operation
+Endpoint ENV:
+                S3CLI_ENDPOINT=http://host:port (only read if flag -e is not set)
+
+Credential ENV:
+                AWS_ACCESS_KEY_ID=AK     (only read if flag -p is not set)
+                AWS_ACCESS_KEY=AK        (only read if AWS_ACCESS_KEY_ID is not set)
+                AWS_SECRET_ACCESS_KEY=SK (only read if flag -p is not set)
+                AWS_SECRET_KEY=SK        (only read if AWS_SECRET_ACCESS_KEY is not set)
 
 Usage:
   s3cli [command]
@@ -39,7 +47,7 @@ Available Commands:
 
 Flags:
       --debug             print debug log
-  -e, --endpoint string   endpoint(ENV S3CLI_ENDPOINT)
+  -e, --endpoint string   S3 endpoint(http://host:port)
   -h, --help              help for s3cli
   -p, --profile string    profile in credential file
   -R, --region string     region (default "cn-north-1")
