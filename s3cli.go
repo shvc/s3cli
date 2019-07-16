@@ -238,7 +238,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 	}
 	doi := &s3.DeleteObjectsInput{
 		Bucket: aws.String(bucket),
-		Delete: &s3.Delete{},
+		Delete: &s3.Delete{Quiet: aws.Bool(true)},
 	}
 	for {
 		req := client.ListObjectsRequest(loi)
@@ -251,6 +251,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 			break
 		}
 
+		// TODO: use goroute delete Objects
 		objects := make([]s3.ObjectIdentifier, 0, 1000)
 		for _, obj := range resp.Contents {
 			objects = append(objects, s3.ObjectIdentifier{Key: obj.Key})
