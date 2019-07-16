@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 
-version="1.0.$(git rev-list HEAD --count)-$(date +'%m%d%H')"
+version="1.1.$(git rev-list HEAD --count)-$(date +'%m%d%H')"
 
 endpoint='https://play.min.io:9000'
 if [ "X$1" != "X" ]
