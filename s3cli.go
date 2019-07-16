@@ -149,20 +149,43 @@ func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
 		return fmt.Errorf("failed to create file %q, %v", filename, err)
 	}
 	defer f.Close()
-	rangeBytes := ""
+	var objRange *string
 	if oRange != "" {
-		rangeBytes = fmt.Sprintf("bytes=%s", oRange)
+		objRange = aws.String(fmt.Sprintf("bytes=%s", oRange))
 	}
 	req := client.GetObjectRequest(&s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
-		Range:  aws.String(rangeBytes),
+		Range:  objRange,
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
 		return fmt.Errorf("get object failed: %v", err)
 	}
 	_, err = io.Copy(f, resp.Body)
+	return err
+}
+
+// catObject print Object contents
+func (sc *S3Cli) catObject(bucket, key, oRange string) error {
+	client, err := sc.newS3Client()
+	if err != nil {
+		return fmt.Errorf("init s3 Client failed: %v", err)
+	}
+	var objRange *string
+	if oRange != "" {
+		objRange = aws.String(fmt.Sprintf("bytes=%s", oRange))
+	}
+	req := client.GetObjectRequest(&s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+		Range:  objRange,
+	})
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return fmt.Errorf("get object failed: %v", err)
+	}
+	_, err = io.Copy(os.Stdout, resp.Body)
 	return err
 }
 
@@ -646,6 +669,21 @@ Credential ENV:
 	getObjectCmd.Flags().StringP("range", "r", "", "Object range to download, 0-64 means [0, 64]")
 	getObjectCmd.Flags().BoolP("overwrite", "w", false, "overwrite file if exist")
 	rootCmd.AddCommand(getObjectCmd)
+
+	catObjectCmd := &cobra.Command{
+		Use:   "cat <bucket> <key>",
+		Short: "cat Object",
+		Long:  "print Object contents",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			objRange := cmd.Flag("range").Value.String()
+			if err := sc.catObject(args[0], args[1], objRange); err != nil {
+				fmt.Printf("cat %s failed: %s\n", args[1], err)
+			}
+		},
+	}
+	catObjectCmd.Flags().StringP("range", "r", "", "Object range to cat, 0-64 means [0, 64]")
+	rootCmd.AddCommand(catObjectCmd)
 
 	deleteObjectCmd := &cobra.Command{
 		Use:     "delete <bucket> [key|prefix]",
