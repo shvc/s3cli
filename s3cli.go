@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -232,13 +233,10 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 		return 0, fmt.Errorf("init s3 Client failed: %v", err)
 	}
 	var objNum int64
+	var doneDeletes sync.WaitGroup
 	loi := &s3.ListObjectsInput{
 		Bucket: aws.String(bucket),
 		Prefix: aws.String(prefix),
-	}
-	doi := &s3.DeleteObjectsInput{
-		Bucket: aws.String(bucket),
-		Delete: &s3.Delete{Quiet: aws.Bool(true)},
 	}
 	for {
 		req := client.ListObjectsRequest(loi)
@@ -256,14 +254,21 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 		for _, obj := range resp.Contents {
 			objects = append(objects, s3.ObjectIdentifier{Key: obj.Key})
 		}
-		doi.Delete.Objects = objects
-		deleteReq := client.DeleteObjectsRequest(doi)
-		if _, err = deleteReq.Send(context.Background()); err != nil {
-			return objNum, err
-		}
-		if sc.verbose {
-			fmt.Printf("%5d Objects deleted\n", contentsLen)
-		}
+		doneDeletes.Add(1)
+		go func() {
+			doi := &s3.DeleteObjectsInput{
+				Bucket: aws.String(bucket),
+				Delete: &s3.Delete{Quiet: aws.Bool(true)},
+			}
+			doi.Delete.Objects = objects
+			deleteReq := client.DeleteObjectsRequest(doi)
+			if _, e := deleteReq.Send(context.Background()); err != nil {
+				err = fmt.Errorf("delete Objects failed: %s", e)
+			} else if sc.verbose {
+				fmt.Printf("%5d Objects deleted\n", contentsLen)
+			}
+			doneDeletes.Done()
+		}()
 		objNum += int64(contentsLen)
 		if resp.NextMarker != nil {
 			loi.Marker = aws.String(*resp.NextMarker)
@@ -273,6 +278,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 			break
 		}
 	}
+	doneDeletes.Wait()
 	return objNum, nil
 }
 
