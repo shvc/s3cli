@@ -233,7 +233,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 		return 0, fmt.Errorf("init s3 Client failed: %v", err)
 	}
 	var objNum int64
-	var doneDeletes sync.WaitGroup
+	var wg sync.WaitGroup
 	loi := &s3.ListObjectsInput{
 		Bucket: aws.String(bucket),
 		Prefix: aws.String(prefix),
@@ -244,18 +244,16 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 		if err != nil {
 			return objNum, fmt.Errorf("list object failed: %v", err)
 		}
-		contentsLen := len(resp.Contents)
-		if contentsLen == 0 {
+		objectNum := len(resp.Contents)
+		if objectNum == 0 {
 			break
 		}
-
-		// TODO: use goroute delete Objects
 		objects := make([]s3.ObjectIdentifier, 0, 1000)
 		for _, obj := range resp.Contents {
 			objects = append(objects, s3.ObjectIdentifier{Key: obj.Key})
 		}
-		doneDeletes.Add(1)
-		go func() {
+		wg.Add(1)
+		go func(objects []s3.ObjectIdentifier) {
 			doi := &s3.DeleteObjectsInput{
 				Bucket: aws.String(bucket),
 				Delete: &s3.Delete{Quiet: aws.Bool(true)},
@@ -263,22 +261,22 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 			doi.Delete.Objects = objects
 			deleteReq := client.DeleteObjectsRequest(doi)
 			if _, e := deleteReq.Send(context.Background()); err != nil {
-				err = fmt.Errorf("delete Objects failed: %s", e)
+				fmt.Printf("delete Objects failed: %s", e)
 			} else if sc.verbose {
-				fmt.Printf("%5d Objects deleted\n", contentsLen)
+				fmt.Printf("%5d Objects deleted\n", objectNum)
 			}
-			doneDeletes.Done()
-		}()
-		objNum += int64(contentsLen)
+			wg.Done()
+		}(objects)
+		objNum += int64(objectNum)
 		if resp.NextMarker != nil {
-			loi.Marker = aws.String(*resp.NextMarker)
+			loi.Marker = resp.NextMarker
 		} else if resp.IsTruncated != nil && *resp.IsTruncated {
-			loi.Marker = resp.Contents[contentsLen-1].Key
+			loi.Marker = resp.Contents[objectNum-1].Key
 		} else {
 			break
 		}
 	}
-	doneDeletes.Wait()
+	wg.Wait()
 	return objNum, nil
 }
 
