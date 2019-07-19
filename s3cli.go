@@ -558,8 +558,12 @@ Credential ENV:
 		Use:     "head <bucket/key>",
 		Aliases: []string{"head"},
 		Short:   "head Bucket/Object",
-		Long:    "get Bucket/Object metadata",
-		Args:    cobra.ExactArgs(1),
+		Long: `get Bucket/Object metadata
+1. get a Bucket's Metadata
+ s3cli head BucketName
+2. get a Object's Metadata
+ s3cli head Bucket/Key`,
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
 			if key != "" {
@@ -582,9 +586,13 @@ Credential ENV:
 	getaclCmd := &cobra.Command{
 		Use:     "getacl <bucket/key>",
 		Aliases: []string{"ga"},
-		Short:   "get Bucket/Object acl",
-		Long:    "get Bucket/Object ACL",
-		Args:    cobra.ExactArgs(1),
+		Short:   "get Bucket/Object ACL",
+		Long: `get Bucket/Object ACL
+1. get a Bucket's ACL
+ s3cli getacl BucketName
+2. get a Object's ACL
+ s3cli getacl Bucket/Key`,
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
 			if key != "" {
@@ -605,47 +613,49 @@ Credential ENV:
 	rootCmd.AddCommand(getaclCmd)
 
 	putObjectCmd := &cobra.Command{
-		Use:     "upload <bucket> <local-file>",
+		Use:     "upload <local-file> <bucket/key>",
 		Aliases: []string{"up"},
 		Short:   "upload Object",
-		Long:    "upload Object to Bucket",
-		Args:    cobra.ExactArgs(2),
+		Long: `upload Object to Bucket
+1. upload a file
+  s3cli up /path/to/file BucketName
+2. upload a file with new Key
+  s3cli up /path/to/file BucketName/Key`,
+		Args: cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			key := cmd.Flag("key").Value.String()
+			bucket, key := splitBucketObject(args[1])
 			if key == "" {
-				key = filepath.Base(args[1])
+				key = filepath.Base(args[0])
 			}
-			if err := sc.putObject(args[0], key, args[1]); err != nil {
+			if err := sc.putObject(bucket, key, args[0]); err != nil {
 				fmt.Printf("upload %s failed: %s\n", args[1], err)
 			} else {
-				fmt.Printf("upload %s to %s/%s success\n", args[1], args[0], key)
+				fmt.Printf("upload %s to %s success\n", args[0], args[1])
 			}
 		},
 	}
-	putObjectCmd.Flags().StringP("key", "k", "", "key name")
 	putObjectCmd.Flags().BoolP("overwrite", "w", false, "overwrite file if exist")
 	rootCmd.AddCommand(putObjectCmd)
 
 	mpuObjectCmd := &cobra.Command{
-		Use:     "mpu <bucket> <local-file>",
+		Use:     "mpu <local-file> <bucket/key>",
 		Aliases: []string{"mp", "mu"},
 		Short:   "mpu Object",
 		Long:    "mutiPartUpload Object to Bucket",
 		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			//cmd.Flag("overwrite").Changed
-			key := cmd.Flag("key").Value.String()
+			bucket, key := splitBucketObject(args[1])
 			if key == "" {
 				key = filepath.Base(args[0])
 			}
-			if err := sc.mpuObject(args[0], key, args[1]); err != nil {
+			if err := sc.mpuObject(bucket, key, args[0]); err != nil {
 				fmt.Printf("mpu %s failed: %s\n", key, err)
 			} else {
 				fmt.Printf("mpu %s success\n", key)
 			}
 		},
 	}
-	mpuObjectCmd.Flags().StringP("key", "k", "", "key name")
 	mpuObjectCmd.Flags().BoolP("overwrite", "w", false, "overwrite file if exist")
 	rootCmd.AddCommand(mpuObjectCmd)
 
@@ -653,8 +663,12 @@ Credential ENV:
 		Use:     "list [bucket]",
 		Aliases: []string{"ls"},
 		Short:   "list Buckets or Objects",
-		Long:    "list Buckets or Objects",
-		Args:    cobra.RangeArgs(0, 1),
+		Long: `list Buckets or Objects
+1. list Buckets
+  s3cli ls
+2. list Objects
+  s3cli ls BucketName`,
+		Args: cobra.RangeArgs(0, 1),
 		Run: func(cmd *cobra.Command, args []string) {
 			index := cmd.Flag("index").Changed
 			prefix := cmd.Flag("prefix").Value.String()
@@ -693,8 +707,12 @@ Credential ENV:
 		Use:     "download <bucket/key> [destination]",
 		Aliases: []string{"get", "down", "d"},
 		Short:   "download Object",
-		Long:    "downlaod Object from Bucket",
-		Args:    cobra.RangeArgs(1, 2),
+		Long: `downlaod Object from Bucket
+1. download a Object to PWD
+  s3cli down Bucket/Key
+2. downlaod a Object to /path/to/file
+  s3cli down Bucket/Key /path/to/file`,
+		Args: cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
 			destination := ""
@@ -718,8 +736,10 @@ Credential ENV:
 	catObjectCmd := &cobra.Command{
 		Use:   "cat <bucket/key>",
 		Short: "cat Object",
-		Long:  "print Object contents",
-		Args:  cobra.ExactArgs(1),
+		Long: `cat Object contents
+	1. print Object
+	  s3cli cat Bucket/Key`,
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			objRange := cmd.Flag("range").Value.String()
 			bucket, key := splitBucketObject(args[0])
@@ -735,10 +755,17 @@ Credential ENV:
 		Use:     "copy <bucket/key> <bucket/key>",
 		Aliases: []string{"cp"},
 		Short:   "copy Object",
-		Long:    "copy sourceBucket/key to dstBucket/key",
-		Args:    cobra.ExactArgs(2),
+		Long: `copy Bucket/key to Bucket/key
+1. spedify destination key
+  s3cli copy Bucket1/Key1 Bucket2/Key2
+2. default destionation key
+  s3cli copy Bucket1/Key1 Bucket2`,
+		Args: cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[1])
+			if key == "" {
+				_, key = splitBucketObject(args[0])
+			}
 			if err := sc.copyObject(args[0], bucket, key); err != nil {
 				fmt.Printf("copy %s failed: %s\n", args[1], err)
 			}
@@ -750,8 +777,14 @@ Credential ENV:
 		Use:     "delete <bucket/key>",
 		Aliases: []string{"del", "rm"},
 		Short:   "delete(remove) Object or Bucket(Bucket and Objects)",
-		Long:    "delete(remove) Object or Bucket(Bucket and Objects)",
-		Args:    cobra.ExactArgs(1),
+		Long: `delete Bucket or Object(s)
+1. delete Bucket and all Objects
+  s3cli delete Bucket
+2. delete Object
+  s3cli delete Bucket/Key
+3. delete all Objects which has same prefix
+  s3cli delete Bucket/Prefix -x`,
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			prefixMode := cmd.Flag("prefix").Changed
 			bucket, key := splitBucketObject(args[0])
@@ -781,8 +814,12 @@ Credential ENV:
 		Use:     "presign <bucket/key>",
 		Aliases: []string{"ps"},
 		Short:   "presign Object",
-		Long:    "presign Object URL",
-		Args:    cobra.ExactArgs(1),
+		Long: `presign Object URL
+1. presign a URL go Get Object
+  s3cli presign Bucket/Key
+2. presign a URL go Put Object
+  s3cli presign Bucket/Key --put`,
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			exp, err := time.ParseDuration(cmd.Flag("expire").Value.String())
 			if err != nil {
@@ -805,7 +842,6 @@ Credential ENV:
 	}
 	presignObjectCmd.Flags().DurationP("expire", "E", 12*time.Hour, "URL expire time")
 	presignObjectCmd.Flags().BoolP("put", "", false, "generate a put URL")
-	presignObjectCmd.Flags().BoolP("v2", "2", false, "s3v2 signature")
 	rootCmd.AddCommand(presignObjectCmd)
 
 	aclObjectCmd := &cobra.Command{
