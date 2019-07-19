@@ -138,6 +138,20 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 	return nil
 }
 
+// renameObjects rename Object(s)
+func (sc *S3Cli) renameObjects(bucket, prefix, delimiter, marker string) error {
+	// TODO: Copy and Delete Object
+	return fmt.Errorf("not impl")
+
+}
+
+// copyObjects copy Object(s)
+func (sc *S3Cli) copyObjects(bucket, prefix, delimiter, marker string) error {
+	// TODO: Copy Object
+	return fmt.Errorf("not impl")
+
+}
+
 // getObject downlaod a Object from bucket
 func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
 	client, err := sc.newS3Client()
