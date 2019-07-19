@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -71,6 +72,14 @@ func (sc *S3Cli) newS3Client() (*s3.Client, error) {
 		client.ForcePathStyle = true
 	}
 	return client, nil
+}
+
+func splitBucketObject(bucketObject string) (bucket, object string) {
+	bo := strings.SplitN(bucketObject, "/", 2)
+	if len(bo) == 2 {
+		return bo[0], bo[1]
+	}
+	return bucketObject, ""
 }
 
 // listAllObjects list all Objects in spcified bucket
@@ -145,11 +154,26 @@ func (sc *S3Cli) renameObjects(bucket, prefix, delimiter, marker string) error {
 
 }
 
-// copyObjects copy Object(s)
-func (sc *S3Cli) copyObjects(bucket, prefix, delimiter, marker string) error {
-	// TODO: Copy Object
-	return fmt.Errorf("not impl")
-
+// copyObjects copy Object to destBucket/key
+func (sc *S3Cli) copyObject(source, bucket, key string) error {
+	client, err := sc.newS3Client()
+	if err != nil {
+		return fmt.Errorf("init s3 Client failed: %v", err)
+	}
+	req := client.CopyObjectRequest(&s3.CopyObjectInput{
+		CopySource: aws.String(source),
+		Bucket:     aws.String(bucket),
+		Key:        aws.String(key),
+	})
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return fmt.Errorf("copy object failed: %v", err)
+	}
+	if sc.verbose {
+		fmt.Println(resp)
+		return nil
+	}
+	return nil
 }
 
 // getObject downlaod a Object from bucket
@@ -531,21 +555,22 @@ Credential ENV:
 	rootCmd.AddCommand(deleteBucketCmd)
 
 	headCmd := &cobra.Command{
-		Use:     "head <bucket> [key]",
+		Use:     "head <bucket/key>",
 		Aliases: []string{"head"},
 		Short:   "head Bucket/Object",
 		Long:    "get Bucket/Object metadata",
-		Args:    cobra.RangeArgs(1, 2),
+		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) == 2 {
-				if h, err := sc.headObject(args[0], args[1]); err != nil {
-					fmt.Printf("head %s failed: %s\n", args[1], err)
+			bucket, key := splitBucketObject(args[0])
+			if key != "" {
+				if h, err := sc.headObject(bucket, key); err != nil {
+					fmt.Printf("head %s/%s failed: %s\n", bucket, key, err)
 				} else {
 					fmt.Println(h)
 				}
 			} else {
-				if h, err := sc.headBucket(args[0]); err != nil {
-					fmt.Printf("head %s failed: %s\n", args[1], err)
+				if h, err := sc.headBucket(bucket); err != nil {
+					fmt.Printf("head %s failed: %s\n", bucket, err)
 				} else {
 					fmt.Println(h)
 				}
@@ -555,21 +580,22 @@ Credential ENV:
 	rootCmd.AddCommand(headCmd)
 
 	getaclCmd := &cobra.Command{
-		Use:     "getacl <bucket> [key]",
+		Use:     "getacl <bucket/key>",
 		Aliases: []string{"ga"},
 		Short:   "get Bucket/Object acl",
 		Long:    "get Bucket/Object ACL",
-		Args:    cobra.RangeArgs(1, 2),
+		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) == 2 {
-				if acl, err := sc.getObjectACL(args[0], args[1]); err != nil {
-					fmt.Printf("get %s ACL failed: %s\n", args[1], err)
+			bucket, key := splitBucketObject(args[0])
+			if key != "" {
+				if acl, err := sc.getObjectACL(bucket, key); err != nil {
+					fmt.Printf("get %s/%s ACL failed: %s\n", bucket, key, err)
 				} else {
 					fmt.Println(acl)
 				}
 			} else {
-				if acl, err := sc.getBucketACL(args[0]); err != nil {
-					fmt.Printf("get %s ACL failed: %s\n", args[0], err)
+				if acl, err := sc.getBucketACL(bucket); err != nil {
+					fmt.Printf("get %s ACL failed: %s\n", bucket, err)
 				} else {
 					fmt.Println(acl)
 				}
@@ -655,7 +681,6 @@ Credential ENV:
 			}
 		},
 	}
-
 	listObjectCmd.Flags().StringP("marker", "m", "", "marker")
 	listObjectCmd.Flags().Int64P("maxkeys", "M", 1000, "max keys")
 	listObjectCmd.Flags().StringP("prefix", "x", "", "only show Object(w) with prefix")
@@ -665,23 +690,24 @@ Credential ENV:
 	rootCmd.AddCommand(listObjectCmd)
 
 	getObjectCmd := &cobra.Command{
-		Use:     "download <bucket> <key> [destination]",
+		Use:     "download <bucket/key> [destination]",
 		Aliases: []string{"get", "down", "d"},
 		Short:   "download Object",
 		Long:    "downlaod Object from Bucket",
-		Args:    cobra.RangeArgs(2, 3),
+		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
+			bucket, key := splitBucketObject(args[0])
 			destination := ""
-			if len(args) == 3 {
-				destination = args[2]
+			if len(args) == 2 {
+				destination = args[1]
 			} else {
-				destination = filepath.Base(args[1])
+				destination = filepath.Base(key)
 			}
 			objRange := cmd.Flag("range").Value.String()
-			if err := sc.getObject(args[0], args[1], objRange, destination); err != nil {
+			if err := sc.getObject(bucket, key, objRange, destination); err != nil {
 				fmt.Printf("download %s to %s failed: %s\n", args[1], destination, err)
 			} else {
-				fmt.Printf("download %s to %s\n", args[1], destination)
+				fmt.Printf("download %s to %s\n", args[0], destination)
 			}
 		},
 	}
@@ -690,13 +716,14 @@ Credential ENV:
 	rootCmd.AddCommand(getObjectCmd)
 
 	catObjectCmd := &cobra.Command{
-		Use:   "cat <bucket> <key>",
+		Use:   "cat <bucket/key>",
 		Short: "cat Object",
 		Long:  "print Object contents",
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			objRange := cmd.Flag("range").Value.String()
-			if err := sc.catObject(args[0], args[1], objRange); err != nil {
+			bucket, key := splitBucketObject(args[0])
+			if err := sc.catObject(bucket, key, objRange); err != nil {
 				fmt.Printf("cat %s failed: %s\n", args[1], err)
 			}
 		},
@@ -704,30 +731,42 @@ Credential ENV:
 	catObjectCmd.Flags().StringP("range", "r", "", "Object range to cat, 0-64 means [0, 64]")
 	rootCmd.AddCommand(catObjectCmd)
 
+	copyObjectCmd := &cobra.Command{
+		Use:     "copy <bucket/key> <bucket/key>",
+		Aliases: []string{"cp"},
+		Short:   "copy Object",
+		Long:    "copy sourceBucket/key to dstBucket/key",
+		Args:    cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			bucket, key := splitBucketObject(args[1])
+			if err := sc.copyObject(args[0], bucket, key); err != nil {
+				fmt.Printf("copy %s failed: %s\n", args[1], err)
+			}
+		},
+	}
+	rootCmd.AddCommand(copyObjectCmd)
+
 	deleteObjectCmd := &cobra.Command{
-		Use:     "delete <bucket> [key|prefix]",
+		Use:     "delete <bucket/key>",
 		Aliases: []string{"del", "rm"},
 		Short:   "delete(remove) Object or Bucket(Bucket and Objects)",
 		Long:    "delete(remove) Object or Bucket(Bucket and Objects)",
-		Args:    cobra.RangeArgs(1, 2),
+		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			prefix := cmd.Flag("prefix").Changed
-			if len(args) == 2 && prefix == false {
-				if err := sc.deleteObject(args[0], args[1]); err != nil {
+			prefixMode := cmd.Flag("prefix").Changed
+			bucket, key := splitBucketObject(args[0])
+			if key != "" && prefixMode == false {
+				if err := sc.deleteObject(bucket, key); err != nil {
 					fmt.Println("delete Object failed: ", err)
 				}
-			} else if prefix {
-				prefix := ""
-				if len(args) == 2 {
-					prefix = args[1]
-				}
-				if n, err := sc.deleteObjects(args[0], prefix); err != nil {
+			} else if prefixMode {
+				if n, err := sc.deleteObjects(bucket, key); err != nil {
 					fmt.Println("delete Objects failed: ", err)
 				} else {
 					fmt.Printf("all %d Objects deleted\n", n)
 				}
 			} else {
-				if n, err := sc.deleteBucketAndObjects(args[0]); err != nil {
+				if n, err := sc.deleteBucketAndObjects(bucket); err != nil {
 					fmt.Printf("%d Objects deleted but delete Bucket %s failed: %s\n", n, args[0], err)
 				} else {
 					fmt.Printf("all %d Objects and Bucket %s deleted\n", n, args[0])
@@ -739,22 +778,23 @@ Credential ENV:
 	rootCmd.AddCommand(deleteObjectCmd)
 
 	presignObjectCmd := &cobra.Command{
-		Use:     "presign <bucket> <key>",
-		Aliases: []string{"psn", "psg"},
+		Use:     "presign <bucket/key>",
+		Aliases: []string{"ps"},
 		Short:   "presign Object",
 		Long:    "presign Object URL",
-		Args:    cobra.ExactArgs(2),
+		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			exp, err := time.ParseDuration(cmd.Flag("expire").Value.String())
 			if err != nil {
 				fmt.Println("invalid expire : ", err)
 				return
 			}
+			bucket, key := splitBucketObject(args[0])
 			var url string
 			if cmd.Flag("put").Changed {
-				url, err = sc.presignPutObject(args[0], args[1], exp)
+				url, err = sc.presignPutObject(bucket, key, exp)
 			} else {
-				url, err = sc.presignGetObject(args[0], args[1], exp)
+				url, err = sc.presignGetObject(bucket, key, exp)
 			}
 			if err != nil {
 				fmt.Println("presign failed: ", err)
@@ -769,23 +809,19 @@ Credential ENV:
 	rootCmd.AddCommand(presignObjectCmd)
 
 	aclObjectCmd := &cobra.Command{
-		Use:     "acl <bucket> [key|prefix]",
+		Use:     "acl <bucket/key>",
 		Aliases: []string{"pa"},
 		Short:   "acl Bucket or Object",
 		Long:    "acl Bucket or Object(s) in Bucket",
-		Args:    cobra.RangeArgs(1, 2),
+		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			//prefix := cmd.Flag("prefix").Changed
-			key := ""
-			if len(args) == 2 {
-				key = args[1]
-			}
-			if cnt, err := sc.aclObjects(args[0], key); err != nil {
+			bucket, key := splitBucketObject(args[0])
+			if cnt, err := sc.aclObjects(bucket, key); err != nil {
 				fmt.Println("acl Object error: ", err)
 			} else {
 				fmt.Printf("acl %d Objects success\n", cnt)
 			}
-
 		},
 	}
 	aclObjectCmd.Flags().BoolP("prefix", "x", false, "acl all Objects with specified prefix(key)")
