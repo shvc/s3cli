@@ -520,8 +520,12 @@ Credential ENV:
 		Use:     "createBucket <name>",
 		Aliases: []string{"cb", "mb"},
 		Short:   "create(make) Bucket",
-		Long:    "create(make) Bucket",
-		Args:    cobra.ExactArgs(1),
+		Long: `create Bucket
+1. createBucket alias
+  s3cli cb Bucket
+2. makeBucket alias
+  s3cli mb Bucket`,
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			sc.createBucket(args[0])
 		},
@@ -532,8 +536,10 @@ Credential ENV:
 		Use:     "listBuckets",
 		Aliases: []string{"lb"},
 		Short:   "list Buckets",
-		Long:    "list all Buckets",
-		Args:    cobra.ExactArgs(0),
+		Long: `list all Buckets
+1. list Buckets alias
+  s3cli lb`,
+		Args: cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			sc.listBuckets()
 		},
@@ -542,10 +548,12 @@ Credential ENV:
 
 	deleteBucketCmd := &cobra.Command{
 		Use:     "deleteBucket <bucket>",
-		Aliases: []string{"db", "rb"},
-		Short:   "delete(remove) Bucket",
-		Long:    "delete(remove) Bucket",
-		Args:    cobra.ExactArgs(1),
+		Aliases: []string{"db"},
+		Short:   "delete Bucket",
+		Long: `delete Bucket
+1. delete Bucket alias
+  s3cli db Bucket`,
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := sc.deleteBucket(args[0]); err != nil {
 				fmt.Printf("delete %s failed: %s\n", args[0], err)
@@ -560,7 +568,7 @@ Credential ENV:
 		Short:   "head Bucket/Object",
 		Long: `get Bucket/Object metadata
 1. get a Bucket's Metadata
- s3cli head BucketName
+ s3cli head Bucket
 2. get a Object's Metadata
  s3cli head Bucket/Key`,
 		Args: cobra.ExactArgs(1),
@@ -589,7 +597,7 @@ Credential ENV:
 		Short:   "get Bucket/Object ACL",
 		Long: `get Bucket/Object ACL
 1. get a Bucket's ACL
- s3cli getacl BucketName
+ s3cli getacl Bucket
 2. get a Object's ACL
  s3cli getacl Bucket/Key`,
 		Args: cobra.ExactArgs(1),
@@ -618,9 +626,9 @@ Credential ENV:
 		Short:   "upload Object",
 		Long: `upload Object to Bucket
 1. upload a file
-  s3cli up /path/to/file BucketName
+  s3cli up /path/to/file Bucket
 2. upload a file with new Key
-  s3cli up /path/to/file BucketName/Key`,
+  s3cli up /path/to/file Bucket/Key`,
 		Args: cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[1])
@@ -641,8 +649,12 @@ Credential ENV:
 		Use:     "mpu <local-file> <bucket/key>",
 		Aliases: []string{"mp", "mu"},
 		Short:   "mpu Object",
-		Long:    "mutiPartUpload Object to Bucket",
-		Args:    cobra.ExactArgs(2),
+		Long: `mutiPartUpload Object to Bucket
+1. upload a file
+  s3cli up /path/to/file Bucket
+2. upload a file with new Key
+  s3cli up /path/to/file Bucket/Key`,
+		Args: cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			//cmd.Flag("overwrite").Changed
 			bucket, key := splitBucketObject(args[1])
@@ -667,7 +679,7 @@ Credential ENV:
 1. list Buckets
   s3cli ls
 2. list Objects
-  s3cli ls BucketName`,
+  s3cli ls Bucket`,
 		Args: cobra.RangeArgs(0, 1),
 		Run: func(cmd *cobra.Command, args []string) {
 			index := cmd.Flag("index").Changed
@@ -737,8 +749,8 @@ Credential ENV:
 		Use:   "cat <bucket/key>",
 		Short: "cat Object",
 		Long: `cat Object contents
-	1. print Object
-	  s3cli cat Bucket/Key`,
+1. cat Object
+  s3cli cat Bucket/Key`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			objRange := cmd.Flag("range").Value.String()
@@ -848,8 +860,12 @@ Credential ENV:
 		Use:     "acl <bucket/key>",
 		Aliases: []string{"pa"},
 		Short:   "acl Bucket or Object",
-		Long:    "acl Bucket or Object(s) in Bucket",
-		Args:    cobra.ExactArgs(1),
+		Long: `acl Bucket or Object(s) in Bucket
+1. acl Object
+  s3cli acl Bucket/Key
+2. acl Objects with same Prifix
+  s3cli acl Bucket/Prefix -x`,
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			//prefix := cmd.Flag("prefix").Changed
 			bucket, key := splitBucketObject(args[0])
