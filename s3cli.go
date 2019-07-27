@@ -517,7 +517,7 @@ Credential ENV:
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", endpoints.CnNorth1RegionID, "region")
 
 	createBucketCmd := &cobra.Command{
-		Use:     "createBucket <name>",
+		Use:     "createBucket <bucket>",
 		Aliases: []string{"cb", "mb"},
 		Short:   "create(make) Bucket",
 		Long: `create Bucket
