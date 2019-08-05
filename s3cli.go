@@ -23,7 +23,7 @@ import (
 var version = "1.2.3"
 
 // endpoint ENV Var
-var endpointEnvVar = "S3CLI_ENDPOINT"
+var endpointEnvVar = "S3_ENDPOINT"
 
 // S3Cli represent a S3Cli Client
 type S3Cli struct {
@@ -501,7 +501,7 @@ func main() {
 		Short: "s3cli client tool",
 		Long: `s3cli client tool for S3 Bucket/Object operation
 Endpoint ENV:
-	S3CLI_ENDPOINT=http://host:port (only read if flag -e is not set)
+	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 
 Credential ENV:
 	AWS_ACCESS_KEY_ID=AK      (only read if flag -p is not set)
@@ -756,7 +756,7 @@ Credential ENV:
 			objRange := cmd.Flag("range").Value.String()
 			bucket, key := splitBucketObject(args[0])
 			if err := sc.catObject(bucket, key, objRange); err != nil {
-				fmt.Printf("cat %s failed: %s\n", args[1], err)
+				fmt.Printf("cat %s failed: %s\n", args[0], err)
 			}
 		},
 	}

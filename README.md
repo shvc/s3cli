@@ -19,7 +19,7 @@ aws_secret_access_key=SK
 ./s3cli -h
 s3cli client tool for S3 Bucket/Object operation
 Endpoint ENV:
-	S3CLI_ENDPOINT=http://host:port (only read if flag -e is not set)
+	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 
 Credential ENV:
 	AWS_ACCESS_KEY_ID=AK      (only read if flag -p is not set)
@@ -73,7 +73,7 @@ bucket1"
 ```
 or parse endpoint from ENV  
 ```
-export S3CLI_ENDPOINT=http://192.168.55.2:9020
+export S3_ENDPOINT=http://192.168.55.2:9020
 ./s3cli -p ecs lb
 bucket1
 ```
