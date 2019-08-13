@@ -249,10 +249,10 @@ func (sc *S3Cli) putObject(bucket, key, filename string) error {
 	return err
 }
 
-func (sc *S3Cli) headObject(bucket, key string) (*s3.HeadObjectOutput, error) {
+func (sc *S3Cli) headObject(bucket, key string, mtime bool) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return nil, fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %v", err)
 	}
 	req := client.HeadObjectRequest(&s3.HeadObjectInput{
 		Bucket: aws.String(bucket),
@@ -260,9 +260,19 @@ func (sc *S3Cli) headObject(bucket, key string) (*s3.HeadObjectOutput, error) {
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return resp.HeadObjectOutput, nil
+	if resp == nil {
+		return nil
+	}
+	if sc.verbose {
+		fmt.Println(resp.HeadObjectOutput)
+	} else if mtime {
+		fmt.Println(resp.HeadObjectOutput.LastModified)
+	} else {
+		fmt.Printf("%d\t%s\n", *resp.HeadObjectOutput.ContentLength, resp.HeadObjectOutput.LastModified)
+	}
+	return nil
 }
 
 func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
@@ -400,10 +410,10 @@ func (sc *S3Cli) presignPutObject(bucket, key string, exp time.Duration) (string
 	return req.Presign(exp)
 }
 
-func (sc *S3Cli) getObjectACL(bucket, key string) (*s3.GetObjectAclOutput, error) {
+func (sc *S3Cli) getObjectACL(bucket, key string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return nil, fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %v", err)
 	}
 
 	req := client.GetObjectAclRequest(&s3.GetObjectAclInput{
@@ -412,9 +422,12 @@ func (sc *S3Cli) getObjectACL(bucket, key string) (*s3.GetObjectAclOutput, error
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return resp.GetObjectAclOutput, nil
+	if resp != nil {
+		fmt.Println(resp.GetObjectAclOutput)
+	}
+	return nil
 }
 
 func (sc *S3Cli) createBucket(bucket string) error {
@@ -432,34 +445,40 @@ func (sc *S3Cli) createBucket(bucket string) error {
 	return err
 }
 
-func (sc *S3Cli) getBucketACL(bucket string) (*s3.GetBucketAclOutput, error) {
+func (sc *S3Cli) getBucketACL(bucket string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return nil, fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %v", err)
 	}
 	req := client.GetBucketAclRequest(&s3.GetBucketAclInput{
 		Bucket: aws.String(bucket),
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return resp.GetBucketAclOutput, nil
+	if resp != nil {
+		fmt.Println(resp.GetBucketAclOutput)
+	}
+	return err
 }
 
-func (sc *S3Cli) headBucket(bucket string) (*s3.HeadBucketOutput, error) {
+func (sc *S3Cli) headBucket(bucket string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return nil, fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %v", err)
 	}
 	req := client.HeadBucketRequest(&s3.HeadBucketInput{
 		Bucket: aws.String(bucket),
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return resp.HeadBucketOutput, err
+	if resp != nil {
+		fmt.Println(resp.HeadBucketOutput)
+	}
+	return err
 }
 
 func (sc *S3Cli) deleteBucket(bucket string) error {
@@ -575,20 +594,18 @@ Credential ENV:
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
 			if key != "" {
-				if h, err := sc.headObject(bucket, key); err != nil {
+				m := cmd.Flag("mtime").Changed
+				if err := sc.headObject(bucket, key, m); err != nil {
 					fmt.Printf("head %s/%s failed: %s\n", bucket, key, err)
-				} else {
-					fmt.Println(h)
 				}
 			} else {
-				if h, err := sc.headBucket(bucket); err != nil {
+				if err := sc.headBucket(bucket); err != nil {
 					fmt.Printf("head %s failed: %s\n", bucket, err)
-				} else {
-					fmt.Println(h)
 				}
 			}
 		},
 	}
+	headCmd.Flags().BoolP("mtime", "", false, "show Object mtime")
 	rootCmd.AddCommand(headCmd)
 
 	getaclCmd := &cobra.Command{
@@ -604,16 +621,12 @@ Credential ENV:
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
 			if key != "" {
-				if acl, err := sc.getObjectACL(bucket, key); err != nil {
+				if err := sc.getObjectACL(bucket, key); err != nil {
 					fmt.Printf("get %s/%s ACL failed: %s\n", bucket, key, err)
-				} else {
-					fmt.Println(acl)
 				}
 			} else {
-				if acl, err := sc.getBucketACL(bucket); err != nil {
+				if err := sc.getBucketACL(bucket); err != nil {
 					fmt.Printf("get %s ACL failed: %s\n", bucket, err)
-				} else {
-					fmt.Println(acl)
 				}
 			}
 		},
