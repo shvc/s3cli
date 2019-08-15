@@ -564,7 +564,7 @@ Credential ENV:
 		Args: cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := sc.listBuckets(); err != nil {
-				fmt.Printf("list Buckets failed: %s\n", args[0], err)
+				fmt.Printf("list Buckets failed: %s\n", err)
 			}
 		},
 	}
