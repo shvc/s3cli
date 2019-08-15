@@ -64,6 +64,9 @@ func (sc *S3Cli) newS3Client() (*s3.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	if sc.debug {
+		fmt.Println(cfg)
+	}
 	client := s3.New(*cfg)
 	if sc.endpoint == "" {
 		sc.endpoint = os.Getenv(endpointEnvVar)
@@ -560,7 +563,9 @@ Credential ENV:
   s3cli lb`,
 		Args: cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			sc.listBuckets()
+			if err := sc.listBuckets(); err != nil {
+				fmt.Printf("list Buckets failed: %s\n", err)
+			}
 		},
 	}
 	rootCmd.AddCommand(listBucketCmd)
