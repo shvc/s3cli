@@ -241,7 +241,6 @@ func (sc *S3Cli) putObject(bucket, key, filename string) error {
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %v", err)
 	}
-	// Create a file to write the S3 Object contents to.
 	f, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -527,10 +526,10 @@ func main() {
 		Use:   "s3cli",
 		Short: "s3cli client tool",
 		Long: `s3cli client tool for S3 Bucket/Object operation
-Endpoint ENV:
+Endpoint Envvar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 
-Credential ENV:
+Credential Envvar:
 	AWS_ACCESS_KEY_ID=AK      (only read if flag -p is not set)
 	AWS_ACCESS_KEY=AK         (only read if AWS_ACCESS_KEY_ID is not set)
 	AWS_SECRET_ACCESS_KEY=SK  (only read if flag -p is not set)
@@ -550,7 +549,7 @@ Credential ENV:
 		Long: `create Bucket
 1. createBucket alias
   s3cli cb Bucket
-2. makeBucket alias
+2. or makeBucket alias
   s3cli mb Bucket`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -559,27 +558,11 @@ Credential ENV:
 	}
 	rootCmd.AddCommand(createBucketCmd)
 
-	listBucketCmd := &cobra.Command{
-		Use:     "listBuckets",
-		Aliases: []string{"lb"},
-		Short:   "list Buckets",
-		Long: `list all Buckets
-1. list Buckets alias
-  s3cli lb`,
-		Args: cobra.ExactArgs(0),
-		Run: func(cmd *cobra.Command, args []string) {
-			if err := sc.listBuckets(); err != nil {
-				fmt.Printf("list Buckets failed: %s\n", err)
-			}
-		},
-	}
-	rootCmd.AddCommand(listBucketCmd)
-
 	deleteBucketCmd := &cobra.Command{
 		Use:     "deleteBucket <bucket>",
 		Aliases: []string{"db"},
-		Short:   "delete Bucket",
-		Long: `delete Bucket
+		Short:   "delete a empty Bucket",
+		Long: `delete a empty Bucket
 1. delete Bucket alias
   s3cli db Bucket`,
 		Args: cobra.ExactArgs(1),
@@ -645,12 +628,12 @@ Credential ENV:
 
 	putObjectCmd := &cobra.Command{
 		Use:     "upload <local-file> <bucket/key>",
-		Aliases: []string{"up"},
+		Aliases: []string{"put", "up", "u"},
 		Short:   "upload Object",
 		Long: `upload Object to Bucket
 1. upload a file
   s3cli up /path/to/file Bucket
-2. upload a file with new Key
+2. upload a file to Bucket/Key
   s3cli up /path/to/file Bucket/Key`,
 		Args: cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -665,7 +648,6 @@ Credential ENV:
 			}
 		},
 	}
-	putObjectCmd.Flags().BoolP("overwrite", "w", false, "overwrite file if exist")
 	rootCmd.AddCommand(putObjectCmd)
 
 	mpuObjectCmd := &cobra.Command{
@@ -675,11 +657,10 @@ Credential ENV:
 		Long: `mutiPartUpload Object to Bucket
 1. upload a file
   s3cli up /path/to/file Bucket
-2. upload a file with new Key
+2. upload a file Bucket/Key
   s3cli up /path/to/file Bucket/Key`,
 		Args: cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			//cmd.Flag("overwrite").Changed
 			bucket, key := splitBucketObject(args[1])
 			if key == "" {
 				key = filepath.Base(args[0])
@@ -691,11 +672,10 @@ Credential ENV:
 			}
 		},
 	}
-	mpuObjectCmd.Flags().BoolP("overwrite", "w", false, "overwrite file if exist")
 	rootCmd.AddCommand(mpuObjectCmd)
 
 	listObjectCmd := &cobra.Command{
-		Use:     "list [bucket]|[bucket/prefix]",
+		Use:     "list [bucket[/prefix]]",
 		Aliases: []string{"ls"},
 		Short:   "list Buckets or Objects",
 		Long: `list Buckets or Objects
@@ -818,7 +798,7 @@ Credential ENV:
   s3cli delete Bucket
 2. delete Object
   s3cli delete Bucket/Key
-3. delete all Objects which has same prefix
+3. delete all Objects with same Prefix
   s3cli delete Bucket/Prefix -x`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -851,9 +831,9 @@ Credential ENV:
 		Aliases: []string{"ps"},
 		Short:   "presign Object",
 		Long: `presign Object URL
-1. presign a URL go Get Object
+1. presign a Get URL
   s3cli presign Bucket/Key
-2. presign a URL go Put Object
+2. presign a Put URL
   s3cli presign Bucket/Key --put`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -887,7 +867,7 @@ Credential ENV:
 		Long: `acl Bucket or Object(s) in Bucket
 1. acl Object
   s3cli acl Bucket/Key
-2. acl Objects with same Prifix
+2. acl Objects with same Prefix
   s3cli acl Bucket/Prefix -x`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
