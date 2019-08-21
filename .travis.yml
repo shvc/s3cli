@@ -1,5 +1,8 @@
 language: go
 
+before_script:
+  - go vet ./...
+
 install:
   - go get -d -v ./...
 
