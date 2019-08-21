@@ -2,6 +2,9 @@
 #### 1. Download prebuild binary
 https://github.com/vager/s3cli/releases
 
+#### 2. Install
+`cp s3cli /usr/local/bin/`
+
 #### 2. Configuration credential
 Add you profile to ~/.aws/credentials
 ```
@@ -16,7 +19,7 @@ aws_secret_access_key=SK
 
 ## Usage
 ```
-./s3cli -h
+s3cli -h
 S3 commandline tool
 Endpoint Envvar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
@@ -61,48 +64,48 @@ Use "s3cli [command] --help" for more information about a command.
 #### Create Bucket
 - parse endpoint from flag -e
 ```
-./s3cli -e http://192.168.55.2:9020 -p ecs cb bucket1
+s3cli -e http://192.168.55.2:9020 -p ecs cb bucket1
 ```
 - or parse endpoint from Envvar  
 ```
 export S3_ENDPOINT=http://192.168.55.2:9020
-./s3cli cb bucket2
+s3cli cb bucket2
 ```
 
 #### Upload file
 - upload file(/etc/hosts) to bucket1/hosts  
 ```
-./s3cli -p ecs up /etc/hosts bucket1
+s3cli -p ecs up /etc/hosts bucket1
 upload /etc/hosts to bucket1 success
 ```
 - upload file(/etc/hosts) to bucket1/host2  
 ```
-./s3cli -p ecs up /etc/hosts bucket1/host2
+s3cli -p ecs up /etc/hosts bucket1/host2
 upload /etc/hosts to bucket1/host2 success
 ```
 
 #### List
 - List Buckets
 ```
-./s3cli -p ecs ls
+s3cli -p ecs ls
 ```
 - List Objects(default 1000 Objects)
 ```
-./s3cli -p ecs ls bucket1
+s3cli -p ecs ls bucket1
 ```
 - List all Objects
 ```
-./s3cli -p ecs ls bucket1 -a
+s3cli -p ecs ls bucket1 -a
 ```
 - List Objects with specified prefix
 ```
-./s3cli -p ecs ls bucket1/prefix
+s3cli -p ecs ls bucket1/prefix
 ```
 
 #### Download file
 - download bucket1/hosts to ./hosts
 ```
-./s3cli -p ecs down bucket1/hosts
+s3cli -p ecs down bucket1/hosts
 download bucket1/hosts to hosts
 ```
 - download bucket1/hosts to /tmp/newfile
@@ -118,19 +121,19 @@ s3cli -p ecs ps bucket1/hosts
 ```
 - Presign a Put URL  
 ```
-./s3cli -p ecs ps bucket1/host3 --put
+s3cli -p ecs ps bucket1/host3 --put
 ```
 
 #### Delete
 - Delete an Object
 ```
-./s3cli -p ecs delete bucket1/key
+s3cli -p ecs delete bucket1/key
 ```
 - Delete all Objects with specified prefix
 ```
-./s3cli -p ecs delete bucket1/prefix -x
+s3cli -p ecs delete bucket1/prefix -x
 ```
 - Delete Bucket and all Objects  
 ```
-./s3cli -p ecs delete bucket1 --force
+s3cli -p ecs delete bucket1 --force
 ```
