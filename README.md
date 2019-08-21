@@ -60,21 +60,14 @@ Use "s3cli [command] --help" for more information about a command.
 
 ## Example
 #### Create Bucket
+- parse endpint from -e flag  
 ```
 ./s3cli -e http://192.168.55.2:9020 -p ecs cb bucket1
 ```
-
-#### List Buckets
-parse endpint from -e flag  
-```
-./s3cli -e http://192.168.55.2:9020 -p ecs ls
-bucket1
-```
-or parse endpoint from Envvar  
+- or parse endpoint from Envvar  
 ```
 export S3_ENDPOINT=http://192.168.55.2:9020
-./s3cli -p ecs ls
-bucket1
+./s3cli cb bucket2
 ```
 
 #### Upload file
@@ -83,10 +76,28 @@ bucket1
 ./s3cli -p ecs up /etc/hosts bucket1
 upload /etc/hosts to bucket1 success
 ```
-upload file(/etc/hosts) to bucket1/host2  
+- upload file(/etc/hosts) to bucket1/host2  
 ```
 ./s3cli -p ecs up /etc/hosts bucket1/host2
 upload /etc/hosts to bucket1/host2 success
+```
+
+#### List
+- List Buckets
+```
+./s3cli -p ecs ls
+```
+- List Objects(default 100 Objects)
+```
+./s3cli -p ecs ls bucket1
+```
+- List all Objects
+```
+./s3cli -p ecs ls bucket1 -a
+```
+- List Objects with specified prefix
+```
+./s3cli -p ecs ls bucket1/prefix
 ```
 
 #### Download file
@@ -94,8 +105,11 @@ upload /etc/hosts to bucket1/host2 success
 ```
 ./s3cli -p ecs down bucket1/hosts
 download bucket1/hosts to hosts
-s3cli down bucket1/host2 host2
-download bucket1/host2 to host2
+```
+- download bucket1/hosts to /tmp/newfile
+```
+s3cli down bucket1/host2 /tmp/newfile
+download bucket1/host2 to /tmp/newfile
 ```
 
 ##### Presign URL
@@ -108,25 +122,16 @@ presing a Put URL
 ./s3cli -p ecs psg bucket1/hosts --put
 ```
 
-#### List Objects
+#### Delete Object(s)
+- Delete Object
 ```
-./s3cli -p ecs ls bucket1
+./s3cli -p ecs delete bucket1/key
 ```
-List Objects with specified prefix  
+- Delete Objects with specified prefix
 ```
-./s3cli -p ecs ls bucket1/prefix
+./s3cli -p ecs delete bucket1/prefix -x
 ```
-
-#### Delete Objects
-Delete Objects with specified prefix  
+- Delete Bucket and all Objects  
 ```
-./s3cli -p ecs delete bucket1/key -x
-3 Objects deleted
-all 3 Objects deleted
-```
-Delete Bucket and all Objects  
-```
-./s3cli -p ecs delete bucket1
-2 Objects deleted
-Bucket bucket1 and 2 Objects deleted
+./s3cli -p ecs delete bucket1 -a
 ```
