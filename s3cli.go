@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -307,21 +308,22 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 			objects = append(objects, s3.ObjectIdentifier{Key: obj.Key})
 		}
 		wg.Add(1)
-		go func(objects []s3.ObjectIdentifier) {
+		go func(objects []s3.ObjectIdentifier, n int) {
 			doi := &s3.DeleteObjectsInput{
 				Bucket: aws.String(bucket),
-				Delete: &s3.Delete{Quiet: aws.Bool(true)},
+				Delete: &s3.Delete{Quiet: aws.Bool(true),
+					Objects: objects},
 			}
-			doi.Delete.Objects = objects
 			deleteReq := client.DeleteObjectsRequest(doi)
 			if _, e := deleteReq.Send(context.Background()); err != nil {
 				fmt.Printf("delete Objects failed: %s", e)
 			} else if sc.verbose {
-				fmt.Printf("%5d Objects deleted\n", objectNum)
+				fmt.Printf("%d Objects deleted\n", atomic.AddInt64(&objNum, int64(n)))
+			} else {
+				atomic.AddInt64(&objNum, int64(n))
 			}
 			wg.Done()
-		}(objects)
-		objNum += int64(objectNum)
+		}(objects, objectNum)
 		if resp.NextMarker != nil {
 			loi.Marker = resp.NextMarker
 		} else if resp.IsTruncated != nil && *resp.IsTruncated {
@@ -693,22 +695,24 @@ Credential ENV:
 	rootCmd.AddCommand(mpuObjectCmd)
 
 	listObjectCmd := &cobra.Command{
-		Use:     "list [bucket]",
+		Use:     "list [bucket]|[bucket/prefix]",
 		Aliases: []string{"ls"},
 		Short:   "list Buckets or Objects",
 		Long: `list Buckets or Objects
 1. list Buckets
   s3cli ls
 2. list Objects
-  s3cli ls Bucket`,
+  s3cli ls Bucket
+3. list Objects with prefix(2019)
+  s3cli ls Bucket/2019`,
 		Args: cobra.RangeArgs(0, 1),
 		Run: func(cmd *cobra.Command, args []string) {
 			index := cmd.Flag("index").Changed
-			prefix := cmd.Flag("prefix").Value.String()
 			delimiter := cmd.Flag("delimiter").Value.String()
 			if len(args) == 1 {
+				bucket, prefix := splitBucketObject(args[0])
 				if cmd.Flag("all").Changed {
-					if err := sc.listAllObjects(args[0], prefix, delimiter, index); err != nil {
+					if err := sc.listAllObjects(bucket, prefix, delimiter, index); err != nil {
 						fmt.Println(err)
 					}
 				} else {
@@ -717,7 +721,7 @@ Credential ENV:
 						maxKeys = 1000
 					}
 					marker := cmd.Flag("marker").Value.String()
-					if err := sc.listObjects(args[0], prefix, delimiter, marker, maxKeys, index); err != nil {
+					if err := sc.listObjects(bucket, prefix, delimiter, marker, maxKeys, index); err != nil {
 						fmt.Println(err)
 					}
 				}
@@ -730,7 +734,6 @@ Credential ENV:
 	}
 	listObjectCmd.Flags().StringP("marker", "m", "", "marker")
 	listObjectCmd.Flags().Int64P("maxkeys", "M", 1000, "max keys")
-	listObjectCmd.Flags().StringP("prefix", "x", "", "only show Object(w) with prefix")
 	listObjectCmd.Flags().StringP("delimiter", "d", "", "Object delimiter")
 	listObjectCmd.Flags().BoolP("index", "i", false, "show Object index ")
 	listObjectCmd.Flags().BoolP("all", "a", false, "list all Objects")
