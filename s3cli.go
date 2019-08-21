@@ -140,6 +140,9 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 		fmt.Println(resp)
 		return nil
 	}
+	for _, p := range resp.CommonPrefixes {
+		fmt.Println(*p.Prefix)
+	}
 	for i, obj := range resp.Contents {
 		if index {
 			fmt.Printf("%d\t%s\n", i, *obj.Key)
