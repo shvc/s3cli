@@ -87,7 +87,7 @@ upload /etc/hosts to bucket1/host2 success
 ```
 ./s3cli -p ecs ls
 ```
-- List Objects(default 100 Objects)
+- List Objects(default 1000 Objects)
 ```
 ./s3cli -p ecs ls bucket1
 ```
@@ -113,13 +113,13 @@ download bucket1/host2 to /tmp/newfile
 ```
 
 ##### Presign URL
-presign a Get URL  
+- Presign a Get URL  
 ```
 s3cli -p ecs ps bucket1/hosts
 ```
-presing a Put URL  
+- Presign a Put URL  
 ```
-./s3cli -p ecs psg bucket1/hosts --put
+./s3cli -p ecs ps bucket1/host3 --put
 ```
 
 #### Delete Object(s)
@@ -127,11 +127,11 @@ presing a Put URL
 ```
 ./s3cli -p ecs delete bucket1/key
 ```
-- Delete Objects with specified prefix
+- Delete all Objects with specified prefix
 ```
 ./s3cli -p ecs delete bucket1/prefix -x
 ```
 - Delete Bucket and all Objects  
 ```
-./s3cli -p ecs delete bucket1 -a
+./s3cli -p ecs delete bucket1
 ```

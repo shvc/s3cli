@@ -28,7 +28,7 @@ var endpointEnvVar = "S3_ENDPOINT"
 
 // S3Cli represent a S3Cli Client
 type S3Cli struct {
-	profile  string // profile in credential file
+	profile  string // profile in credentials file
 	endpoint string // Server endpoine(URL)
 	region   string
 	verbose  bool
@@ -539,7 +539,7 @@ Credential Envvar:
 	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "print debug log")
 	rootCmd.PersistentFlags().BoolVarP(&sc.verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", "S3 endpoint(http://host:port)")
-	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credential file")
+	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credentials file")
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", endpoints.CnNorth1RegionID, "region")
 
 	createBucketCmd := &cobra.Command{
