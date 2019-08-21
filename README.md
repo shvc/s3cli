@@ -59,12 +59,12 @@ Use "s3cli [command] --help" for more information about a command.
 ```
 
 ## Example
-##### Create Bucket
+#### Create Bucket
 ```
 ./s3cli -e http://192.168.55.2:9020 -p ecs cb bucket1
 ```
 
-##### List Buckets
+#### List Buckets
 parse endpint from -e flag  
 ```
 ./s3cli -e http://192.168.55.2:9020 -p ecs ls
@@ -77,15 +77,20 @@ export S3_ENDPOINT=http://192.168.55.2:9020
 bucket1
 ```
 
-##### Upload file(/etc/hosts) to bucket1
+#### Upload file
+- upload file(/etc/hosts) to bucket1/hosts  
 ```
 ./s3cli -p ecs up /etc/hosts bucket1
 upload /etc/hosts to bucket1 success
+```
+upload file(/etc/hosts) to bucket1/host2  
+```
 ./s3cli -p ecs up /etc/hosts bucket1/host2
 upload /etc/hosts to bucket1/host2 success
 ```
 
-##### Download file
+#### Download file
+- download bucket1/hosts to ./hosts
 ```
 ./s3cli -p ecs down bucket1/hosts
 download bucket1/hosts to hosts
@@ -103,7 +108,7 @@ presing a Put URL
 ./s3cli -p ecs psg bucket1/hosts --put
 ```
 
-##### List Objects
+#### List Objects
 ```
 ./s3cli -p ecs ls bucket1
 ```
@@ -112,7 +117,7 @@ List Objects with specified prefix
 ./s3cli -p ecs ls bucket1/prefix
 ```
 
-##### Delete Objects
+#### Delete Objects
 Delete Objects with specified prefix  
 ```
 ./s3cli -p ecs delete bucket1/key -x
