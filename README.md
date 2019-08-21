@@ -16,8 +16,8 @@ aws_secret_access_key=SK
 
 ## Usage
 ```
-./s3cli 
-s3cli client tool for S3 Bucket/Object operation
+./s3cli -h
+S3 commandline tool
 Endpoint Envvar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 
@@ -36,7 +36,6 @@ Available Commands:
   copy         copy Object
   createBucket create(make) Bucket
   delete       delete(remove) Object or Bucket(Bucket and Objects)
-  deleteBucket delete a empty Bucket
   download     download Object
   getacl       get Bucket/Object ACL
   head         head Bucket/Object
@@ -50,7 +49,7 @@ Flags:
       --debug             print debug log
   -e, --endpoint string   S3 endpoint(http://host:port)
   -h, --help              help for s3cli
-  -p, --profile string    profile in credential file
+  -p, --profile string    profile in credentials file
   -R, --region string     region (default "cn-north-1")
   -v, --verbose           verbose output
       --version           version for s3cli
@@ -60,7 +59,7 @@ Use "s3cli [command] --help" for more information about a command.
 
 ## Example
 #### Create Bucket
-- parse endpint from -e flag  
+- parse endpoint from flag -e
 ```
 ./s3cli -e http://192.168.55.2:9020 -p ecs cb bucket1
 ```
@@ -108,8 +107,8 @@ download bucket1/hosts to hosts
 ```
 - download bucket1/hosts to /tmp/newfile
 ```
-s3cli down bucket1/host2 /tmp/newfile
-download bucket1/host2 to /tmp/newfile
+s3cli down bucket1/hosts /tmp/newfile
+download bucket1/hosts to /tmp/newfile
 ```
 
 ##### Presign URL
@@ -122,8 +121,8 @@ s3cli -p ecs ps bucket1/hosts
 ./s3cli -p ecs ps bucket1/host3 --put
 ```
 
-#### Delete Object(s)
-- Delete Object
+#### Delete
+- Delete an Object
 ```
 ./s3cli -p ecs delete bucket1/key
 ```
@@ -133,5 +132,5 @@ s3cli -p ecs ps bucket1/hosts
 ```
 - Delete Bucket and all Objects  
 ```
-./s3cli -p ecs delete bucket1
+./s3cli -p ecs delete bucket1 --force
 ```

@@ -281,10 +281,10 @@ func (sc *S3Cli) headObject(bucket, key string, mtime bool) error {
 	return nil
 }
 
-func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
+func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return 0, fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %v", err)
 	}
 	var objNum int64
 	var wg sync.WaitGroup
@@ -296,7 +296,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 		req := client.ListObjectsRequest(loi)
 		resp, err := req.Send(context.Background())
 		if err != nil {
-			return objNum, fmt.Errorf("list object failed: %v", err)
+			return fmt.Errorf("list object failed: %v", err)
 		}
 		objectNum := len(resp.Contents)
 		if objectNum == 0 {
@@ -332,16 +332,17 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) (int64, error) {
 		}
 	}
 	wg.Wait()
-	return objNum, nil
+	return nil
 }
 
-// deleteBucketAndObjects force delete a bucket
-func (sc *S3Cli) deleteBucketAndObjects(bucket string) (int64, error) {
-	n, err := sc.deleteObjects(bucket, "")
-	if err != nil {
-		return n, err
+// deleteBucketAndObjects force delete a Bucket
+func (sc *S3Cli) deleteBucketAndObjects(bucket string, force bool) error {
+	if force {
+		if err := sc.deleteObjects(bucket, ""); err != nil {
+			return err
+		}
 	}
-	return n, sc.deleteBucket(bucket)
+	return sc.deleteBucket(bucket)
 }
 
 func (sc *S3Cli) deleteObject(bucket, key string) error {
@@ -525,7 +526,7 @@ func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "s3cli",
 		Short: "s3cli client tool",
-		Long: `s3cli client tool for S3 Bucket/Object operation
+		Long: `S3 commandline tool
 Endpoint Envvar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 
@@ -557,22 +558,6 @@ Credential Envvar:
 		},
 	}
 	rootCmd.AddCommand(createBucketCmd)
-
-	deleteBucketCmd := &cobra.Command{
-		Use:     "deleteBucket <bucket>",
-		Aliases: []string{"db"},
-		Short:   "delete a empty Bucket",
-		Long: `delete a empty Bucket
-1. delete Bucket alias
-  s3cli db Bucket`,
-		Args: cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			if err := sc.deleteBucket(args[0]); err != nil {
-				fmt.Printf("delete %s failed: %s\n", args[0], err)
-			}
-		},
-	}
-	rootCmd.AddCommand(deleteBucketCmd)
 
 	headCmd := &cobra.Command{
 		Use:     "head <bucket/key>",
@@ -803,27 +788,25 @@ Credential Envvar:
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			prefixMode := cmd.Flag("prefix").Changed
+			force := cmd.Flag("force").Changed
 			bucket, key := splitBucketObject(args[0])
-			if key != "" && prefixMode == false {
+			if prefixMode {
+				if err := sc.deleteObjects(bucket, key); err != nil {
+					fmt.Println("delete Objects failed: ", err)
+				}
+			} else if key != "" {
 				if err := sc.deleteObject(bucket, key); err != nil {
 					fmt.Println("delete Object failed: ", err)
 				}
-			} else if prefixMode {
-				if n, err := sc.deleteObjects(bucket, key); err != nil {
-					fmt.Println("delete Objects failed: ", err)
-				} else {
-					fmt.Printf("all %d Objects deleted\n", n)
-				}
 			} else {
-				if n, err := sc.deleteBucketAndObjects(bucket); err != nil {
-					fmt.Printf("%d Objects deleted but delete Bucket %s failed: %s\n", n, args[0], err)
-				} else {
-					fmt.Printf("all %d Objects and Bucket %s deleted\n", n, args[0])
+				if err := sc.deleteBucketAndObjects(bucket, force); err != nil {
+					fmt.Printf("deleted Bucket %s and Objects failed: %s\n", args[0], err)
 				}
 			}
 		},
 	}
-	deleteObjectCmd.Flags().BoolP("prefix", "x", false, "delete Objects start with specified prefix(key)")
+	deleteObjectCmd.Flags().BoolP("force", "", false, "delete Bucket and all Objects")
+	deleteObjectCmd.Flags().BoolP("prefix", "x", false, "delete Objects start with specified prefix")
 	rootCmd.AddCommand(deleteObjectCmd)
 
 	presignObjectCmd := &cobra.Command{
