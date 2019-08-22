@@ -255,7 +255,7 @@ func (sc *S3Cli) putObject(bucket, key, filename string) error {
 	return err
 }
 
-func (sc *S3Cli) headObject(bucket, key string, mtime bool) error {
+func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %v", err)
@@ -275,6 +275,8 @@ func (sc *S3Cli) headObject(bucket, key string, mtime bool) error {
 		fmt.Println(resp.HeadObjectOutput)
 	} else if mtime {
 		fmt.Println(resp.HeadObjectOutput.LastModified)
+	} else if mtimestamp {
+		fmt.Println(resp.HeadObjectOutput.LastModified.Unix())
 	} else {
 		fmt.Printf("%d\t%s\n", *resp.HeadObjectOutput.ContentLength, resp.HeadObjectOutput.LastModified)
 	}
@@ -576,8 +578,9 @@ Credential Envvar:
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
 			if key != "" {
-				m := cmd.Flag("mtime").Changed
-				if err := sc.headObject(bucket, key, m); err != nil {
+				mt := cmd.Flag("mtime").Changed
+				mts := cmd.Flag("mtimestamp").Changed
+				if err := sc.headObject(bucket, key, mt, mts); err != nil {
 					fmt.Printf("head %s/%s failed: %s\n", bucket, key, err)
 				}
 			} else {
@@ -587,6 +590,7 @@ Credential Envvar:
 			}
 		},
 	}
+	headCmd.Flags().BoolP("mtimestamp", "", false, "show Object mtimestamp")
 	headCmd.Flags().BoolP("mtime", "", false, "show Object mtime")
 	rootCmd.AddCommand(headCmd)
 
