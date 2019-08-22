@@ -183,7 +183,7 @@ func (sc *S3Cli) copyObject(source, bucket, key string) error {
 	return nil
 }
 
-// getObject downlaod a Object from bucket
+// getObject download a Object from bucket
 func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
@@ -358,16 +358,20 @@ func (sc *S3Cli) deleteObject(bucket, key string) error {
 	return err
 }
 
-func (sc *S3Cli) aclBucket(bucket, key string) error {
-	return fmt.Errorf("not ready")
-}
-
-func (sc *S3Cli) aclObjects(bucket, prefix string) (int64, error) {
-	return 0, fmt.Errorf("not ready")
-}
-
-func (sc *S3Cli) aclObject(bucket, key string) error {
-	return fmt.Errorf("not ready")
+func (sc *S3Cli) policyBucket(bucket, key string) error {
+	client, err := sc.newS3Client()
+	if err != nil {
+		return fmt.Errorf("init s3 Client failed: %v", err)
+	}
+	req := client.GetBucketPolicyRequest(&s3.GetBucketPolicyInput{
+		Bucket: aws.String(bucket),
+	})
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Println(*resp.GetBucketPolicyOutput.Policy)
+	return nil
 }
 
 // mpuObject Multi-Part-Upload a Object
@@ -586,15 +590,14 @@ Credential Envvar:
 	headCmd.Flags().BoolP("mtime", "", false, "show Object mtime")
 	rootCmd.AddCommand(headCmd)
 
-	getaclCmd := &cobra.Command{
-		Use:     "getacl <bucket/key>",
-		Aliases: []string{"ga"},
-		Short:   "get Bucket/Object ACL",
+	aclCmd := &cobra.Command{
+		Use:   "acl <bucket/key>",
+		Short: "get Bucket/Object ACL",
 		Long: `get Bucket/Object ACL
 1. get a Bucket's ACL
- s3cli getacl Bucket
+ s3cli acl Bucket
 2. get a Object's ACL
- s3cli getacl Bucket/Key`,
+ s3cli acl Bucket/Key`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
@@ -609,7 +612,7 @@ Credential Envvar:
 			}
 		},
 	}
-	rootCmd.AddCommand(getaclCmd)
+	rootCmd.AddCommand(aclCmd)
 
 	putObjectCmd := &cobra.Command{
 		Use:     "upload <local-file> <bucket/key>",
@@ -708,10 +711,10 @@ Credential Envvar:
 		Use:     "download <bucket/key> [destination]",
 		Aliases: []string{"get", "down", "d"},
 		Short:   "download Object",
-		Long: `downlaod Object from Bucket
+		Long: `download Object from Bucket
 1. download a Object to PWD
   s3cli down Bucket/Key
-2. downlaod a Object to /path/to/file
+2. download a Object to /path/to/file
   s3cli down Bucket/Key /path/to/file`,
 		Args: cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -843,28 +846,26 @@ Credential Envvar:
 	presignObjectCmd.Flags().BoolP("put", "", false, "generate a put URL")
 	rootCmd.AddCommand(presignObjectCmd)
 
-	aclObjectCmd := &cobra.Command{
-		Use:     "acl <bucket/key>",
-		Aliases: []string{"pa"},
-		Short:   "acl Bucket or Object",
-		Long: `acl Bucket or Object(s) in Bucket
-1. acl Object
-  s3cli acl Bucket/Key
-2. acl Objects with same Prefix
-  s3cli acl Bucket/Prefix -x`,
+	policyCmd := &cobra.Command{
+		Use:   "policy <bucket/key>",
+		Short: "policy Bucket or Object",
+		Long: `policy Bucket or Object(s) in Bucket
+1. policy Bucket
+  s3cli policy Bucket
+2. policy Object
+  s3cli policy Bucket/Key`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			//prefix := cmd.Flag("prefix").Changed
 			bucket, key := splitBucketObject(args[0])
-			if cnt, err := sc.aclObjects(bucket, key); err != nil {
-				fmt.Println("acl Object error: ", err)
+			if err := sc.policyBucket(bucket, key); err != nil {
+				fmt.Printf("policy failed: %v\n", err)
 			} else {
-				fmt.Printf("acl %d Objects success\n", cnt)
+				fmt.Printf(" Objects success\n")
 			}
 		},
 	}
-	aclObjectCmd.Flags().BoolP("prefix", "x", false, "acl all Objects with specified prefix(key)")
-	rootCmd.AddCommand(aclObjectCmd)
+	rootCmd.AddCommand(policyCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

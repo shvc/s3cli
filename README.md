@@ -3,10 +3,13 @@
 https://github.com/vager/s3cli/releases
 
 #### 2. Install
-`cp s3cli /usr/local/bin/`
+```
+unzip s3cli-*.zip
+cp s3cli /usr/local/bin/
+```
 
-#### 2. Configuration credential
-Add you profile to ~/.aws/credentials
+#### 3. Configuration credential
+Add you profile(ecs) to ~/.aws/credentials
 ```
 [default]
 aws_access_key_id=AK
