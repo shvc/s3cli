@@ -122,11 +122,7 @@ func Test_deleteBucketAndObjects(t *testing.T) {
 	// TODO
 }
 
-func Test_aclObjects(t *testing.T) {
-	// TODO
-}
-
-func Test_aclObject(t *testing.T) {
+func Test_policyBucket(t *testing.T) {
 	// TODO
 }
 

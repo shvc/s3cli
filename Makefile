@@ -26,10 +26,11 @@ default:
 	@echo "Building ${BINARY}-${VERSION}"
 	go build ${LDFLAGS}
 
+install: default
+	install ${BINARY} /usr/local/bin/
+
 clean:
 	rm -rf *zip
 	rm -rf ${BINARY}
-
-ALL: default
 
 .PHONY: pkg test default clean
