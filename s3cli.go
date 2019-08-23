@@ -304,6 +304,9 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 		if objectNum == 0 {
 			break
 		}
+		if sc.verbose {
+			fmt.Printf("%d Objects list\n", objectNum)
+		}
 		objects := make([]s3.ObjectIdentifier, 0, 1000)
 		for _, obj := range resp.Contents {
 			objects = append(objects, s3.ObjectIdentifier{Key: obj.Key})
@@ -325,6 +328,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 			}
 			wg.Done()
 		}(objects, objectNum)
+		wg.Wait()
 		if resp.NextMarker != nil {
 			loi.Marker = resp.NextMarker
 		} else if resp.IsTruncated != nil && *resp.IsTruncated {
@@ -333,7 +337,6 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 			break
 		}
 	}
-	wg.Wait()
 	return nil
 }
 
