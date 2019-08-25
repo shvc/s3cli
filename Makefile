@@ -20,7 +20,10 @@ pkg:
 	zip -m ${BINARY}-${VERSION}-win.zip ${BINARY}.exe
 
 test:
-	go test
+	go test ./...
+
+vet:
+	go vet ./...
 
 default:
 	@echo "Building ${BINARY}-${VERSION}"
