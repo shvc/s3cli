@@ -36,4 +36,4 @@ clean:
 	rm -rf *zip
 	rm -rf ${BINARY}
 
-.PHONY: pkg test default clean
+.PHONY: pkg test vet default clean
