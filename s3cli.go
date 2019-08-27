@@ -7,8 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -289,7 +287,6 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 		return fmt.Errorf("init s3 Client failed: %v", err)
 	}
 	var objNum int64
-	var wg sync.WaitGroup
 	loi := &s3.ListObjectsInput{
 		Bucket: aws.String(bucket),
 		Prefix: aws.String(prefix),
@@ -305,30 +302,27 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 			break
 		}
 		if sc.verbose {
-			fmt.Printf("%d Objects list\n", objectNum)
+			fmt.Printf("Got %d Objects, ", objectNum)
 		}
 		objects := make([]s3.ObjectIdentifier, 0, 1000)
 		for _, obj := range resp.Contents {
 			objects = append(objects, s3.ObjectIdentifier{Key: obj.Key})
 		}
-		wg.Add(1)
-		go func(objects []s3.ObjectIdentifier, n int) {
-			doi := &s3.DeleteObjectsInput{
-				Bucket: aws.String(bucket),
-				Delete: &s3.Delete{Quiet: aws.Bool(true),
-					Objects: objects},
-			}
-			deleteReq := client.DeleteObjectsRequest(doi)
-			if _, e := deleteReq.Send(context.Background()); err != nil {
-				fmt.Printf("delete Objects failed: %s", e)
-			} else if sc.verbose {
-				fmt.Printf("%d Objects deleted\n", atomic.AddInt64(&objNum, int64(n)))
-			} else {
-				atomic.AddInt64(&objNum, int64(n))
-			}
-			wg.Done()
-		}(objects, objectNum)
-		wg.Wait()
+		doi := &s3.DeleteObjectsInput{
+			Bucket: aws.String(bucket),
+			Delete: &s3.Delete{Quiet: aws.Bool(true),
+				Objects: objects},
+		}
+		deleteReq := client.DeleteObjectsRequest(doi)
+		if _, e := deleteReq.Send(context.Background()); err != nil {
+			fmt.Printf("delete Objects failed: %s", e)
+		} else {
+			objNum = objNum + int64(objectNum)
+		}
+		if sc.verbose {
+			fmt.Printf("%d Objects deleted\n", objNum)
+		}
+
 		if resp.NextMarker != nil {
 			loi.Marker = resp.NextMarker
 		} else if resp.IsTruncated != nil && *resp.IsTruncated {
