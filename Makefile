@@ -1,7 +1,7 @@
 BINARY=s3cli
 BUILDDATE=$(shell date +'%Y-%m-%dT%H:%M:%SZ')
-VERSION=2.2.$(shell git rev-list HEAD --count)
-LONGVER=${VERSION}@${BUILDDATE}
+VERSION=2.2.2
+LONGVER=${VERSION}@${BUILDDATE}@$(shell git rev-list HEAD --count)
 
 LDFLAGS=-ldflags "-X main.version=${LONGVER}"
 
@@ -20,7 +20,10 @@ pkg:
 	zip -m ${BINARY}-${VERSION}-win.zip ${BINARY}.exe
 
 test:
-	go test
+	go test ./...
+
+vet:
+	go vet ./...
 
 default:
 	@echo "Building ${BINARY}-${VERSION}"
@@ -33,4 +36,4 @@ clean:
 	rm -rf *zip
 	rm -rf ${BINARY}
 
-.PHONY: pkg test default clean
+.PHONY: pkg test vet default clean

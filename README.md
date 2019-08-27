@@ -2,10 +2,9 @@
 #### 1. Download prebuild binary
 https://github.com/vager/s3cli/releases
 
-#### 2. Install
+#### 2. Install s3cli to /usr/local/bin/
 ```
-unzip s3cli-*.zip
-cp s3cli /usr/local/bin/
+unzip s3cli-*.zip -d /usr/local/bin/
 ```
 
 #### 3. Configuration credential
