@@ -728,7 +728,7 @@ Credential Envvar:
 			}
 			objRange := cmd.Flag("range").Value.String()
 			if err := sc.getObject(bucket, key, objRange, destination); err != nil {
-				fmt.Printf("download %s to %s failed: %s\n", args[1], destination, err)
+				fmt.Printf("download %s to %s failed: %s\n", args[0], destination, err)
 			} else {
 				fmt.Printf("download %s to %s\n", args[0], destination)
 			}
