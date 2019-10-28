@@ -36,7 +36,7 @@ type S3Cli struct {
 func (sc *S3Cli) loadS3Cfg() (*aws.Config, error) {
 	cfg, err := external.LoadDefaultAWSConfig(external.WithSharedConfigProfile(sc.profile))
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config, %v", err)
+		return nil, fmt.Errorf("failed to load config, %w", err)
 	}
 	cfg.Region = sc.region
 	//cfg.EndpointResolver = aws.ResolveWithEndpoint{
@@ -84,11 +84,11 @@ func splitBucketObject(bucketObject string) (bucket, object string) {
 	return bucketObject, ""
 }
 
-// listAllObjects list all Objects in spcified bucket
+// listAllObjects list all Objects in specified bucket
 func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	var i int64
 	req := client.ListObjectsRequest(&s3.ListObjectsInput{
@@ -113,16 +113,16 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool) er
 		}
 	}
 	if err := p.Err(); err != nil {
-		return fmt.Errorf("list all objects failed: %v", err)
+		return fmt.Errorf("list all objects failed: %w", err)
 	}
 	return nil
 }
 
-// listObjects list Objects in spcified bucket
+// listObjects list Objects in specified bucket
 func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys int64, index bool) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	req := client.ListObjectsRequest(&s3.ListObjectsInput{
 		Bucket:    aws.String(bucket),
@@ -133,7 +133,7 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
-		return fmt.Errorf("list objects failed: %v", err)
+		return fmt.Errorf("list objects failed: %w", err)
 	}
 	if sc.verbose {
 		fmt.Println(resp)
@@ -163,7 +163,7 @@ func (sc *S3Cli) renameObjects(bucket, prefix, delimiter, marker string) error {
 func (sc *S3Cli) copyObject(source, bucket, key string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	req := client.CopyObjectRequest(&s3.CopyObjectInput{
 		CopySource: aws.String(source),
@@ -172,7 +172,7 @@ func (sc *S3Cli) copyObject(source, bucket, key string) error {
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
-		return fmt.Errorf("copy object failed: %v", err)
+		return fmt.Errorf("copy object failed: %w", err)
 	}
 	if sc.verbose {
 		fmt.Println(resp)
@@ -185,12 +185,12 @@ func (sc *S3Cli) copyObject(source, bucket, key string) error {
 func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	// Create a file to write the S3 Object contents to.
 	f, err := os.Create(filename)
 	if err != nil {
-		return fmt.Errorf("failed to create file %q, %v", filename, err)
+		return fmt.Errorf("failed to create file %q, %w", filename, err)
 	}
 	defer f.Close()
 	var objRange *string
@@ -204,7 +204,7 @@ func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
-		return fmt.Errorf("get object failed: %v", err)
+		return fmt.Errorf("get object failed: %w", err)
 	}
 	_, err = io.Copy(f, resp.Body)
 	return err
@@ -214,7 +214,7 @@ func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
 func (sc *S3Cli) catObject(bucket, key, oRange string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	var objRange *string
 	if oRange != "" {
@@ -227,7 +227,7 @@ func (sc *S3Cli) catObject(bucket, key, oRange string) error {
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
-		return fmt.Errorf("get object failed: %v", err)
+		return fmt.Errorf("get object failed: %w", err)
 	}
 	_, err = io.Copy(os.Stdout, resp.Body)
 	return err
@@ -237,7 +237,7 @@ func (sc *S3Cli) catObject(bucket, key, oRange string) error {
 func (sc *S3Cli) putObject(bucket, key, filename string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	f, err := os.Open(filename)
 	if err != nil {
@@ -256,7 +256,7 @@ func (sc *S3Cli) putObject(bucket, key, filename string) error {
 func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	req := client.HeadObjectRequest(&s3.HeadObjectInput{
 		Bucket: aws.String(bucket),
@@ -284,7 +284,7 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	var objNum int64
 	loi := &s3.ListObjectsInput{
@@ -295,7 +295,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 		req := client.ListObjectsRequest(loi)
 		resp, err := req.Send(context.Background())
 		if err != nil {
-			return fmt.Errorf("list object failed: %v", err)
+			return fmt.Errorf("list object failed: %w", err)
 		}
 		objectNum := len(resp.Contents)
 		if objectNum == 0 {
@@ -347,7 +347,7 @@ func (sc *S3Cli) deleteBucketAndObjects(bucket string, force bool) error {
 func (sc *S3Cli) deleteObject(bucket, key string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	req := client.DeleteObjectRequest(&s3.DeleteObjectInput{
 		Bucket: aws.String(bucket),
@@ -360,7 +360,7 @@ func (sc *S3Cli) deleteObject(bucket, key string) error {
 func (sc *S3Cli) policyBucket(bucket, key string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	req := client.GetBucketPolicyRequest(&s3.GetBucketPolicyInput{
 		Bucket: aws.String(bucket),
@@ -378,7 +378,7 @@ func (sc *S3Cli) policyBucket(bucket, key string) error {
 func (sc *S3Cli) mpuObject(bucket, key, filename string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	// Create a file to write the S3 Object contents to.
 	f, err := os.Open(filename)
@@ -399,7 +399,7 @@ func (sc *S3Cli) mpuObject(bucket, key, filename string) error {
 func (sc *S3Cli) presignGetObject(bucket, key string, exp time.Duration) (string, error) {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return "", fmt.Errorf("init s3 Client failed: %v", err)
+		return "", fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	req := client.GetObjectRequest(&s3.GetObjectInput{
 		Bucket: aws.String(bucket),
@@ -412,7 +412,7 @@ func (sc *S3Cli) presignGetObject(bucket, key string, exp time.Duration) (string
 func (sc *S3Cli) presignPutObject(bucket, key string, exp time.Duration) (string, error) {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return "", fmt.Errorf("init s3 Client failed: %v", err)
+		return "", fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	req := client.PutObjectRequest(&s3.PutObjectInput{
 		Bucket: aws.String(bucket),
@@ -424,7 +424,7 @@ func (sc *S3Cli) presignPutObject(bucket, key string, exp time.Duration) (string
 func (sc *S3Cli) getObjectACL(bucket, key string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 
 	req := client.GetObjectAclRequest(&s3.GetObjectAclInput{
@@ -444,7 +444,7 @@ func (sc *S3Cli) getObjectACL(bucket, key string) error {
 func (sc *S3Cli) createBucket(bucket string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	createBucketReq := client.CreateBucketRequest(&s3.CreateBucketInput{
 		Bucket: aws.String(bucket),
@@ -459,7 +459,7 @@ func (sc *S3Cli) createBucket(bucket string) error {
 func (sc *S3Cli) getBucketACL(bucket string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	req := client.GetBucketAclRequest(&s3.GetBucketAclInput{
 		Bucket: aws.String(bucket),
@@ -477,7 +477,7 @@ func (sc *S3Cli) getBucketACL(bucket string) error {
 func (sc *S3Cli) headBucket(bucket string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	req := client.HeadBucketRequest(&s3.HeadBucketInput{
 		Bucket: aws.String(bucket),
@@ -495,7 +495,7 @@ func (sc *S3Cli) headBucket(bucket string) error {
 func (sc *S3Cli) deleteBucket(bucket string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	req := client.DeleteBucketRequest(&s3.DeleteBucketInput{
 		Bucket: aws.String(bucket),
@@ -507,7 +507,7 @@ func (sc *S3Cli) deleteBucket(bucket string) error {
 func (sc *S3Cli) listBuckets() error {
 	client, err := sc.newS3Client()
 	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %v", err)
+		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	req := client.ListBucketsRequest(&s3.ListBucketsInput{})
 	resp, err := req.Send(context.Background())
