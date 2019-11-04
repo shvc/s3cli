@@ -64,7 +64,7 @@ func (sc *S3Cli) newS3Client() (*s3.Client, error) {
 		return nil, err
 	}
 	if sc.debug {
-		fmt.Println(cfg)
+		cfg.LogLevel = aws.LogDebug
 	}
 	client := s3.New(*cfg)
 	if sc.endpoint == "" {
