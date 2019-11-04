@@ -70,9 +70,11 @@ func (sc *S3Cli) newS3Client() (*s3.Client, error) {
 	if sc.endpoint != "" {
 		client.ForcePathStyle = true
 	}
+	client.Logger = aws.NewDefaultLogger()
 	if sc.debug {
-		fmt.Printf("config: %+v\n", *cfg)
-		fmt.Printf("client: %+v\n", *client)
+		//fmt.Printf("config: %+v\n", *cfg)
+		//fmt.Printf("client: %+v\n", *client)
+		client.LogLevel = aws.LogDebug
 	}
 	return client, nil
 }
