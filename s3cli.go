@@ -63,15 +63,16 @@ func (sc *S3Cli) newS3Client() (*s3.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if sc.debug {
-		fmt.Println(cfg)
-	}
 	client := s3.New(*cfg)
 	if sc.endpoint == "" {
 		sc.endpoint = os.Getenv(endpointEnvVar)
 	}
 	if sc.endpoint != "" {
 		client.ForcePathStyle = true
+	}
+	if sc.debug {
+		fmt.Printf("config: %+v\n", *cfg)
+		fmt.Printf("client: %+v\n", *client)
 	}
 	return client, nil
 }
