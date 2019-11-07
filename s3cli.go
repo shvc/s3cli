@@ -281,7 +281,7 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 	return nil
 }
 
-func (sc *S3Cli) getBucketVersioning(bucket, key string) error {
+func (sc *S3Cli) getBucketVersioning(bucket string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %w", err)
@@ -293,13 +293,35 @@ func (sc *S3Cli) getBucketVersioning(bucket, key string) error {
 	if err != nil {
 		return err
 	}
-	if resp == nil {
-		return nil
-	}
+	fmt.Printf("getBucketVersioning: %s\n", resp)
 	return nil
 }
 
-func (sc *S3Cli) listObjectVersion(bucket, key string) error {
+func (sc *S3Cli) putBucketVersioning(bucket string, status bool) error {
+	client, err := sc.newS3Client()
+	if err != nil {
+		return fmt.Errorf("init s3 Client failed: %w", err)
+	}
+	verStatus := s3.BucketVersioningStatusSuspended
+	if status {
+		verStatus = s3.BucketVersioningStatusEnabled
+	}
+	req := client.PutBucketVersioningRequest(&s3.PutBucketVersioningInput{
+		Bucket: aws.String(bucket),
+		VersioningConfiguration: &s3.VersioningConfiguration{
+			Status: verStatus,
+		},
+	})
+
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Printf("putBucketVersioning: %s\n", resp)
+	return nil
+}
+
+func (sc *S3Cli) listObjectVersions(bucket string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %w", err)
@@ -332,9 +354,7 @@ func (sc *S3Cli) restoreObject(bucket, key string) error {
 	if err != nil {
 		return err
 	}
-	if resp == nil {
-		return nil
-	}
+	fmt.Println(resp)
 	return nil
 }
 
@@ -796,21 +816,17 @@ Credential Envvar:
 	rootCmd.AddCommand(getObjectCmd)
 
 	listObjectVersion := &cobra.Command{
-		Use:     "listversion <bucket/key>",
-		Aliases: []string{"lsv", "lv"},
-		Short:   "list Bucket(Object) version",
-		Long: `download Object from Bucket
-1. download a Object to PWD
-  s3cli down Bucket/Key
-2. download a Object to /path/to/file
-  s3cli down Bucket/Key /path/to/file`,
+		Use:     "listObjectVersion <bucket>",
+		Aliases: []string{"lov"},
+		Short:   "list Object versions",
+		Long: `list Object from Bucket
+1. listObjectVersion
+  s3cli lov Bucket
+`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			bucket, key := splitBucketObject(args[0])
-			if err := sc.listObjectVersion(bucket, key); err != nil {
-				fmt.Printf("listObjectVersion failed: %s\n", err)
-			} else {
-				fmt.Printf("listObjectVersion\n")
+			if err := sc.listObjectVersions(args[0]); err != nil {
+				fmt.Printf("listObjectVersions failed: %s\n", err)
 			}
 		},
 	}
