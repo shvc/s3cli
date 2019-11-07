@@ -281,6 +281,63 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 	return nil
 }
 
+func (sc *S3Cli) getBucketVersioning(bucket, key string) error {
+	client, err := sc.newS3Client()
+	if err != nil {
+		return fmt.Errorf("init s3 Client failed: %w", err)
+	}
+	req := client.GetBucketVersioningRequest(&s3.GetBucketVersioningInput{
+		Bucket: aws.String(bucket),
+	})
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	if resp == nil {
+		return nil
+	}
+	return nil
+}
+
+func (sc *S3Cli) listObjectVersion(bucket, key string) error {
+	client, err := sc.newS3Client()
+	if err != nil {
+		return fmt.Errorf("init s3 Client failed: %w", err)
+	}
+	req := client.ListObjectVersionsRequest(&s3.ListObjectVersionsInput{
+		Bucket: aws.String(bucket),
+	})
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	if resp == nil {
+		return nil
+	}
+
+	fmt.Println(resp.ListObjectVersionsOutput)
+	return nil
+}
+
+func (sc *S3Cli) restoreObject(bucket, key string) error {
+	client, err := sc.newS3Client()
+	if err != nil {
+		return fmt.Errorf("init s3 Client failed: %w", err)
+	}
+	req := client.RestoreObjectRequest(&s3.RestoreObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	if resp == nil {
+		return nil
+	}
+	return nil
+}
+
 func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
@@ -737,6 +794,27 @@ Credential Envvar:
 	getObjectCmd.Flags().StringP("range", "r", "", "Object range to download, 0-64 means [0, 64]")
 	getObjectCmd.Flags().BoolP("overwrite", "w", false, "overwrite file if exist")
 	rootCmd.AddCommand(getObjectCmd)
+
+	listObjectVersion := &cobra.Command{
+		Use:     "listversion <bucket/key>",
+		Aliases: []string{"lsv", "lv"},
+		Short:   "list Bucket(Object) version",
+		Long: `download Object from Bucket
+1. download a Object to PWD
+  s3cli down Bucket/Key
+2. download a Object to /path/to/file
+  s3cli down Bucket/Key /path/to/file`,
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			bucket, key := splitBucketObject(args[0])
+			if err := sc.listObjectVersion(bucket, key); err != nil {
+				fmt.Printf("listObjectVersion failed: %s\n", err)
+			} else {
+				fmt.Printf("listObjectVersion\n")
+			}
+		},
+	}
+	rootCmd.AddCommand(listObjectVersion)
 
 	catObjectCmd := &cobra.Command{
 		Use:   "cat <bucket/key>",
