@@ -249,8 +249,14 @@ func (sc *S3Cli) putObject(bucket, key, filename string) error {
 		Key:    aws.String(key),
 		Body:   f,
 	})
-	_, err = req.Send(context.Background())
-	return err
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	if sc.verbose {
+		fmt.Println(resp)
+	}
+	return nil
 }
 
 func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
@@ -840,7 +846,7 @@ Credential Envvar:
 					fmt.Println("disable bucketVersioning failed: ", err)
 				}
 			case "":
-				if err := sc.listObjectVersions(args[0]); err != nil {
+				if err := sc.getBucketVersioning(args[0]); err != nil {
 					fmt.Printf("listObjectVersions failed: %s\n", err)
 				}
 			default:
