@@ -249,8 +249,14 @@ func (sc *S3Cli) putObject(bucket, key, filename string) error {
 		Key:    aws.String(key),
 		Body:   f,
 	})
-	_, err = req.Send(context.Background())
-	return err
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	if sc.verbose {
+		fmt.Println(resp)
+	}
+	return nil
 }
 
 func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
@@ -278,6 +284,66 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 	} else {
 		fmt.Printf("%d\t%s\n", *resp.HeadObjectOutput.ContentLength, resp.HeadObjectOutput.LastModified)
 	}
+	return nil
+}
+
+func (sc *S3Cli) getBucketVersioning(bucket string) error {
+	client, err := sc.newS3Client()
+	if err != nil {
+		return fmt.Errorf("init s3 Client failed: %w", err)
+	}
+	req := client.GetBucketVersioningRequest(&s3.GetBucketVersioningInput{
+		Bucket: aws.String(bucket),
+	})
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Printf("getBucketVersioning: %s\n", resp)
+	return nil
+}
+
+func (sc *S3Cli) putBucketVersioning(bucket string, status bool) error {
+	client, err := sc.newS3Client()
+	if err != nil {
+		return fmt.Errorf("init s3 Client failed: %w", err)
+	}
+	verStatus := s3.BucketVersioningStatusSuspended
+	if status {
+		verStatus = s3.BucketVersioningStatusEnabled
+	}
+	req := client.PutBucketVersioningRequest(&s3.PutBucketVersioningInput{
+		Bucket: aws.String(bucket),
+		VersioningConfiguration: &s3.VersioningConfiguration{
+			Status: verStatus,
+		},
+	})
+
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Printf("putBucketVersioning: %s\n", resp)
+	return nil
+}
+
+func (sc *S3Cli) listObjectVersions(bucket string) error {
+	client, err := sc.newS3Client()
+	if err != nil {
+		return fmt.Errorf("init s3 Client failed: %w", err)
+	}
+	req := client.ListObjectVersionsRequest(&s3.ListObjectVersionsInput{
+		Bucket: aws.String(bucket),
+	})
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	if resp == nil {
+		return nil
+	}
+
+	fmt.Println(resp.ListObjectVersionsOutput)
 	return nil
 }
 
@@ -344,17 +410,28 @@ func (sc *S3Cli) deleteBucketAndObjects(bucket string, force bool) error {
 	return sc.deleteBucket(bucket)
 }
 
-func (sc *S3Cli) deleteObject(bucket, key string) error {
+func (sc *S3Cli) deleteObject(bucket, key, version string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
+	var versionID *string
+	if version != "" {
+		versionID = aws.String(version)
+	}
 	req := client.DeleteObjectRequest(&s3.DeleteObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
+		Bucket:    aws.String(bucket),
+		Key:       aws.String(key),
+		VersionId: versionID,
 	})
-	_, err = req.Send(context.Background())
-	return err
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	if sc.verbose {
+		fmt.Println(resp)
+	}
+	return nil
 }
 
 func (sc *S3Cli) policyBucket(bucket, key string) error {
@@ -452,7 +529,13 @@ func (sc *S3Cli) createBucket(bucket string) error {
 			LocationConstraint: s3.BucketLocationConstraint(sc.region),
 		},
 	})
-	_, err = createBucketReq.Send(context.Background())
+	resp, err := createBucketReq.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	if sc.verbose {
+		fmt.Println(resp)
+	}
 	return err
 }
 
@@ -547,17 +630,18 @@ Credential Envvar:
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", endpoints.CnNorth1RegionID, "region")
 
 	createBucketCmd := &cobra.Command{
-		Use:     "createBucket <bucket>",
-		Aliases: []string{"cb", "mb"},
-		Short:   "create(make) Bucket",
-		Long: `create Bucket
-1. createBucket alias
-  s3cli cb Bucket
-2. or makeBucket alias
+		Use:     "makeBucket <bucket>",
+		Aliases: []string{"mb"},
+		Short:   "make Bucket",
+		Long: `make(create) Bucket
+1. makeBucket alias
   s3cli mb Bucket`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			sc.createBucket(args[0])
+			if err := sc.createBucket(args[0]); err != nil {
+				fmt.Println("makeBucket failed: ", err)
+				os.Exit(1)
+			}
 		},
 	}
 	rootCmd.AddCommand(createBucketCmd)
@@ -579,10 +663,12 @@ Credential Envvar:
 				mts := cmd.Flag("mtimestamp").Changed
 				if err := sc.headObject(bucket, key, mt, mts); err != nil {
 					fmt.Printf("head %s/%s failed: %s\n", bucket, key, err)
+					os.Exit(1)
 				}
 			} else {
 				if err := sc.headBucket(bucket); err != nil {
 					fmt.Printf("head %s failed: %s\n", bucket, err)
+					os.Exit(1)
 				}
 			}
 		},
@@ -605,10 +691,12 @@ Credential Envvar:
 			if key != "" {
 				if err := sc.getObjectACL(bucket, key); err != nil {
 					fmt.Printf("get %s/%s ACL failed: %s\n", bucket, key, err)
+					os.Exit(1)
 				}
 			} else {
 				if err := sc.getBucketACL(bucket); err != nil {
 					fmt.Printf("get %s ACL failed: %s\n", bucket, err)
+					os.Exit(1)
 				}
 			}
 		},
@@ -632,8 +720,7 @@ Credential Envvar:
 			}
 			if err := sc.putObject(bucket, key, args[0]); err != nil {
 				fmt.Printf("upload %s failed: %s\n", args[1], err)
-			} else {
-				fmt.Printf("upload %s to %s success\n", args[0], args[1])
+				os.Exit(1)
 			}
 		},
 	}
@@ -656,8 +743,7 @@ Credential Envvar:
 			}
 			if err := sc.mpuObject(bucket, key, args[0]); err != nil {
 				fmt.Printf("mpu %s failed: %s\n", key, err)
-			} else {
-				fmt.Printf("mpu %s success\n", key)
+				os.Exit(1)
 			}
 		},
 	}
@@ -683,6 +769,7 @@ Credential Envvar:
 				if cmd.Flag("all").Changed {
 					if err := sc.listAllObjects(bucket, prefix, delimiter, index); err != nil {
 						fmt.Println(err)
+						os.Exit(1)
 					}
 				} else {
 					maxKeys, err := cmd.Flags().GetInt64("maxkeys")
@@ -692,11 +779,13 @@ Credential Envvar:
 					marker := cmd.Flag("marker").Value.String()
 					if err := sc.listObjects(bucket, prefix, delimiter, marker, maxKeys, index); err != nil {
 						fmt.Println(err)
+						os.Exit(1)
 					}
 				}
 			} else {
 				if err := sc.listBuckets(); err != nil {
 					fmt.Println(err)
+					os.Exit(1)
 				}
 			}
 		},
@@ -729,6 +818,7 @@ Credential Envvar:
 			objRange := cmd.Flag("range").Value.String()
 			if err := sc.getObject(bucket, key, objRange, destination); err != nil {
 				fmt.Printf("download %s to %s failed: %s\n", args[0], destination, err)
+				os.Exit(1)
 			} else {
 				fmt.Printf("download %s to %s\n", args[0], destination)
 			}
@@ -737,6 +827,63 @@ Credential Envvar:
 	getObjectCmd.Flags().StringP("range", "r", "", "Object range to download, 0-64 means [0, 64]")
 	getObjectCmd.Flags().BoolP("overwrite", "w", false, "overwrite file if exist")
 	rootCmd.AddCommand(getObjectCmd)
+
+	bucketVersionCmd := &cobra.Command{
+		Use:     "bucketVersion <bucket>",
+		Aliases: []string{"bv"},
+		Short:   "bucket versioning",
+		Long: `list Object from Bucket
+1. get bucket versioning status
+  s3cli bv Bucket
+2. get bucket versioning status
+  s3cli bv Bucket
+3. get bucket versioning status
+  s3cli bv Bucket
+`,
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			switch cmd.Flag("status").Value.String() {
+			case "enable":
+				if err := sc.putBucketVersioning(args[0], true); err != nil {
+					fmt.Println("enable bucketVersioning failed: ", err)
+					os.Exit(1)
+				}
+			case "disable":
+				if err := sc.putBucketVersioning(args[0], false); err != nil {
+					fmt.Println("disable bucketVersioning failed: ", err)
+					os.Exit(1)
+				}
+			case "":
+				if err := sc.getBucketVersioning(args[0]); err != nil {
+					fmt.Printf("listObjectVersions failed: %s\n", err)
+					os.Exit(1)
+				}
+			default:
+				fmt.Println("invalid bucketVersioning status")
+				os.Exit(1)
+			}
+		},
+	}
+	bucketVersionCmd.Flags().StringP("status", "", "", "Set bucketVersioning status(enable, disable)")
+	rootCmd.AddCommand(bucketVersionCmd)
+
+	listObjectVersionCmd := &cobra.Command{
+		Use:     "listObjectVersion <bucket>",
+		Aliases: []string{"lov"},
+		Short:   "list Object versions",
+		Long: `list Object from Bucket
+1. listObjectVersion
+  s3cli lov Bucket
+`,
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := sc.listObjectVersions(args[0]); err != nil {
+				fmt.Printf("listObjectVersions failed: %s\n", err)
+				os.Exit(1)
+			}
+		},
+	}
+	rootCmd.AddCommand(listObjectVersionCmd)
 
 	catObjectCmd := &cobra.Command{
 		Use:   "cat <bucket/key>",
@@ -750,6 +897,7 @@ Credential Envvar:
 			bucket, key := splitBucketObject(args[0])
 			if err := sc.catObject(bucket, key, objRange); err != nil {
 				fmt.Printf("cat %s failed: %s\n", args[0], err)
+				os.Exit(1)
 			}
 		},
 	}
@@ -773,6 +921,7 @@ Credential Envvar:
 			}
 			if err := sc.copyObject(args[0], bucket, key); err != nil {
 				fmt.Printf("copy %s failed: %s\n", args[1], err)
+				os.Exit(1)
 			}
 		},
 	}
@@ -797,19 +946,24 @@ Credential Envvar:
 			if prefixMode {
 				if err := sc.deleteObjects(bucket, key); err != nil {
 					fmt.Println("delete Objects failed: ", err)
+					os.Exit(1)
 				}
 			} else if key != "" {
-				if err := sc.deleteObject(bucket, key); err != nil {
+				version := cmd.Flag("version").Value.String()
+				if err := sc.deleteObject(bucket, key, version); err != nil {
 					fmt.Println("delete Object failed: ", err)
+					os.Exit(1)
 				}
 			} else {
 				if err := sc.deleteBucketAndObjects(bucket, force); err != nil {
 					fmt.Printf("deleted Bucket %s and Objects failed: %s\n", args[0], err)
+					os.Exit(1)
 				}
 			}
 		},
 	}
 	deleteObjectCmd.Flags().BoolP("force", "", false, "delete Bucket and all Objects")
+	deleteObjectCmd.Flags().StringP("version", "", "", "Object version ID to delete")
 	deleteObjectCmd.Flags().BoolP("prefix", "x", false, "delete Objects start with specified prefix")
 	rootCmd.AddCommand(deleteObjectCmd)
 
@@ -827,7 +981,7 @@ Credential Envvar:
 			exp, err := time.ParseDuration(cmd.Flag("expire").Value.String())
 			if err != nil {
 				fmt.Println("invalid expire : ", err)
-				return
+				os.Exit(1)
 			}
 			bucket, key := splitBucketObject(args[0])
 			var url string
@@ -838,9 +992,9 @@ Credential Envvar:
 			}
 			if err != nil {
 				fmt.Println("presign failed: ", err)
-			} else {
-				fmt.Println(url)
+				os.Exit(1)
 			}
+			fmt.Println(url)
 		},
 	}
 	presignObjectCmd.Flags().DurationP("expire", "E", 12*time.Hour, "URL expire time")
@@ -861,8 +1015,7 @@ Credential Envvar:
 			bucket, key := splitBucketObject(args[0])
 			if err := sc.policyBucket(bucket, key); err != nil {
 				fmt.Printf("policy failed: %v\n", err)
-			} else {
-				fmt.Printf(" Objects success\n")
+				os.Exit(1)
 			}
 		},
 	}
