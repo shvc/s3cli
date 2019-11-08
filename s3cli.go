@@ -428,14 +428,19 @@ func (sc *S3Cli) deleteBucketAndObjects(bucket string, force bool) error {
 	return sc.deleteBucket(bucket)
 }
 
-func (sc *S3Cli) deleteObject(bucket, key string) error {
+func (sc *S3Cli) deleteObject(bucket, key, version string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
+	var versionID *string
+	if version != "" {
+		versionID = aws.String(version)
+	}
 	req := client.DeleteObjectRequest(&s3.DeleteObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
+		Bucket:    aws.String(bucket),
+		Key:       aws.String(key),
+		VersionId: versionID,
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
@@ -981,7 +986,8 @@ Credential Envvar:
 					os.Exit(1)
 				}
 			} else if key != "" {
-				if err := sc.deleteObject(bucket, key); err != nil {
+				version := cmd.Flag("version").Value.String()
+				if err := sc.deleteObject(bucket, key, version); err != nil {
 					fmt.Println("delete Object failed: ", err)
 					os.Exit(1)
 				}
@@ -994,6 +1000,7 @@ Credential Envvar:
 		},
 	}
 	deleteObjectCmd.Flags().BoolP("force", "", false, "delete Bucket and all Objects")
+	deleteObjectCmd.Flags().StringP("version", "", "", "Object version ID to delete")
 	deleteObjectCmd.Flags().BoolP("prefix", "x", false, "delete Objects start with specified prefix")
 	rootCmd.AddCommand(deleteObjectCmd)
 
