@@ -347,24 +347,6 @@ func (sc *S3Cli) listObjectVersions(bucket string) error {
 	return nil
 }
 
-func (sc *S3Cli) restoreObject(bucket, key, version string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.RestoreObjectRequest(&s3.RestoreObjectInput{
-		Bucket:    aws.String(bucket),
-		Key:       aws.String(key),
-		VersionId: aws.String(version),
-	})
-	resp, err := req.Send(context.Background())
-	if err != nil {
-		return err
-	}
-	fmt.Println(resp)
-	return nil
-}
-
 func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
@@ -902,25 +884,6 @@ Credential Envvar:
 		},
 	}
 	rootCmd.AddCommand(listObjectVersionCmd)
-
-	restoreObjectCmd := &cobra.Command{
-		Use:     "restore <bucket/key> <versionID>",
-		Aliases: []string{"rs"},
-		Short:   "restore Object versions",
-		Long: `restore Object to giving versionID
-1. listObjectVersion
-  s3cli restore Bucket/Key versionid
-`,
-		Args: cobra.ExactArgs(2),
-		Run: func(cmd *cobra.Command, args []string) {
-			bucket, key := splitBucketObject(args[0])
-			if err := sc.restoreObject(bucket, key, args[1]); err != nil {
-				fmt.Printf("restoreObject failed: %s\n", err)
-				os.Exit(1)
-			}
-		},
-	}
-	rootCmd.AddCommand(restoreObjectCmd)
 
 	catObjectCmd := &cobra.Command{
 		Use:   "cat <bucket/key>",
