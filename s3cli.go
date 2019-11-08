@@ -908,7 +908,8 @@ Credential Envvar:
 `,
 		Args: cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := sc.restoreObject(args[0], args[1], args[2]); err != nil {
+			bucket, key := splitBucketObject(args[0])
+			if err := sc.restoreObject(bucket, key, args[1]); err != nil {
 				fmt.Printf("restoreObject failed: %s\n", err)
 				os.Exit(1)
 			}
