@@ -341,14 +341,15 @@ func (sc *S3Cli) listObjectVersions(bucket string) error {
 	return nil
 }
 
-func (sc *S3Cli) restoreObject(bucket, key string) error {
+func (sc *S3Cli) restoreObject(bucket, key, version string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
 	req := client.RestoreObjectRequest(&s3.RestoreObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
+		Bucket:    aws.String(bucket),
+		Key:       aws.String(key),
+		VersionId: aws.String(version),
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
@@ -815,7 +816,42 @@ Credential Envvar:
 	getObjectCmd.Flags().BoolP("overwrite", "w", false, "overwrite file if exist")
 	rootCmd.AddCommand(getObjectCmd)
 
-	listObjectVersion := &cobra.Command{
+	bucketVersionCmd := &cobra.Command{
+		Use:     "bucketVersion <bucket>",
+		Aliases: []string{"bv"},
+		Short:   "bucket versioning",
+		Long: `list Object from Bucket
+1. get bucket versioning status
+  s3cli bv Bucket
+2. get bucket versioning status
+  s3cli bv Bucket
+3. get bucket versioning status
+  s3cli bv Bucket
+`,
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			switch cmd.Flag("status").Value.String() {
+			case "enable":
+				if err := sc.putBucketVersioning(args[0], true); err != nil {
+					fmt.Println("enable bucketVersioning failed: ", err)
+				}
+			case "disable":
+				if err := sc.putBucketVersioning(args[0], false); err != nil {
+					fmt.Println("disable bucketVersioning failed: ", err)
+				}
+			case "":
+				if err := sc.listObjectVersions(args[0]); err != nil {
+					fmt.Printf("listObjectVersions failed: %s\n", err)
+				}
+			default:
+				fmt.Println("invalid bucketVersioning status")
+			}
+		},
+	}
+	bucketVersionCmd.Flags().StringP("status", "", "", "Set bucketVersioning status(enable, disable)")
+	rootCmd.AddCommand(bucketVersionCmd)
+
+	listObjectVersionCmd := &cobra.Command{
 		Use:     "listObjectVersion <bucket>",
 		Aliases: []string{"lov"},
 		Short:   "list Object versions",
@@ -830,7 +866,24 @@ Credential Envvar:
 			}
 		},
 	}
-	rootCmd.AddCommand(listObjectVersion)
+	rootCmd.AddCommand(listObjectVersionCmd)
+
+	restoreObjectCmd := &cobra.Command{
+		Use:     "restore <bucket/key> <versionID>",
+		Aliases: []string{"rs"},
+		Short:   "restore Object versions",
+		Long: `restore Object to giving versionID
+1. listObjectVersion
+  s3cli restore Bucket/Key versionid
+`,
+		Args: cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := sc.restoreObject(args[0], args[1], args[2]); err != nil {
+				fmt.Printf("restoreObject failed: %s\n", err)
+			}
+		},
+	}
+	rootCmd.AddCommand(restoreObjectCmd)
 
 	catObjectCmd := &cobra.Command{
 		Use:   "cat <bucket/key>",
