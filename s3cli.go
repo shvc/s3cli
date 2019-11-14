@@ -182,7 +182,7 @@ func (sc *S3Cli) copyObject(source, bucket, key string) error {
 }
 
 // getObject download a Object from bucket
-func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
+func (sc *S3Cli) getObject(bucket, key, oRange, version, filename string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %w", err)
@@ -197,10 +197,15 @@ func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
 	if oRange != "" {
 		objRange = aws.String(fmt.Sprintf("bytes=%s", oRange))
 	}
+	var versionID *string
+	if version != "" {
+		versionID = aws.String(version)
+	}
 	req := client.GetObjectRequest(&s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		Range:  objRange,
+		Bucket:    aws.String(bucket),
+		Key:       aws.String(key),
+		VersionId: versionID,
+		Range:     objRange,
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
@@ -211,7 +216,7 @@ func (sc *S3Cli) getObject(bucket, key, oRange, filename string) error {
 }
 
 // catObject print Object contents
-func (sc *S3Cli) catObject(bucket, key, oRange string) error {
+func (sc *S3Cli) catObject(bucket, key, oRange, version string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %w", err)
@@ -220,10 +225,15 @@ func (sc *S3Cli) catObject(bucket, key, oRange string) error {
 	if oRange != "" {
 		objRange = aws.String(fmt.Sprintf("bytes=%s", oRange))
 	}
+	var versionID *string
+	if version != "" {
+		versionID = aws.String(version)
+	}
 	req := client.GetObjectRequest(&s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		Range:  objRange,
+		Bucket:    aws.String(bucket),
+		Key:       aws.String(key),
+		VersionId: versionID,
+		Range:     objRange,
 	})
 	resp, err := req.Send(context.Background())
 	if err != nil {
@@ -816,7 +826,8 @@ Credential Envvar:
 				destination = filepath.Base(key)
 			}
 			objRange := cmd.Flag("range").Value.String()
-			if err := sc.getObject(bucket, key, objRange, destination); err != nil {
+			version := cmd.Flag("version").Value.String()
+			if err := sc.getObject(bucket, key, objRange, version, destination); err != nil {
 				fmt.Printf("download %s to %s failed: %s\n", args[0], destination, err)
 				os.Exit(1)
 			} else {
@@ -825,6 +836,7 @@ Credential Envvar:
 		},
 	}
 	getObjectCmd.Flags().StringP("range", "r", "", "Object range to download, 0-64 means [0, 64]")
+	getObjectCmd.Flags().StringP("version", "", "", "Object version ID to delete")
 	getObjectCmd.Flags().BoolP("overwrite", "w", false, "overwrite file if exist")
 	rootCmd.AddCommand(getObjectCmd)
 
@@ -894,14 +906,16 @@ Credential Envvar:
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			objRange := cmd.Flag("range").Value.String()
+			version := cmd.Flag("version").Value.String()
 			bucket, key := splitBucketObject(args[0])
-			if err := sc.catObject(bucket, key, objRange); err != nil {
+			if err := sc.catObject(bucket, key, objRange, version); err != nil {
 				fmt.Printf("cat %s failed: %s\n", args[0], err)
 				os.Exit(1)
 			}
 		},
 	}
 	catObjectCmd.Flags().StringP("range", "r", "", "Object range to cat, 0-64 means [0, 64]")
+	catObjectCmd.Flags().StringP("version", "", "", "Object version ID to delete")
 	rootCmd.AddCommand(catObjectCmd)
 
 	copyObjectCmd := &cobra.Command{
