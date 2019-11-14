@@ -7,7 +7,7 @@ https://github.com/vager/s3cli/releases
 unzip s3cli-*.zip -d /usr/local/bin/
 ```
 
-#### 3. Configuration credential
+#### 3. AWS credentials configuration
 Add you profile(ecs) to ~/.aws/credentials
 ```
 [default]
