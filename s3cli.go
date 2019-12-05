@@ -118,7 +118,7 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool) er
 	return nil
 }
 
-// listObjects list Objects in specified bucket
+// listObjects (S3 listBucket)list Objects in specified bucket
 func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys int64, index bool) error {
 	client, err := sc.newS3Client()
 	if err != nil {
