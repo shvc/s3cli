@@ -25,20 +25,13 @@ func setup() error {
 	}
 	return os.Setenv("AWS_SECRET_KEY", "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG")
 }
-func Test_loadS3Cfg(t *testing.T) {
-	err := setup()
-	if err != nil {
-		t.Errorf("setup failed: %s", err)
-	}
-	cfg, err := s3cli.loadS3Cfg()
-	if err != nil {
-		t.Errorf("loadS3config failed")
-	}
-	t.Log(cfg)
-}
 
 func Test_newS3Client(t *testing.T) {
-	// TODO
+	// TODO:
+	_, err := s3cli.newS3Client()
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func Test_splitBucketObject(t *testing.T) {
