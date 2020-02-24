@@ -85,6 +85,7 @@ Credential Envvar:
 		Version: version,
 		Hidden:  true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// mannual init S3 client
 			client, err := newS3Client(&sc)
 			if err != nil {
 				return err
@@ -114,7 +115,7 @@ Credential Envvar:
 
 	// bucket sub-command create
 	bucketCreateCmd := &cobra.Command{
-		Use:     "create <bucket>",
+		Use:     "create <bucket> [<bucket> ...]",
 		Aliases: []string{"c"},
 		Short:   "create Bucket(s)",
 		Long: `create Bucket(s)
@@ -277,7 +278,7 @@ Credential Envvar:
 
 	// object put(upload)
 	putObjectCmd := &cobra.Command{
-		Use:     "put <bucket[/key]> [local-file]",
+		Use:     "put <bucket[/key]> [<local-file> ...]",
 		Aliases: []string{"put", "upload"},
 		Short:   "put Object(s)",
 		Long: `upload Object(s) to Bucket
@@ -287,6 +288,8 @@ Credential Envvar:
 	s3cli put bucket/key /path/to/file
 * put(upload) files to Bucket
 	s3cli put bucket file1 file2 file3
+* put(upload) files to Bucket with common prefix
+	s3cli put bucket/prefix file1 file2 file3
 * presign a PUT Object URL
 	s3cli up bucket/key`,
 		Args: cobra.MinimumNArgs(1),
@@ -299,8 +302,8 @@ Credential Envvar:
 				}
 			} else {
 				for _, v := range args[1:] {
-					key = fmt.Sprintf("%s%s", key, filepath.Base(v))
-					if err := sc.putObject(bucket, key, v); err != nil {
+					newKey := fmt.Sprintf("%s%s", key, filepath.Base(v))
+					if err := sc.putObject(bucket, newKey, v); err != nil {
 						fmt.Printf("put Object failed: %s\n", err)
 						os.Exit(1)
 					}
@@ -564,8 +567,7 @@ Credential Envvar:
 		Short:   "create a MPU request",
 		Long: `create a mutiPartUpload request
 * create a MPU request
-	s3cli mpu ct bucket/key
-`,
+	s3cli mpu ct bucket/key`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
@@ -583,8 +585,7 @@ Credential Envvar:
 		Short:   "upload a MPU part",
 		Long: `upload a mutiPartUpload part
 * upload MPU part 1
-	s3cli mpu u bucket/key upload-id 1 /path/to/file
-`,
+	s3cli mpu u bucket/key upload-id 1 /path/to/file`,
 		Args: cobra.ExactArgs(4),
 		Run: func(cmd *cobra.Command, args []string) {
 			part, err := strconv.ParseInt(args[2], 10, 64)
@@ -607,8 +608,7 @@ Credential Envvar:
 		Short:   "abort a MPU request",
 		Long: `abort a mutiPartUpload request
 1. abort a mpu request
-	s3cli mpu a bucket/key upload-id
-`,
+	s3cli mpu a bucket/key upload-id`,
 		Args: cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
@@ -626,8 +626,7 @@ Credential Envvar:
 		Short:   "list MPU",
 		Long: `list mutiPartUploads
 1. list MPU
-	s3cli mpu ls bucket/prefix
-`,
+	s3cli mpu ls bucket/prefix`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
@@ -640,13 +639,12 @@ Credential Envvar:
 	mpuCmd.AddCommand(mpuListCmd)
 
 	mpuCompleteCmd := &cobra.Command{
-		Use:     "complete <bucket/key> <upload-id> <part-etag>...",
+		Use:     "complete <bucket/key> <upload-id> <part-etag> [<part-etag> ...]",
 		Aliases: []string{"cl"},
 		Short:   "complete a MPU request",
 		Long: `complete a mutiPartUpload request
 1. complete a MPU request
-	s3cli mpu cl bucket/key upload-id etag01 etag02 etag03
-`,
+	s3cli mpu cl bucket/key upload-id etag01 etag02 etag03`,
 		Args: cobra.MinimumNArgs(3),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
