@@ -45,6 +45,8 @@ func TestMain(m *testing.M) {
 		log.Fatal("newS3Client", err)
 	}
 	s3cliTest.Client = client
+
+	os.Exit(m.Run())
 }
 
 func Test_splitBucketObject(t *testing.T) {

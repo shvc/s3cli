@@ -172,8 +172,8 @@ Credential Envvar:
 	// bucket sub-command acl
 	bucketACLCmd := &cobra.Command{
 		Use:   "acl <bucket> [ACL]",
-		Short: "acl Bucket",
-		Long: `acl Bucket
+		Short: "get/set Bucket ACL",
+		Long: `get/set Bucket ACL
 * get a Bucket(bk0)'s ACL
 	s3cli b p bk0
 * set a Bucket(bk0)'s ACL
@@ -199,8 +199,8 @@ Credential Envvar:
 	bucketPolicyCmd := &cobra.Command{
 		Use:     "policy <bucket> [policy]",
 		Aliases: []string{"p"},
-		Short:   "policy Bucket",
-		Long: `policy Bucket
+		Short:   "get/set Bucket Policy",
+		Long: `get/set Bucket Policy
 * get a Bucket(bk0)'s policy
 	s3cli b p bk0
 * set a Bucket(bk0)'s policy
@@ -349,25 +349,39 @@ Credential Envvar:
 	rootCmd.AddCommand(headCmd)
 
 	aclCmd := &cobra.Command{
-		Use:   "acl <bucket/key>",
-		Short: "get Bucket/Object ACL",
-		Long: `get Bucket/Object ACL
+		Use:   "acl <bucket/key> [ACL]",
+		Short: "get/set Bucket/Object ACL",
+		Long: `get/set Bucket/Object ACL
 * get a Bucket's ACL
 	s3cli acl bucket
 * get a Object's ACL
 	s3cli acl bucket/key`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
 			if key != "" {
-				if err := sc.getObjectACL(bucket, key); err != nil {
-					fmt.Printf("get %s/%s ACL failed: %s\n", bucket, key, err)
-					os.Exit(1)
+				if len(args) == 1 {
+					if err := sc.getObjectACL(bucket, key); err != nil {
+						fmt.Printf("get Object %s ACL failed: %s\n", key, err)
+						os.Exit(1)
+					}
+				} else {
+					if err := sc.setObjectACL(bucket, key, args[1]); err != nil {
+						fmt.Printf("set Object %s ACL failed: %s\n", key, err)
+						os.Exit(1)
+					}
 				}
 			} else {
-				if err := sc.bucketACLGet(bucket); err != nil {
-					fmt.Printf("get %s ACL failed: %s\n", bucket, err)
-					os.Exit(1)
+				if len(args) == 1 {
+					if err := sc.bucketACLGet(bucket); err != nil {
+						fmt.Printf("get Bucket %s ACL failed: %s\n", bucket, err)
+						os.Exit(1)
+					}
+				} else {
+					if err := sc.bucketACLSet(bucket, args[1]); err != nil {
+						fmt.Printf("set bucket %s ACL failed: %s\n", bucket, err)
+						os.Exit(1)
+					}
 				}
 			}
 		},
@@ -422,6 +436,23 @@ Credential Envvar:
 	listObjectCmd.Flags().BoolP("all", "a", false, "list all Objects")
 	rootCmd.AddCommand(listObjectCmd)
 
+	listVersionCmd := &cobra.Command{
+		Use:     "listVersion <bucket>",
+		Aliases: []string{"lv"},
+		Short:   "list Object versions",
+		Long: `list Object versions
+* list Object Version
+	s3cli lv Bucket`,
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := sc.listObjectVersions(args[0]); err != nil {
+				fmt.Printf("listObjectVersions failed: %s\n", err)
+				os.Exit(1)
+			}
+		},
+	}
+	rootCmd.AddCommand(listVersionCmd)
+
 	getObjectCmd := &cobra.Command{
 		Use:     "get <bucket/key> [destination]",
 		Aliases: []string{"download"},
@@ -455,23 +486,6 @@ Credential Envvar:
 	getObjectCmd.Flags().BoolP("overwrite", "w", false, "overwrite file if exist")
 	rootCmd.AddCommand(getObjectCmd)
 
-	listVersionCmd := &cobra.Command{
-		Use:     "listVersion <bucket>",
-		Aliases: []string{"lv"},
-		Short:   "list Object versions",
-		Long: `list Object versions
-* list Object Version
-	s3cli lv Bucket`,
-		Args: cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			if err := sc.listObjectVersions(args[0]); err != nil {
-				fmt.Printf("listObjectVersions failed: %s\n", err)
-				os.Exit(1)
-			}
-		},
-	}
-	rootCmd.AddCommand(listVersionCmd)
-
 	catObjectCmd := &cobra.Command{
 		Use:   "cat <bucket/key>",
 		Short: "cat Object",
@@ -492,6 +506,29 @@ Credential Envvar:
 	catObjectCmd.Flags().StringP("range", "r", "", "Object range to cat, 0-64 means [0, 64]")
 	catObjectCmd.Flags().StringP("version", "", "", "Object version ID to delete")
 	rootCmd.AddCommand(catObjectCmd)
+
+	renameObjectCmd := &cobra.Command{
+		Use:     "rename <bucket/key> <bucket/key>",
+		Aliases: []string{"ren", "mv"},
+		Short:   "rename Object",
+		Long: `rename Bucket/key to Bucket/key
+* spedify destination key
+	s3cli mv bucket1/key1 bucket2/key2
+* default destionation key
+	s3cli mv bucket1/key1 bucket2`,
+		Args: cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			bucket, key := splitBucketObject(args[1])
+			if key == "" {
+				_, key = splitBucketObject(args[0])
+			}
+			if err := sc.renameObject(args[0], bucket, key); err != nil {
+				fmt.Printf("rename %s failed: %s\n", args[1], err)
+				os.Exit(1)
+			}
+		},
+	}
+	rootCmd.AddCommand(renameObjectCmd)
 
 	copyObjectCmd := &cobra.Command{
 		Use:     "copy <bucket/key> <bucket/key>",
