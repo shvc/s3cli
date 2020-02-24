@@ -433,13 +433,13 @@ Credential Envvar:
 `,
 		Args: cobra.ExactArgs(4),
 		Run: func(cmd *cobra.Command, args []string) {
-			part, err := strconv.ParseInt(args[3], 10, 64)
+			part, err := strconv.ParseInt(args[2], 10, 64)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
 			bucket, key := splitBucketObject(args[0])
-			if err := sc.mpuUpload(bucket, key, args[2], part, args[3]); err != nil {
+			if err := sc.mpuUpload(bucket, key, args[1], part, args[3]); err != nil {
 				fmt.Printf("mpu upload %s failed: %s\n", key, err)
 				os.Exit(1)
 			}
