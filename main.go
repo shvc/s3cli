@@ -299,7 +299,7 @@ Credential Envvar:
 				}
 			} else {
 				for _, v := range args[1:] {
-					key = filepath.Base(v)
+					key = fmt.Sprintf("%s%s", key, filepath.Base(v))
 					if err := sc.putObject(bucket, key, v); err != nil {
 						fmt.Printf("put Object failed: %s\n", err)
 						os.Exit(1)
