@@ -1,10 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/johannesboyne/gofakes3"
+	"github.com/johannesboyne/gofakes3/backend/s3mem"
 )
 
 //	# Access Key ID
@@ -15,10 +18,11 @@ import (
 //	AWS_SECRET_ACCESS_KEY=SECRET
 //	AWS_SECRET_KEY=SECRET # only read if AWS_SECRET_ACCESS_KEY is not set.
 
-var s3cli = S3Cli{
-	endpoint: "https://play.min.io:9000",
-	region:   "default",
-	Client:   nil,
+var s3cliTest = S3Cli{
+	ak:     "my-ak",
+	sk:     "my-sk",
+	region: "default",
+	Client: nil,
 }
 
 func setEnv() error {
@@ -30,12 +34,17 @@ func setEnv() error {
 }
 
 func TestMain(m *testing.M) {
-	client, err := newS3Client(&s3cli)
+	// fake s3
+	backend := s3mem.New()
+	faker := gofakes3.New(backend)
+	ts := httptest.NewServer(faker.Server())
+	defer ts.Close()
+	s3cliTest.endpoint = ts.URL
+	client, err := newS3Client(&s3cliTest)
 	if err != nil {
-		fmt.Println("")
 		log.Fatal("newS3Client", err)
 	}
-	s3cli.Client = client
+	s3cliTest.Client = client
 }
 
 func Test_splitBucketObject(t *testing.T) {

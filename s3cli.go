@@ -131,6 +131,30 @@ func (sc *S3Cli) bucketACLGet(bucket string) error {
 	return err
 }
 
+// bucketACLSet set a Bucket's ACL
+func (sc *S3Cli) bucketACLSet(bucket, acl string) error {
+	req := sc.Client.PutBucketAclRequest(&s3.PutBucketAclInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	if resp != nil {
+		fmt.Println(resp.PutBucketAclOutput)
+	}
+	return err
+}
+
 // bucketPolicyGet get a Bucket's Policy
 func (sc *S3Cli) bucketPolicyGet(bucket string) error {
 	req := sc.Client.GetBucketPolicyRequest(&s3.GetBucketPolicyInput{
@@ -247,6 +271,41 @@ func (sc *S3Cli) bucketDelete(bucket string) error {
 
 	_, err := req.Send(context.Background())
 	return err
+}
+
+// putObject upload a Object
+func (sc *S3Cli) putObject(bucket, key, filename string) error {
+	if sc.presign || filename == "" {
+		req := sc.Client.PutObjectRequest(&s3.PutObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		})
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	f, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	req := sc.Client.PutObjectRequest(&s3.PutObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+		Body:   f,
+	})
+
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	if sc.verbose {
+		fmt.Println(resp)
+	}
+	return nil
 }
 
 // listAllObjects list all Objects in specified bucket
@@ -422,41 +481,6 @@ func (sc *S3Cli) catObject(bucket, key, oRange, version string) error {
 	}
 	_, err = io.Copy(os.Stdout, resp.Body)
 	return err
-}
-
-// putObject upload a Object
-func (sc *S3Cli) putObject(bucket, key, filename string) error {
-	if sc.presign || filename == "" {
-		req := sc.Client.PutObjectRequest(&s3.PutObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(key),
-		})
-		s, err := req.Presign(sc.presignExp)
-		if err == nil {
-			fmt.Println(s)
-		}
-		return err
-	}
-
-	f, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	req := sc.Client.PutObjectRequest(&s3.PutObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		Body:   f,
-	})
-
-	resp, err := req.Send(context.Background())
-	if err != nil {
-		return err
-	}
-	if sc.verbose {
-		fmt.Println(resp)
-	}
-	return nil
 }
 
 func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {

@@ -174,19 +174,22 @@ Credential Envvar:
 		Use:   "acl <bucket> [ACL]",
 		Short: "acl Bucket",
 		Long: `acl Bucket
-* get a Bucket(bk0)'s acl
+* get a Bucket(bk0)'s ACL
 	s3cli b p bk0
-* set a Bucket(bk0)'s policy(not impl)
+* set a Bucket(bk0)'s ACL
 	s3cli b p bk0`,
 		Args: cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 1 {
 				if err := sc.bucketACLGet(args[0]); err != nil {
-					fmt.Println("get policy failed: ", err)
+					fmt.Println("get ACL failed: ", err)
 					os.Exit(1)
 				}
 			} else {
-				fmt.Println("not impl")
+				if err := sc.bucketACLSet(args[0], args[1]); err != nil {
+					fmt.Println("set ACL failed: ", err)
+					os.Exit(1)
+				}
 			}
 		},
 	}
