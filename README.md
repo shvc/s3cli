@@ -8,15 +8,11 @@ unzip s3cli-*.zip -d /usr/local/bin/
 ```
 
 #### 3. AWS credentials configuration
-Add you profile(ecs) to ~/.aws/credentials
+Add you profile(default) to ~/.aws/credentials or use cli flag(--ak, --sk)
 ```
 [default]
-aws_access_key_id=AK
-aws_secret_access_key=SK
-
-[ecs]
-aws_access_key_id=AK
-aws_secret_access_key=SK
+aws_access_key_id=my-ak
+aws_secret_access_key=my-sk
 ```
 
 ## Usage
@@ -36,20 +32,19 @@ Usage:
   s3cli [command]
 
 Available Commands:
-  acl               get Bucket/Object ACL
-  bucketVersion     bucket versioning
-  cat               cat Object
-  copy              copy Object
-  delete            delete(remove) Object or Bucket(Bucket and Objects)
-  download          download Object
-  head              head Bucket/Object
-  help              Help about any command
-  list              list Buckets or Objects
-  listObjectVersion list Object versions
-  makeBucket        make Bucket
-  mpu               mpu Object
-  policy            policy Bucket
-  upload            upload Object
+  acl         get/set Bucket/Object ACL
+  bucket      bucket sub-command
+  cat         cat Object
+  copy        copy Object
+  delete      delete Object or Bucket
+  get         get Object
+  head        head Bucket/Object
+  help        Help about any command
+  list        list Buckets or Objects
+  listVersion list Object versions
+  mpu         mpu sub-command
+  put         put Object(s)
+  rename      rename Object
 
 Flags:
       --ak string         access key
@@ -68,86 +63,73 @@ Use "s3cli [command] --help" for more information about a command.
 ```
 
 ## Example
-#### Create Bucket
-- parse endpoint from flag -e
-```
-s3cli -e http://192.168.55.2:9020 -p ecs cb bucket1
-```
-- or parse endpoint from Envvar
-```
+#### Bucket(b)
+```sh
+# Bucket(b) create(c)
+s3cli -e http://192.168.55.2:9020 b c bucket1
+# or
 export S3_ENDPOINT=http://192.168.55.2:9020
-s3cli cb bucket2
+s3cli b c bucket2
+
+# list(ls) Buckets  
+s3cli b ls
+
+# bucket(b) policy(p) get  
+s3cli b p
+
+# bucket(b) delete(d)  
+s3cli b d bucket
 ```
 
-#### Upload file
-- upload file(/etc/hosts) to bucket1/hosts
-```
-s3cli -p ecs up /etc/hosts bucket1
-upload /etc/hosts to bucket1 success
-```
-- upload file(/etc/hosts) to bucket1/host2
-```
-s3cli -p ecs up /etc/hosts bucket1/host2
-upload /etc/hosts to bucket1/host2 success
-```
-- presign a PUT Object URL
-```
-s3cli -p ecs up bucket1/file2 --presign
+#### Object
+- upload(put) Objcet  
+```sh
+# upload file(/etc/hosts) to bucket1/hosts
+s3cli put bucket1 /etc/hosts
 
-or
+# upload file(/etc/hosts) to bucket1/host2
+s3cli put bucket1/host2 /etc/hosts
 
-s3cli -p ecs up bucket1/host2
+# presign a PUT Object URL
+s3cli put bucket1/file3 --presign
+#or
+s3cli put bucket1/file3
 ```
-
-#### List
-- List Buckets
-```
-s3cli -p ecs ls
-```
-- List Objects(default 1000 Objects)
-```
-s3cli -p ecs ls bucket1
-```
-- List all Objects
-```
-s3cli -p ecs ls bucket1 -a
-```
-- List Objects with specified prefix
-```
-s3cli -p ecs ls bucket1/prefix
-```
-
-#### Download file
-- download bucket1/hosts to ./hosts
-```
+- Download(get) Object  
+```sh
+# download bucket1/hosts to ./hosts
 s3cli -p ecs down bucket1/hosts
-download bucket1/hosts to hosts
-```
-- download bucket1/hosts to /tmp/newfile
-```
+
+# download bucket1/hosts to /tmp/newfile
 s3cli down bucket1/hosts /tmp/newfile
-download bucket1/hosts to /tmp/newfile
-```
-- presign GET Object URL
-```
+
+# presign GET Object URL
 s3cli get bucket1/hosts --presign
 ```
 
+- list(ls) Objects  
+```sh
+# list Objects(default 1000 Objects)
+s3cli ls bucket1
 
-#### Delete
-- Delete an Object
+# list all Objects
+s3cli ls bucket1 -a
+
+# list Objects with specified prefix
+s3cli ls bucket1/prefix
 ```
-s3cli -p ecs delete bucket1/key
-```
-- Delete all Objects with specified prefix
-```
-s3cli -p ecs delete bucket1/prefix -x
-```
-- Delete Bucket and all Objects
-```
-s3cli -p ecs delete bucket1 --force
-```
-- presign an DELETE Object URL
-```
-s3cli -p ecs delete bucket1/hosts --presign
+
+- Delete(rm) Object(s)  
+```sh
+# delete an Object
+s3cli rm bucket1/key
+
+# delete all Objects with specified prefix
+s3cli rm bucket1/prefix -x
+
+# delete Bucket and all Objects
+s3cli rm bucket1 --force
+
+# presign an DELETE Object URL
+s3cli rm bucket1/hosts --presign
 ```
