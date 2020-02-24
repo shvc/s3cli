@@ -2,14 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/endpoints"
-	"github.com/aws/aws-sdk-go-v2/aws/external"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
@@ -25,55 +24,235 @@ type S3Cli struct {
 	presignExp time.Duration
 	verbose    bool
 	debug      bool
+	Client     *s3.Client // manual init this field
 }
 
-// newS3Client allocates a s3.Client
-func (sc *S3Cli) newS3Client() (*s3.Client, error) {
-	if sc.ak != "" && sc.sk != "" {
-		os.Setenv("AWS_ACCESS_KEY_ID", sc.ak)
-		os.Setenv("AWS_SECRET_ACCESS_KEY", sc.sk)
-	}
-	cfg, err := external.LoadDefaultAWSConfig(external.WithSharedConfigProfile(sc.profile))
-	if err != nil {
-		return nil, fmt.Errorf("failed to load config, %w", err)
-	}
-	cfg.Region = sc.region
-	//cfg.EndpointResolver = aws.ResolveWithEndpoint{
-	//	URL: sc.endpoint,
-	//}
-	defaultResolver := endpoints.NewDefaultResolver()
-	myCustomResolver := func(service, region string) (aws.Endpoint, error) {
-		if service == s3.EndpointsID {
-			return aws.Endpoint{
-				URL: sc.endpoint,
-				//SigningRegion: "custom-signing-region",
-				SigningNameDerived: true,
-			}, nil
+// bucketCreate create a Bucket
+func (sc *S3Cli) bucketCreate(bucket []string) error {
+	for _, b := range bucket {
+		createBucketInput := &s3.CreateBucketInput{
+			Bucket: aws.String(b),
+			CreateBucketConfiguration: &s3.CreateBucketConfiguration{
+				LocationConstraint: s3.BucketLocationConstraint(sc.region),
+			},
 		}
-		return defaultResolver.ResolveEndpoint(service, region)
+		req := sc.Client.CreateBucketRequest(createBucketInput)
+
+		if sc.presign {
+			s, err := req.Presign(sc.presignExp)
+			if err == nil {
+				fmt.Println(s)
+			}
+			return err
+		}
+
+		resp, err := req.Send(context.Background())
+		if err != nil {
+			return err
+		}
+		if sc.verbose {
+			fmt.Println(resp)
+		}
 	}
-	cfg.EndpointResolver = aws.EndpointResolverFunc(myCustomResolver)
-	if sc.debug {
-		cfg.LogLevel = aws.LogDebug
+	return nil
+}
+
+// bucketList list all my Buckets
+func (sc *S3Cli) bucketList() error {
+	req := sc.Client.ListBucketsRequest(&s3.ListBucketsInput{})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
 	}
-	client := s3.New(cfg)
-	if sc.endpoint == "" {
-		sc.endpoint = os.Getenv(endpointEnvVar)
+
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
 	}
-	if sc.endpoint != "" {
-		client.ForcePathStyle = true
+	if sc.verbose {
+		fmt.Println(resp.ListBucketsOutput)
+		return nil
 	}
-	return client, nil
+	for _, b := range resp.ListBucketsOutput.Buckets {
+		fmt.Println(*b.Name)
+	}
+	return nil
+}
+
+// bucketHead head a Bucket
+func (sc *S3Cli) bucketHead(bucket string) error {
+	req := sc.Client.HeadBucketRequest(&s3.HeadBucketInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	if resp != nil {
+		fmt.Println(resp.HeadBucketOutput)
+	}
+	return err
+}
+
+// bucketACLGet get a Bucket's ACL
+func (sc *S3Cli) bucketACLGet(bucket string) error {
+	req := sc.Client.GetBucketAclRequest(&s3.GetBucketAclInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	if resp != nil {
+		fmt.Println(resp.GetBucketAclOutput)
+	}
+	return err
+}
+
+// bucketPolicyGet get a Bucket's Policy
+func (sc *S3Cli) bucketPolicyGet(bucket string) error {
+	req := sc.Client.GetBucketPolicyRequest(&s3.GetBucketPolicyInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Println(*resp.GetBucketPolicyOutput.Policy)
+	return nil
+}
+
+// bucketPolicySet set a Bucket's Policy
+func (sc *S3Cli) bucketPolicySet(bucket, policy string) error {
+	if policy == "" {
+		return errors.New("empty policy")
+	}
+
+	req := sc.Client.PutBucketPolicyRequest(&s3.PutBucketPolicyInput{
+		Bucket: aws.String(bucket),
+		Policy: aws.String(policy),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Println(*resp.PutBucketPolicyOutput)
+	return nil
+}
+
+// bucketVersioningGet get a Bucket's Versioning status
+func (sc *S3Cli) bucketVersioningGet(bucket string) error {
+	req := sc.Client.GetBucketVersioningRequest(&s3.GetBucketVersioningInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Printf("BucketVersioning: %s\n", resp)
+	return nil
+}
+
+// bucketVersioningSet set a Bucket's Versioning status
+func (sc *S3Cli) bucketVersioningSet(bucket string, status bool) error {
+	verStatus := s3.BucketVersioningStatusSuspended
+	if status {
+		verStatus = s3.BucketVersioningStatusEnabled
+	}
+	req := sc.Client.PutBucketVersioningRequest(&s3.PutBucketVersioningInput{
+		Bucket: aws.String(bucket),
+		VersioningConfiguration: &s3.VersioningConfiguration{
+			Status: verStatus,
+		},
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Printf("BucketVersioning: %s\n", resp)
+	return nil
+}
+
+// bucketDelete delete a Bucket
+func (sc *S3Cli) bucketDelete(bucket string) error {
+	req := sc.Client.DeleteBucketRequest(&s3.DeleteBucketInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	_, err := req.Send(context.Background())
+	return err
 }
 
 // listAllObjects list all Objects in specified bucket
 func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
 	var i int64
-	req := client.ListObjectsRequest(&s3.ListObjectsInput{
+	req := sc.Client.ListObjectsRequest(&s3.ListObjectsInput{
 		Bucket:    aws.String(bucket),
 		Prefix:    aws.String(prefix),
 		Delimiter: aws.String(delimiter),
@@ -102,11 +281,7 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool) er
 
 // listObjects (S3 listBucket)list Objects in specified bucket
 func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys int64, index bool) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.ListObjectsRequest(&s3.ListObjectsInput{
+	req := sc.Client.ListObjectsRequest(&s3.ListObjectsInput{
 		Bucket:    aws.String(bucket),
 		Prefix:    aws.String(prefix),
 		Marker:    aws.String(marker),
@@ -147,16 +322,11 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 func (sc *S3Cli) renameObjects(bucket, prefix, delimiter, marker string) error {
 	// TODO: Copy and Delete Object
 	return fmt.Errorf("not impl")
-
 }
 
 // copyObjects copy Object to destBucket/key
 func (sc *S3Cli) copyObject(source, bucket, key string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.CopyObjectRequest(&s3.CopyObjectInput{
+	req := sc.Client.CopyObjectRequest(&s3.CopyObjectInput{
 		CopySource: aws.String(source),
 		Bucket:     aws.String(bucket),
 		Key:        aws.String(key),
@@ -183,11 +353,6 @@ func (sc *S3Cli) copyObject(source, bucket, key string) error {
 
 // getObject download a Object from bucket
 func (sc *S3Cli) getObject(bucket, key, oRange, version, filename string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-
 	var objRange *string
 	if oRange != "" {
 		objRange = aws.String(fmt.Sprintf("bytes=%s", oRange))
@@ -196,7 +361,7 @@ func (sc *S3Cli) getObject(bucket, key, oRange, version, filename string) error 
 	if version != "" {
 		versionID = aws.String(version)
 	}
-	req := client.GetObjectRequest(&s3.GetObjectInput{
+	req := sc.Client.GetObjectRequest(&s3.GetObjectInput{
 		Bucket:    aws.String(bucket),
 		Key:       aws.String(key),
 		VersionId: versionID,
@@ -228,10 +393,6 @@ func (sc *S3Cli) getObject(bucket, key, oRange, version, filename string) error 
 
 // catObject print Object contents
 func (sc *S3Cli) catObject(bucket, key, oRange, version string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
 	var objRange *string
 	if oRange != "" {
 		objRange = aws.String(fmt.Sprintf("bytes=%s", oRange))
@@ -240,7 +401,7 @@ func (sc *S3Cli) catObject(bucket, key, oRange, version string) error {
 	if version != "" {
 		versionID = aws.String(version)
 	}
-	req := client.GetObjectRequest(&s3.GetObjectInput{
+	req := sc.Client.GetObjectRequest(&s3.GetObjectInput{
 		Bucket:    aws.String(bucket),
 		Key:       aws.String(key),
 		VersionId: versionID,
@@ -265,13 +426,8 @@ func (sc *S3Cli) catObject(bucket, key, oRange, version string) error {
 
 // putObject upload a Object
 func (sc *S3Cli) putObject(bucket, key, filename string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-
-	if sc.presign {
-		req := client.PutObjectRequest(&s3.PutObjectInput{
+	if sc.presign || filename == "" {
+		req := sc.Client.PutObjectRequest(&s3.PutObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(key),
 		})
@@ -287,7 +443,7 @@ func (sc *S3Cli) putObject(bucket, key, filename string) error {
 		return err
 	}
 	defer f.Close()
-	req := client.PutObjectRequest(&s3.PutObjectInput{
+	req := sc.Client.PutObjectRequest(&s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 		Body:   f,
@@ -304,11 +460,7 @@ func (sc *S3Cli) putObject(bucket, key, filename string) error {
 }
 
 func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.HeadObjectRequest(&s3.HeadObjectInput{
+	req := sc.Client.HeadObjectRequest(&s3.HeadObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
@@ -340,69 +492,8 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 	return nil
 }
 
-func (sc *S3Cli) getBucketVersioning(bucket string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.GetBucketVersioningRequest(&s3.GetBucketVersioningInput{
-		Bucket: aws.String(bucket),
-	})
-
-	if sc.presign {
-		s, err := req.Presign(sc.presignExp)
-		if err == nil {
-			fmt.Println(s)
-		}
-		return err
-	}
-
-	resp, err := req.Send(context.Background())
-	if err != nil {
-		return err
-	}
-	fmt.Printf("getBucketVersioning: %s\n", resp)
-	return nil
-}
-
-func (sc *S3Cli) putBucketVersioning(bucket string, status bool) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	verStatus := s3.BucketVersioningStatusSuspended
-	if status {
-		verStatus = s3.BucketVersioningStatusEnabled
-	}
-	req := client.PutBucketVersioningRequest(&s3.PutBucketVersioningInput{
-		Bucket: aws.String(bucket),
-		VersioningConfiguration: &s3.VersioningConfiguration{
-			Status: verStatus,
-		},
-	})
-
-	if sc.presign {
-		s, err := req.Presign(sc.presignExp)
-		if err == nil {
-			fmt.Println(s)
-		}
-		return err
-	}
-
-	resp, err := req.Send(context.Background())
-	if err != nil {
-		return err
-	}
-	fmt.Printf("putBucketVersioning: %s\n", resp)
-	return nil
-}
-
 func (sc *S3Cli) listObjectVersions(bucket string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.ListObjectVersionsRequest(&s3.ListObjectVersionsInput{
+	req := sc.Client.ListObjectVersionsRequest(&s3.ListObjectVersionsInput{
 		Bucket: aws.String(bucket),
 	})
 
@@ -428,17 +519,13 @@ func (sc *S3Cli) listObjectVersions(bucket string) error {
 
 // deleteObjects list and delete Objects
 func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
 	var objNum int64
 	loi := &s3.ListObjectsInput{
 		Bucket: aws.String(bucket),
 		Prefix: aws.String(prefix),
 	}
 	for {
-		req := client.ListObjectsRequest(loi)
+		req := sc.Client.ListObjectsRequest(loi)
 		resp, err := req.Send(context.Background())
 		if err != nil {
 			return fmt.Errorf("list object failed: %w", err)
@@ -459,7 +546,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 			Delete: &s3.Delete{Quiet: aws.Bool(true),
 				Objects: objects},
 		}
-		deleteReq := client.DeleteObjectsRequest(doi)
+		deleteReq := sc.Client.DeleteObjectsRequest(doi)
 		if _, e := deleteReq.Send(context.Background()); err != nil {
 			fmt.Printf("delete Objects failed: %s", e)
 		} else {
@@ -487,19 +574,15 @@ func (sc *S3Cli) deleteBucketAndObjects(bucket string, force bool) error {
 			return err
 		}
 	}
-	return sc.deleteBucket(bucket)
+	return sc.bucketDelete(bucket)
 }
 
 func (sc *S3Cli) deleteObject(bucket, key, version string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
 	var versionID *string
 	if version != "" {
 		versionID = aws.String(version)
 	}
-	req := client.DeleteObjectRequest(&s3.DeleteObjectInput{
+	req := sc.Client.DeleteObjectRequest(&s3.DeleteObjectInput{
 		Bucket:    aws.String(bucket),
 		Key:       aws.String(key),
 		VersionId: versionID,
@@ -523,38 +606,8 @@ func (sc *S3Cli) deleteObject(bucket, key, version string) error {
 	return nil
 }
 
-func (sc *S3Cli) policyBucket(bucket string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.GetBucketPolicyRequest(&s3.GetBucketPolicyInput{
-		Bucket: aws.String(bucket),
-	})
-
-	if sc.presign {
-		s, err := req.Presign(sc.presignExp)
-		if err == nil {
-			fmt.Println(s)
-		}
-		return err
-	}
-
-	resp, err := req.Send(context.Background())
-	if err != nil {
-		return err
-	}
-	fmt.Println(*resp.GetBucketPolicyOutput.Policy)
-	return nil
-}
-
 func (sc *S3Cli) getObjectACL(bucket, key string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-
-	req := client.GetObjectAclRequest(&s3.GetObjectAclInput{
+	req := sc.Client.GetObjectAclRequest(&s3.GetObjectAclInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
@@ -577,148 +630,9 @@ func (sc *S3Cli) getObjectACL(bucket, key string) error {
 	return nil
 }
 
-func (sc *S3Cli) createBucket(bucket string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.CreateBucketRequest(&s3.CreateBucketInput{
-		Bucket: aws.String(bucket),
-		CreateBucketConfiguration: &s3.CreateBucketConfiguration{
-			LocationConstraint: s3.BucketLocationConstraint(sc.region),
-		},
-	})
-
-	if sc.presign {
-		s, err := req.Presign(sc.presignExp)
-		if err == nil {
-			fmt.Println(s)
-		}
-		return err
-	}
-
-	resp, err := req.Send(context.Background())
-	if err != nil {
-		return err
-	}
-	if sc.verbose {
-		fmt.Println(resp)
-	}
-	return err
-}
-
-func (sc *S3Cli) getBucketACL(bucket string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.GetBucketAclRequest(&s3.GetBucketAclInput{
-		Bucket: aws.String(bucket),
-	})
-
-	if sc.presign {
-		s, err := req.Presign(sc.presignExp)
-		if err == nil {
-			fmt.Println(s)
-		}
-		return err
-	}
-
-	resp, err := req.Send(context.Background())
-	if err != nil {
-		return err
-	}
-	if resp != nil {
-		fmt.Println(resp.GetBucketAclOutput)
-	}
-	return err
-}
-
-func (sc *S3Cli) headBucket(bucket string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.HeadBucketRequest(&s3.HeadBucketInput{
-		Bucket: aws.String(bucket),
-	})
-
-	if sc.presign {
-		s, err := req.Presign(sc.presignExp)
-		if err == nil {
-			fmt.Println(s)
-		}
-		return err
-	}
-
-	resp, err := req.Send(context.Background())
-	if err != nil {
-		return err
-	}
-	if resp != nil {
-		fmt.Println(resp.HeadBucketOutput)
-	}
-	return err
-}
-
-func (sc *S3Cli) deleteBucket(bucket string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-
-	req := client.DeleteBucketRequest(&s3.DeleteBucketInput{
-		Bucket: aws.String(bucket),
-	})
-
-	if sc.presign {
-		s, err := req.Presign(sc.presignExp)
-		if err == nil {
-			fmt.Println(s)
-		}
-		return err
-	}
-
-	_, err = req.Send(context.Background())
-	return err
-}
-
-func (sc *S3Cli) listBuckets() error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.ListBucketsRequest(&s3.ListBucketsInput{})
-
-	if sc.presign {
-		s, err := req.Presign(sc.presignExp)
-		if err == nil {
-			fmt.Println(s)
-		}
-		return err
-	}
-
-	resp, err := req.Send(context.Background())
-	if err != nil {
-		return err
-	}
-	if sc.verbose {
-		fmt.Println(resp.ListBucketsOutput)
-		return nil
-	}
-	for _, b := range resp.ListBucketsOutput.Buckets {
-		fmt.Println(*b.Name)
-	}
-	return nil
-}
-
 // mpuCreate create Multi-Part-Upload
 func (sc *S3Cli) mpuCreate(bucket, key string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.CreateMultipartUploadRequest(&s3.CreateMultipartUploadInput{
+	req := sc.Client.CreateMultipartUploadRequest(&s3.CreateMultipartUploadInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
@@ -732,16 +646,12 @@ func (sc *S3Cli) mpuCreate(bucket, key string) error {
 
 // mpuUpload do a Multi-Part-Upload
 func (sc *S3Cli) mpuUpload(bucket, key, uid string, pid int64, filename string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
 	fd, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
 	defer fd.Close()
-	req := client.UploadPartRequest(&s3.UploadPartInput{
+	req := sc.Client.UploadPartRequest(&s3.UploadPartInput{
 		Body:       fd,
 		Bucket:     aws.String(bucket),
 		Key:        aws.String(key),
@@ -758,11 +668,7 @@ func (sc *S3Cli) mpuUpload(bucket, key, uid string, pid int64, filename string) 
 
 // mpuAbort abort Multi-Part-Upload
 func (sc *S3Cli) mpuAbort(bucket, key, uid string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
-	req := client.AbortMultipartUploadRequest(&s3.AbortMultipartUploadInput{
+	req := sc.Client.AbortMultipartUploadRequest(&s3.AbortMultipartUploadInput{
 		Bucket:   aws.String(bucket),
 		Key:      aws.String(key),
 		UploadId: aws.String(uid),
@@ -777,15 +683,11 @@ func (sc *S3Cli) mpuAbort(bucket, key, uid string) error {
 
 // mpuList list Multi-Part-Uploads
 func (sc *S3Cli) mpuList(bucket, prefix string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
 	var keyPrefix *string
 	if prefix != "" {
 		keyPrefix = aws.String(prefix)
 	}
-	req := client.ListMultipartUploadsRequest(&s3.ListMultipartUploadsInput{
+	req := sc.Client.ListMultipartUploadsRequest(&s3.ListMultipartUploadsInput{
 		Bucket: aws.String(bucket),
 		Prefix: keyPrefix,
 	})
@@ -799,10 +701,6 @@ func (sc *S3Cli) mpuList(bucket, prefix string) error {
 
 // mpuComplete completa Multi-Part-Upload
 func (sc *S3Cli) mpuComplete(bucket, key, uid string, etags []string) error {
-	client, err := sc.newS3Client()
-	if err != nil {
-		return fmt.Errorf("init s3 Client failed: %w", err)
-	}
 	parts := make([]s3.CompletedPart, len(etags))
 	for i, v := range etags {
 		parts[i] = s3.CompletedPart{
@@ -810,7 +708,7 @@ func (sc *S3Cli) mpuComplete(bucket, key, uid string, etags []string) error {
 			ETag:       aws.String(v),
 		}
 	}
-	req := client.CompleteMultipartUploadRequest(&s3.CompleteMultipartUploadInput{
+	req := sc.Client.CompleteMultipartUploadRequest(&s3.CompleteMultipartUploadInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 		MultipartUpload: &s3.CompletedMultipartUpload{
