@@ -407,9 +407,9 @@ Credential Envvar:
 	mpuCreateCmd := &cobra.Command{
 		Use:     "create <bucket/key>",
 		Aliases: []string{"ct"},
-		Short:   "create request",
-		Long: `create mutiPartUpload
-1. create a MPU
+		Short:   "create a MPU request",
+		Long: `create a mutiPartUpload request
+1. create a MPU request
 	s3cli ct bucket/key
 `,
 		Args: cobra.ExactArgs(1),
@@ -424,12 +424,12 @@ Credential Envvar:
 	mpuCmd.AddCommand(mpuCreateCmd)
 
 	mpuUploadCmd := &cobra.Command{
-		Use:     "upload <file> <bucket/key> <upload-id> <part-num>",
+		Use:     "upload <bucket/key> <upload-id> <part-num> <file>",
 		Aliases: []string{"up", "u"},
 		Short:   "upload a MPU part",
 		Long: `upload a mutiPartUpload part
 1. upload MPU part 1
-	s3cli mpu up /path/to/file bucket/key xxxxxx 1
+	s3cli mpu up bucket/key upload-id 1 /path/to/file
 `,
 		Args: cobra.ExactArgs(4),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -438,8 +438,8 @@ Credential Envvar:
 				fmt.Println(err)
 				return
 			}
-			bucket, key := splitBucketObject(args[1])
-			if err := sc.mpuUpload(args[0], bucket, key, args[2], part); err != nil {
+			bucket, key := splitBucketObject(args[0])
+			if err := sc.mpuUpload(bucket, key, args[2], part, args[3]); err != nil {
 				fmt.Printf("mpu upload %s failed: %s\n", key, err)
 				os.Exit(1)
 			}
@@ -450,10 +450,10 @@ Credential Envvar:
 	mpuAbortCmd := &cobra.Command{
 		Use:     "abort <bucket/key> <upload-id>",
 		Aliases: []string{"a"},
-		Short:   "abort a MPU",
-		Long: `abort mutiPartUpload
-1. abort a mpu
-	s3cli mpu a bucket/key xxxxxxx
+		Short:   "abort a MPU request",
+		Long: `abort a mutiPartUpload request
+1. abort a mpu request
+	s3cli mpu a bucket/key upload-id
 `,
 		Args: cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -471,7 +471,7 @@ Credential Envvar:
 		Aliases: []string{"ls"},
 		Short:   "list MPU",
 		Long: `list mutiPartUploads
-1. upload a file
+1. list MPU
 	s3cli mpu ls bucket/prefix
 `,
 		Args: cobra.ExactArgs(1),
@@ -486,17 +486,21 @@ Credential Envvar:
 	mpuCmd.AddCommand(mpuListCmd)
 
 	mpuCompleteCmd := &cobra.Command{
-		Use:     "complete <bucket/key> <upload-id>",
+		Use:     "complete <bucket/key> <upload-id> <part-etag>...",
 		Aliases: []string{"cl"},
-		Short:   "complete a MPU part",
-		Long: `complete mutiPartUpload
-1. complete a MPU
-	s3cli mpu cl bucket/key xxxxx
+		Short:   "complete a MPU request",
+		Long: `complete a mutiPartUpload request
+1. complete a MPU request
+	s3cli mpu cl bucket/key upload-id etag01 etag02 etag03
 `,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.MinimumNArgs(3),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
-			if err := sc.mpuComplete(bucket, key, args[1]); err != nil {
+			etags := make([]string, len(args)-2)
+			for i := range etags {
+				etags[i] = args[i+2]
+			}
+			if err := sc.mpuComplete(bucket, key, args[1], etags); err != nil {
 				fmt.Printf("mpu complete %s failed: %s\n", args[1], err)
 				os.Exit(1)
 			}

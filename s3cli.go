@@ -731,7 +731,7 @@ func (sc *S3Cli) mpuCreate(bucket, key string) error {
 }
 
 // mpuUpload do a Multi-Part-Upload
-func (sc *S3Cli) mpuUpload(filename, bucket, key, uid string, pid int64) error {
+func (sc *S3Cli) mpuUpload(bucket, key, uid string, pid int64, filename string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %w", err)
@@ -798,14 +798,24 @@ func (sc *S3Cli) mpuList(bucket, prefix string) error {
 }
 
 // mpuComplete completa Multi-Part-Upload
-func (sc *S3Cli) mpuComplete(bucket, key, uid string) error {
+func (sc *S3Cli) mpuComplete(bucket, key, uid string, etags []string) error {
 	client, err := sc.newS3Client()
 	if err != nil {
 		return fmt.Errorf("init s3 Client failed: %w", err)
 	}
+	parts := make([]s3.CompletedPart, len(etags))
+	for i, v := range etags {
+		parts[i] = s3.CompletedPart{
+			PartNumber: aws.Int64(int64(i + 1)),
+			ETag:       aws.String(v),
+		}
+	}
 	req := client.CompleteMultipartUploadRequest(&s3.CompleteMultipartUploadInput{
-		Bucket:   aws.String(bucket),
-		Key:      aws.String(key),
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+		MultipartUpload: &s3.CompletedMultipartUpload{
+			Parts: parts,
+		},
 		UploadId: aws.String(uid),
 	})
 	resp, err := req.Send(context.Background())
