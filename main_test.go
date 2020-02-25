@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"log"
 	mand "math/rand"
 	"net/http/httptest"
@@ -42,8 +43,19 @@ func TestMain(m *testing.M) {
 	client, err := newS3Client(&s3cliTest)
 	if err != nil {
 		log.Fatal("newS3Client", err)
+		os.Exit(1)
 	}
 	s3cliTest.Client = client
+	if err := s3Backend.CreateBucket(testBucketName); err != nil {
+		log.Fatal("backend CreateBucket error: ", err)
+		os.Exit(1)
+	}
+
+	_, err = s3Backend.PutObject(testBucketName, testObjectKey, nil, bytes.NewReader(testObjectContent), int64(len(testObjectContent)))
+	if err != nil {
+		log.Fatal("backend PutObject error: ", err)
+		os.Exit(1)
+	}
 
 	os.Exit(m.Run())
 }

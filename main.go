@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -175,15 +176,11 @@ Credential Envvar:
 		Short: "get/set Bucket ACL",
 		Long: `get/set Bucket ACL
 * get a Bucket(bk0)'s ACL
-	s3cli b p bk0
-* set a Bucket(bk0)'s ACL to private
-	s3cli b p bk0 private
+	s3cli b acl bk0
 * set a Bucket(bk0)'s ACL to public-read
-	s3cli b p bk0 public-read
-* set a Bucket(bk0)'s ACL to public-read-write
-	s3cli b p bk0 public-read-write
-* set a Bucket(bk0)'s ACL to authenticated-read
-	s3cli b p bk0 authenticated-read`,
+	s3cli b acl bk0 public-read
+* all canned Bucket ACL(private, public-read, public-read-write, authenticated-read)
+`,
 		Args: cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 1 {
@@ -318,23 +315,35 @@ Credential Envvar:
 * put(upload) files to Bucket with common prefix
 	s3cli put bucket/prefix file1 file2 file3
 * presign a PUT Object URL
-	s3cli up bucket/key`,
+	s3cli up bucket/key --presign`,
 		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
+			var err error
+			var fd *os.File
 			bucket, key := splitBucketObject(args[0])
 			if len(args) < 2 {
-				if err := sc.putObject(bucket, key, ""); err != nil {
-					fmt.Printf("put Object failed: %s\n", err)
-					os.Exit(1)
-				}
+				err = sc.putObject(bucket, key, fd)
 			} else {
 				for _, v := range args[1:] {
 					newKey := fmt.Sprintf("%s%s", key, filepath.Base(v))
-					if err := sc.putObject(bucket, newKey, v); err != nil {
+					fd, err = os.Open(v)
+					if err != nil {
+						fmt.Printf("open file %s failed: %s\n", v, err)
+						continue
+					}
+					err = sc.putObject(bucket, newKey, fd)
+					if err != nil {
+						fd.Close()
 						fmt.Printf("put Object failed: %s\n", err)
-						os.Exit(1)
+						continue
+					} else {
+						fd.Close()
 					}
 				}
+			}
+			if err != nil {
+				fmt.Printf("put Object failed: %s\n", err)
+				os.Exit(1)
 			}
 
 		},
@@ -379,7 +388,11 @@ Credential Envvar:
 * get a Bucket's ACL
 	s3cli acl bucket
 * get a Object's ACL
-	s3cli acl bucket/key`,
+	s3cli acl bucket/key
+* set a Object's ACL to public-read
+	s3cli acl bucket/key public-read
+* all canned Object ACL(private,public-read,public-read-write,authenticated-read,aws-exec-read,bucket-owner-read,bucket-owner-full-control)
+`,
 		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
@@ -390,7 +403,34 @@ Credential Envvar:
 						os.Exit(1)
 					}
 				} else {
-					if err := sc.setObjectACL(bucket, key, args[1]); err != nil {
+					var acl s3.ObjectCannedACL
+					switch s3.ObjectCannedACL(args[1]) {
+					case s3.ObjectCannedACLPrivate:
+						acl = s3.ObjectCannedACLPrivate
+						break
+					case s3.ObjectCannedACLPublicRead:
+						acl = s3.ObjectCannedACLPublicRead
+						break
+					case s3.ObjectCannedACLPublicReadWrite:
+						acl = s3.ObjectCannedACLPublicReadWrite
+						break
+					case s3.ObjectCannedACLAuthenticatedRead:
+						acl = s3.ObjectCannedACLAuthenticatedRead
+						break
+					case s3.ObjectCannedACLAwsExecRead:
+						acl = s3.ObjectCannedACLAwsExecRead
+						break
+					case s3.ObjectCannedACLBucketOwnerRead:
+						acl = s3.ObjectCannedACLBucketOwnerRead
+						break
+					case s3.ObjectCannedACLBucketOwnerFullControl:
+						acl = s3.ObjectCannedACLBucketOwnerFullControl
+						break
+					default:
+						fmt.Println("invalid ACL: ", args[1])
+						os.Exit(1)
+					}
+					if err := sc.setObjectACL(bucket, key, acl); err != nil {
 						fmt.Printf("set Object %s ACL failed: %s\n", key, err)
 						os.Exit(1)
 					}
@@ -515,11 +555,27 @@ Credential Envvar:
 			} else {
 				destination = filepath.Base(key)
 			}
+			// Create a file to write the S3 Object contents to.
+			fd, err := os.Create(destination)
+			if err != nil {
+				fmt.Printf("failed to create file %s, %s", destination, err)
+				os.Exit(1)
+				return
+			}
+			defer fd.Close()
 			objRange := cmd.Flag("range").Value.String()
 			version := cmd.Flag("version").Value.String()
-			if err := sc.getObject(bucket, key, objRange, version, destination); err != nil {
-				fmt.Printf("download %s to %s failed: %s\n", args[0], destination, err)
+			if r, err := sc.getObject(bucket, key, objRange, version); err != nil {
+				fmt.Printf("get %s failed: %s\n", args[0], err)
 				os.Exit(1)
+				return
+			} else {
+				defer r.Close()
+				if _, err := io.Copy(fd, r); err != nil {
+					fmt.Printf("download %s failed: %s\n", args[0], err)
+					os.Exit(1)
+					return
+				}
 			}
 		},
 	}

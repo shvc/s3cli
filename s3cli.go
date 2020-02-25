@@ -275,29 +275,20 @@ func (sc *S3Cli) bucketDelete(bucket string) error {
 }
 
 // putObject upload a Object
-func (sc *S3Cli) putObject(bucket, key, filename string) error {
-	if sc.presign || filename == "" {
-		req := sc.Client.PutObjectRequest(&s3.PutObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(key),
-		})
+func (sc *S3Cli) putObject(bucket, key string, r io.ReadSeeker) error {
+	req := sc.Client.PutObjectRequest(&s3.PutObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+		Body:   r,
+	})
+
+	if sc.presign {
 		s, err := req.Presign(sc.presignExp)
 		if err == nil {
 			fmt.Println(s)
 		}
 		return err
 	}
-
-	f, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	req := sc.Client.PutObjectRequest(&s3.PutObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		Body:   f,
-	})
 
 	resp, err := req.Send(context.Background())
 	if err != nil {
@@ -369,10 +360,11 @@ func (sc *S3Cli) getObjectACL(bucket, key string) error {
 }
 
 // setObjectACL set A Object's ACL
-func (sc *S3Cli) setObjectACL(bucket, key, acl string) error {
+func (sc *S3Cli) setObjectACL(bucket, key string, acl s3.ObjectCannedACL) error {
 	req := sc.Client.PutObjectAclRequest(&s3.PutObjectAclInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
+		ACL:    acl,
 	})
 
 	if sc.presign {
@@ -489,7 +481,7 @@ func (sc *S3Cli) listObjectVersions(bucket string) error {
 }
 
 // getObject download a Object from bucket
-func (sc *S3Cli) getObject(bucket, key, oRange, version, filename string) error {
+func (sc *S3Cli) getObject(bucket, key, oRange, version string) (io.ReadCloser, error) {
 	var objRange *string
 	if oRange != "" {
 		objRange = aws.String(fmt.Sprintf("bytes=%s", oRange))
@@ -510,22 +502,15 @@ func (sc *S3Cli) getObject(bucket, key, oRange, version, filename string) error 
 		if err == nil {
 			fmt.Println(s)
 		}
-		return err
+		return nil, err
 	}
-
-	// Create a file to write the S3 Object contents to.
-	f, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("failed to create file %q, %w", filename, err)
-	}
-	defer f.Close()
 
 	resp, err := req.Send(context.Background())
 	if err != nil {
-		return fmt.Errorf("get object failed: %w", err)
+		return nil, fmt.Errorf("get object failed: %w", err)
 	}
-	_, err = io.Copy(f, resp.Body)
-	return err
+	return resp.Body, nil
+
 }
 
 // catObject print Object contents
