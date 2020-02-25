@@ -74,7 +74,7 @@ func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "s3cli",
 		Short: "s3cli client tool",
-		Long: `S3 commandline tool
+		Long: `S3 command-line tool
 Endpoint Envvar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 
@@ -303,16 +303,18 @@ Credential Envvar:
 	// object put(upload)
 	putObjectCmd := &cobra.Command{
 		Use:     "put <bucket[/key]> [<local-file> ...]",
-		Aliases: []string{"put", "upload"},
+		Aliases: []string{"up", "upload"},
 		Short:   "put Object(s)",
 		Long: `upload Object(s) to Bucket
 * put(upload) a file
 	s3cli put bucket /path/to/file
 * put(upload) a file to Bucket/Key
-	s3cli put bucket/key /path/to/file
+	s3cli up bucket/key /path/to/file
 * put(upload) files to Bucket
 	s3cli put bucket file1 file2 file3
-* put(upload) files to Bucket with common prefix
+* put(upload) files to Bucket
+	s3cli up bucket *.txt
+* put(upload) files to Bucket with specified common prefix
 	s3cli put bucket/prefix file1 file2 file3
 * presign a PUT Object URL
 	s3cli up bucket/key --presign`,
@@ -537,7 +539,7 @@ Credential Envvar:
 
 	getObjectCmd := &cobra.Command{
 		Use:     "get <bucket/key> [destination]",
-		Aliases: []string{"download"},
+		Aliases: []string{"download", "down"},
 		Short:   "get Object",
 		Long: `get(download) Object
 * get(download) a Object to ./
@@ -568,7 +570,6 @@ Credential Envvar:
 			if r, err := sc.getObject(bucket, key, objRange, version); err != nil {
 				fmt.Printf("get %s failed: %s\n", args[0], err)
 				os.Exit(1)
-				return
 			} else {
 				defer r.Close()
 				if _, err := io.Copy(fd, r); err != nil {

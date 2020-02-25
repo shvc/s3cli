@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -276,11 +277,14 @@ func (sc *S3Cli) bucketDelete(bucket string) error {
 
 // putObject upload a Object
 func (sc *S3Cli) putObject(bucket, key string, r io.ReadSeeker) error {
-	req := sc.Client.PutObjectRequest(&s3.PutObjectInput{
+	putObjectInput := &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
-		Body:   r,
-	})
+	}
+	if !reflect.ValueOf(r).IsNil() {
+		putObjectInput.Body = r
+	}
+	req := sc.Client.PutObjectRequest(putObjectInput)
 
 	if sc.presign {
 		s, err := req.Presign(sc.presignExp)

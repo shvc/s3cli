@@ -1,5 +1,5 @@
 ## s3cli
-s3cli is a commandline tool for uploading, retrieving and managing data in AWS S3 and other S3 compatible storage service.
+s3cli is a command-line tool for uploading, retrieving and managing data in AWS S3 and other S3 compatible storage service.
 
 #### Download prebuild binary
 https://github.com/vager/s3cli/releases  
@@ -19,7 +19,7 @@ aws_secret_access_key=mySecretKey
 #### Usage
 ```
 ./s3cli -h
-S3 commandline tool
+S3 command-line tool
 Endpoint Envvar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 
@@ -64,73 +64,78 @@ Use "s3cli [command] --help" for more information about a command.
 ```
 
 ## Example
-#### Bucket(b)
+#### Bucket
 ```sh
 # Bucket(b) create(c)
-s3cli -e http://192.168.55.2:9020 b c bucket1
-# or
+s3cli -e http://192.168.55.2:9020 b c bucket-name
+# or pass endpoint from ENV
 export S3_ENDPOINT=http://192.168.55.2:9020
-s3cli b c bucket2
+s3cli b c bucket-name
 
-# list(ls) Buckets  
+# list(ls) Buckets
 s3cli b ls
 
-# bucket(b) policy(p) get  
-s3cli b p
+# bucket(b) policy(p) get/set
+s3cli b p bucket-name  # get
+s3cli b p bucket-name '{policy-json}' # set
+
+# bucket(b) acl get/set
+s3cli b acl bucket-name # get
+s3cli b acl bucket-name public-read # set
+
+# bucket(b) versioning get/set
+s3cli b v bucket-name
 
 # bucket(b) delete(d)  
-s3cli b d bucket
+s3cli b d bucket-name
 ```
 
 #### Object
-- upload(put) Objcet  
+- put(upload) Objcet(s)  
 ```sh
-# upload file(/etc/hosts) to bucket1/hosts
-s3cli put bucket1 /etc/hosts
-
-# upload file(/etc/hosts) to bucket1/host2
-s3cli put bucket1/host2 /etc/hosts
+# upload file
+s3cli put bucket-name /etc/hosts       # use filename as key
+s3cli put bucket-name *.txt            # upload files and use filename as key
+s3cli put bucket-name/host2 /etc/hosts # specify key host2
 
 # presign a PUT Object URL
-s3cli put bucket1/file3 --presign
-#or
-s3cli put bucket1/file3
+s3cli put bucket-name/file3 --presign
 ```
-- Download(get) Object  
+- get(download) Object  
 ```sh
-# download bucket1/hosts to ./hosts
-s3cli -p ecs down bucket1/hosts
+# download Object to current dir and use key as filename
+s3cli -p ecs get bucket/hosts
 
-# download bucket1/hosts to /tmp/newfile
-s3cli down bucket1/hosts /tmp/newfile
+# download and specify local filename
+s3cli down bucket/hosts /tmp/newfile
 
 # presign GET Object URL
-s3cli get bucket1/hosts --presign
+s3cli get bucket/hosts --presign
 ```
 
 - list(ls) Objects  
 ```sh
 # list Objects(default 1000 Objects)
-s3cli ls bucket1
+s3cli ls bucket
 
 # list all Objects
-s3cli ls bucket1 -a
+s3cli ls bucket -a
 
 # list Objects with specified prefix
-s3cli ls bucket1/prefix
+s3cli ls bucket/prefix
 ```
 
 - Delete(rm) Object(s)  
 ```sh
 # delete an Object
-s3cli rm bucket1/key
+s3cli rm bucket/key
 
 # delete all Objects with specified prefix
-s3cli rm bucket1/prefix -x
+s3cli rm bucket/prefix -x
 
 # delete Bucket and all Objects
-s3cli rm bucket1 --force
+s3cli rm bucket --force
 
 # presign an DELETE Object URL
-s3cli rm bucket1/hosts --presign
+s3cli rm bucket/hosts --presign
 ```
