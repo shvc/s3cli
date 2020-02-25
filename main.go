@@ -75,10 +75,10 @@ func main() {
 		Use:   "s3cli",
 		Short: "s3cli client tool",
 		Long: `S3 command-line tool
-Endpoint Envvar:
+Endpoint EnvVar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 
-Credential Envvar:
+Credential EnvVar:
 	AWS_ACCESS_KEY_ID=AK      (only read if flag -p is not set or --ak is not set)
 	AWS_ACCESS_KEY=AK         (only read if AWS_ACCESS_KEY_ID is not set)
 	AWS_SECRET_ACCESS_KEY=SK  (only read if flag -p is not set or --sk is not set)
