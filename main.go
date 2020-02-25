@@ -161,7 +161,7 @@ Credential Envvar:
 	s3cli b h bk0`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := sc.bucketDelete(args[0]); err != nil {
+			if err := sc.bucketHead(args[0]); err != nil {
 				fmt.Println("head failed: ", err)
 				os.Exit(1)
 			}
@@ -603,11 +603,11 @@ Credential Envvar:
 
 	mpuCreateCmd := &cobra.Command{
 		Use:     "create <bucket/key>",
-		Aliases: []string{"ct"},
+		Aliases: []string{"c"},
 		Short:   "create a MPU request",
 		Long: `create a mutiPartUpload request
 * create a MPU request
-	s3cli mpu ct bucket/key`,
+	s3cli mpu c bucket/key`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
@@ -621,11 +621,11 @@ Credential Envvar:
 
 	mpuUploadCmd := &cobra.Command{
 		Use:     "upload <bucket/key> <upload-id> <part-num> <file>",
-		Aliases: []string{"up", "u"},
+		Aliases: []string{"put", "up"},
 		Short:   "upload a MPU part",
 		Long: `upload a mutiPartUpload part
 * upload MPU part 1
-	s3cli mpu u bucket/key upload-id 1 /path/to/file`,
+	s3cli mpu up bucket/key upload-id 1 /path/to/file`,
 		Args: cobra.ExactArgs(4),
 		Run: func(cmd *cobra.Command, args []string) {
 			part, err := strconv.ParseInt(args[2], 10, 64)
