@@ -2,21 +2,19 @@ package main
 
 import (
 	"log"
+	mand "math/rand"
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/johannesboyne/gofakes3"
 	"github.com/johannesboyne/gofakes3/backend/s3mem"
 )
 
-//	# Access Key ID
-//	AWS_ACCESS_KEY_ID=AKID
-//	AWS_ACCESS_KEY=AKID # only read if AWS_ACCESS_KEY_ID is not set.
-//
-//	# Secret Access Key
-//	AWS_SECRET_ACCESS_KEY=SECRET
-//	AWS_SECRET_KEY=SECRET # only read if AWS_SECRET_ACCESS_KEY is not set.
+var (
+	s3Backend *s3mem.Backend
+)
 
 var s3cliTest = S3Cli{
 	ak:     "my-ak",
@@ -34,9 +32,10 @@ func setEnv() error {
 }
 
 func TestMain(m *testing.M) {
-	// fake s3
-	backend := s3mem.New()
-	faker := gofakes3.New(backend)
+	mand.Seed(time.Now().UTC().UnixNano())
+	// init fake s3
+	s3Backend = s3mem.New()
+	faker := gofakes3.New(s3Backend)
 	ts := httptest.NewServer(faker.Server())
 	defer ts.Close()
 	s3cliTest.endpoint = ts.URL

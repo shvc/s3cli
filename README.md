@@ -1,21 +1,22 @@
 ## s3cli
-#### 1. Download prebuild binary
-https://github.com/vager/s3cli/releases
+s3cli is a commandline tool for uploading, retrieving and managing data in AWS S3 and other S3 compatible storage service.
 
-#### 2. Install s3cli to /usr/local/bin/
+#### Download prebuild binary
+https://github.com/vager/s3cli/releases  
+- Install s3cli to `/usr/local/bin/`  
 ```
 unzip s3cli-*.zip -d /usr/local/bin/
 ```
 
-#### 3. AWS credentials configuration
-Add you profile(default) to ~/.aws/credentials or use cli flag(--ak, --sk)
+#### AWS credentials configuration
+Add you profile(default) to `~/.aws/credentials` or use cli flag(--ak, --sk)
 ```
 [default]
-aws_access_key_id=my-ak
-aws_secret_access_key=my-sk
+aws_access_key_id=myAccessKey
+aws_secret_access_key=mySecretKey
 ```
 
-## Usage
+#### Usage
 ```
 ./s3cli -h
 S3 commandline tool

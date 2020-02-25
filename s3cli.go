@@ -132,8 +132,9 @@ func (sc *S3Cli) bucketACLGet(bucket string) error {
 }
 
 // bucketACLSet set a Bucket's ACL
-func (sc *S3Cli) bucketACLSet(bucket, acl string) error {
+func (sc *S3Cli) bucketACLSet(bucket string, acl s3.BucketCannedACL) error {
 	req := sc.Client.PutBucketAclRequest(&s3.PutBucketAclInput{
+		ACL:    acl,
 		Bucket: aws.String(bucket),
 	})
 

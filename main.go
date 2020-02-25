@@ -176,8 +176,14 @@ Credential Envvar:
 		Long: `get/set Bucket ACL
 * get a Bucket(bk0)'s ACL
 	s3cli b p bk0
-* set a Bucket(bk0)'s ACL
-	s3cli b p bk0`,
+* set a Bucket(bk0)'s ACL to private
+	s3cli b p bk0 private
+* set a Bucket(bk0)'s ACL to public-read
+	s3cli b p bk0 public-read
+* set a Bucket(bk0)'s ACL to public-read-write
+	s3cli b p bk0 public-read-write
+* set a Bucket(bk0)'s ACL to authenticated-read
+	s3cli b p bk0 authenticated-read`,
 		Args: cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 1 {
@@ -186,8 +192,26 @@ Credential Envvar:
 					os.Exit(1)
 				}
 			} else {
-				if err := sc.bucketACLSet(args[0], args[1]); err != nil {
-					fmt.Println("set ACL failed: ", err)
+				var acl s3.BucketCannedACL
+				switch s3.BucketCannedACL(args[1]) {
+				case s3.BucketCannedACLPrivate:
+					acl = s3.BucketCannedACLPrivate
+					break
+				case s3.BucketCannedACLPublicRead:
+					acl = s3.BucketCannedACLPublicRead
+					break
+				case s3.BucketCannedACLPublicReadWrite:
+					acl = s3.BucketCannedACLPublicReadWrite
+					break
+				case s3.BucketCannedACLAuthenticatedRead:
+					acl = s3.BucketCannedACLAuthenticatedRead
+					break
+				default:
+					fmt.Println("invalid ACL: ", args[1])
+					os.Exit(1)
+				}
+				if err := sc.bucketACLSet(args[0], acl); err != nil {
+					fmt.Printf("set ACL %s failed: %s\n", args[1], err)
 					os.Exit(1)
 				}
 			}
@@ -378,8 +402,26 @@ Credential Envvar:
 						os.Exit(1)
 					}
 				} else {
-					if err := sc.bucketACLSet(bucket, args[1]); err != nil {
-						fmt.Printf("set bucket %s ACL failed: %s\n", bucket, err)
+					var acl s3.BucketCannedACL
+					switch s3.BucketCannedACL(args[1]) {
+					case s3.BucketCannedACLPrivate:
+						acl = s3.BucketCannedACLPrivate
+						break
+					case s3.BucketCannedACLPublicRead:
+						acl = s3.BucketCannedACLPublicRead
+						break
+					case s3.BucketCannedACLPublicReadWrite:
+						acl = s3.BucketCannedACLPublicReadWrite
+						break
+					case s3.BucketCannedACLAuthenticatedRead:
+						acl = s3.BucketCannedACLAuthenticatedRead
+						break
+					default:
+						fmt.Println("invalid ACL: ", args[1])
+						os.Exit(1)
+					}
+					if err := sc.bucketACLSet(args[0], acl); err != nil {
+						fmt.Printf("set bucket ACL %s failed: %s\n", args[1], err)
 						os.Exit(1)
 					}
 				}

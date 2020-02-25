@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	mrand "math/rand"
 	"testing"
+
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 func randomID() string {
@@ -19,10 +21,15 @@ func randomID() string {
 }
 
 func Test_bucketCreate(t *testing.T) {
-	buckets := []string{
-		randomID(),
-		randomID(),
+	buckets := make([]string, 3)
+	for i := range buckets {
+		bucket := randomID()
+		if exists, err := s3Backend.BucketExists(bucket); err != nil || exists {
+			continue
+		}
+		buckets[i] = bucket
 	}
+
 	err := s3cliTest.bucketCreate(buckets)
 	if err != nil {
 		t.Errorf("bucketCreate failed: %s", err)
@@ -38,43 +45,39 @@ func Test_bucketList(t *testing.T) {
 
 func Test_bucketHead(t *testing.T) {
 	bucket := randomID()
-	if err := s3cliTest.bucketHead(bucket); err == nil {
-		t.Errorf("expect error got success")
+	if err := s3Backend.CreateBucket(bucket); err != nil {
+		t.Error("backend CreateBucket bucket error: ", err)
+		return
 	}
-	if err := s3cliTest.bucketCreate([]string{bucket}); err != nil {
-		t.Errorf("bucketCreate failed: %s", err)
-	} else {
-		if err := s3cliTest.bucketHead(bucket); err != nil {
-			t.Errorf("bucketHead failed: %s", err)
-		}
+	if err := s3cliTest.bucketHead(bucket); err != nil {
+		t.Error("bucketHead error: ", err)
 	}
 }
 
 func Test_bucketACLGet(t *testing.T) {
 	bucket := randomID()
-	if err := s3cliTest.bucketACLGet(bucket); err == nil {
-		t.Errorf("expect error got success")
+	if err := s3Backend.CreateBucket(bucket); err != nil {
+		t.Error("backend CreateBucket bucket error: ", err)
+		return
 	}
-	if err := s3cliTest.bucketCreate([]string{bucket}); err != nil {
-		t.Errorf("bucketCreate failed: %s", err)
-	} else {
-		if err := s3cliTest.bucketACLGet(bucket); err != nil {
-			t.Errorf("bucketACLGet failed: %s", err)
-		}
+	if err := s3cliTest.bucketACLGet(bucket); err != nil {
+		t.Error("bucketACLGet error: ", err)
 	}
 }
 
 func Test_bucketACLSet(t *testing.T) {
 	bucket := randomID()
-	if err := s3cliTest.bucketACLSet(bucket, "ACL"); err == nil {
-		t.Errorf("expect error got success")
-	}
-	if err := s3cliTest.bucketCreate([]string{bucket}); err != nil {
-		t.Errorf("bucketCreate failed: %s", err)
-	} else {
-		if err := s3cliTest.bucketACLSet(bucket, "ACL"); err != nil {
-			t.Errorf("bucketACLSet failed: %s", err)
+	if exists, err := s3Backend.BucketExists(bucket); err != nil {
+		t.Error("backend BucketExists bucket error: ", err)
+		return
+	} else if !exists {
+		if err := s3Backend.CreateBucket(bucket); err != nil {
+			t.Error("backend CreateBucket bucket error: ", err)
+			return
 		}
+	}
+	if err := s3cliTest.bucketACLSet(bucket, s3.BucketCannedACLPublicReadWrite); err != nil {
+		t.Error("bucketACLSet error: ", err)
 	}
 }
 
