@@ -64,7 +64,7 @@ Use "s3cli [command] --help" for more information about a command.
 ```
 
 ## Example
-#### Bucket(s3cli bucket --help)
+#### Bucket ( s3cli bucket -h )
 ```sh
 # bucket(b) create(c)
 s3cli -e http://192.168.55.2:9020 b c bucket-name
@@ -106,13 +106,11 @@ s3cli mpu -h
 ```
 - get(download) Object  
 ```sh
-# download Object to current dir and use key as filename
-s3cli -p ecs get bucket/hosts
+# download Object
+s3cli get bucket/hosts            # to . and use key as filename
+s3cli down bucket/hosts /tmp/file # specify local-filename
 
-# download and specify local filename
-s3cli down bucket/hosts /tmp/newfile
-
-# presign GET Object URL
+# presign a GET Object URL
 s3cli get bucket/hosts --presign
 ```
 
@@ -120,12 +118,8 @@ s3cli get bucket/hosts --presign
 ```sh
 # list Objects(default 1000 Objects)
 s3cli ls bucket
-
-# list all Objects
-s3cli ls bucket -a
-
-# list Objects with specified prefix
-s3cli ls bucket/prefix
+s3cli ls bucket -a     # list all Objects
+s3cli ls bucket/prefix # list Objects with specified prefix
 ```
 
 - Delete(rm) Object(s)  
