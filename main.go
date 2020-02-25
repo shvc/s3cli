@@ -161,7 +161,7 @@ Credential Envvar:
 	s3cli b h bk0`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := sc.bucketDelete(args[0]); err != nil {
+			if err := sc.bucketHead(args[0]); err != nil {
 				fmt.Println("head failed: ", err)
 				os.Exit(1)
 			}
