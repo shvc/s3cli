@@ -9,7 +9,7 @@ unzip s3cli-*.zip -d /usr/local/bin/
 ```
 
 #### AWS credentials configuration
-Add you profile(default) to `~/.aws/credentials` or use cli flag(--ak, --sk)
+Add your ak/sk to `~/.aws/credentials` or use cli flag(--ak, --sk)
 ```
 [default]
 aws_access_key_id=myAccessKey
@@ -64,9 +64,9 @@ Use "s3cli [command] --help" for more information about a command.
 ```
 
 ## Example
-#### Bucket
+#### Bucket(s3cli bucket --help)
 ```sh
-# Bucket(b) create(c)
+# bucket(b) create(c)
 s3cli -e http://192.168.55.2:9020 b c bucket-name
 # or pass endpoint from ENV
 export S3_ENDPOINT=http://192.168.55.2:9020
@@ -100,6 +100,9 @@ s3cli put bucket-name/host2 /etc/hosts # specify key host2
 
 # presign a PUT Object URL
 s3cli put bucket-name/file3 --presign
+
+# MPU
+s3cli mpu -h
 ```
 - get(download) Object  
 ```sh
