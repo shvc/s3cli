@@ -109,7 +109,7 @@ func Test_bucketDelete(t *testing.T) {
 
 func Test_putObject(t *testing.T) {
 	key := "testPutObject"
-	if err := s3cliTest.putObject(testBucketName, key, nil); err != nil {
+	if err := s3cliTest.putObject(testBucketName, key, bytes.NewReader(nil)); err != nil {
 		t.Errorf("putObject failed: %s", err)
 		return
 	}
