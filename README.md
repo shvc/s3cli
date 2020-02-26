@@ -76,11 +76,11 @@ s3cli b c bucket-name
 s3cli b ls
 
 # bucket(b) policy(p) get/set
-s3cli b p bucket-name  # get
+s3cli b p bucket-name                 # get
 s3cli b p bucket-name '{policy-json}' # set
 
 # bucket(b) acl get/set
-s3cli b acl bucket-name # get
+s3cli b acl bucket-name             # get
 s3cli b acl bucket-name public-read # set
 
 # bucket(b) versioning get/set
@@ -96,10 +96,11 @@ s3cli b d bucket-name
 # upload file
 s3cli put bucket-name /etc/hosts       # use filename as key
 s3cli put bucket-name *.txt            # upload files and use filename as key
-s3cli put bucket-name/host2 /etc/hosts # specify key host2
+s3cli put bucket-name/dir/ *.txt       # upload files and set prefix(dir/) to all uploaded Object
+s3cli put bucket-name/key2 /etc/hosts  # specify key(key2)
 
 # presign a PUT Object URL
-s3cli put bucket-name/file3 --presign
+s3cli put bucket-name/key3 --presign
 
 # MPU
 s3cli mpu -h
@@ -107,32 +108,28 @@ s3cli mpu -h
 - get(download) Object  
 ```sh
 # download Object
-s3cli get bucket/hosts            # to . and use key as filename
-s3cli down bucket/hosts /tmp/file # specify local-filename
+s3cli get bucket-name/key            # to . and use key as filename
+s3cli down bucket-name/key /tmp/file # specify local-filename
 
 # presign a GET Object URL
-s3cli get bucket/hosts --presign
+s3cli get bucket-name/key --presign
 ```
 
 - list(ls) Objects  
 ```sh
-# list Objects(default 1000 Objects)
-s3cli ls bucket
-s3cli ls bucket -a     # list all Objects
-s3cli ls bucket/prefix # list Objects with specified prefix
+# list Objects
+s3cli ls bucket-name        # list(default 1000 Objects)
+s3cli ls bucket-name -a     # list all Objects
+s3cli ls bucket-name/prefix # list Objects with specified prefix
 ```
 
 - Delete(rm) Object(s)  
 ```sh
-# delete an Object
-s3cli rm bucket/key
-
-# delete all Objects with specified prefix
-s3cli rm bucket/prefix -x
-
-# delete Bucket and all Objects
-s3cli rm bucket --force
+# delete Object(s)
+s3cli rm bucket-name/key      # delete an Object
+s3cli rm bucket-name/dir/ -x  # delete all Objects with specified prefix(dir/)
+s3cli rm bucket-name --force  # delete Bucket and all Objects
 
 # presign an DELETE Object URL
-s3cli rm bucket/hosts --presign
+s3cli rm bucket-name/key2 --presign
 ```

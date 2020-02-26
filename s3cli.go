@@ -229,15 +229,11 @@ func (sc *S3Cli) bucketVersioningGet(bucket string) error {
 }
 
 // bucketVersioningSet set a Bucket's Versioning status
-func (sc *S3Cli) bucketVersioningSet(bucket string, status bool) error {
-	verStatus := s3.BucketVersioningStatusSuspended
-	if status {
-		verStatus = s3.BucketVersioningStatusEnabled
-	}
+func (sc *S3Cli) bucketVersioningSet(bucket string, status s3.BucketVersioningStatus) error {
 	req := sc.Client.PutBucketVersioningRequest(&s3.PutBucketVersioningInput{
 		Bucket: aws.String(bucket),
 		VersioningConfiguration: &s3.VersioningConfiguration{
-			Status: verStatus,
+			Status: status,
 		},
 	})
 

@@ -91,7 +91,7 @@ func Test_bucketVersioningGet(t *testing.T) {
 }
 
 func Test_bucketVersioningSet(t *testing.T) {
-	if err := s3cliTest.bucketVersioningSet(testBucketName, true); err != nil {
+	if err := s3cliTest.bucketVersioningSet(testBucketName, s3.BucketVersioningStatusEnabled); err != nil {
 		t.Errorf("bucketVersioningSet failed: %s", err)
 	}
 }

@@ -120,8 +120,8 @@ Credential EnvVar:
 		Aliases: []string{"c"},
 		Short:   "create Bucket(s)",
 		Long: `create Bucket(s)
-* create a Bucket(bk0)
-	s3cli b c bk0
+* create a Bucket
+	s3cli b c bucket-name
 * create 3 Buckets(bk1, bk2, bk3)
 	s3cli b c bk1 bk2 bk3`,
 		Args: cobra.MinimumNArgs(1),
@@ -158,8 +158,8 @@ Credential EnvVar:
 		Aliases: []string{"h"},
 		Short:   "head Bucket",
 		Long: `head Bucket
-* head a Bucket(bk0)
-	s3cli b h bk0`,
+* head a Bucket
+	s3cli b h bucket-name`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := sc.bucketHead(args[0]); err != nil {
@@ -175,10 +175,10 @@ Credential EnvVar:
 		Use:   "acl <bucket> [ACL]",
 		Short: "get/set Bucket ACL",
 		Long: `get/set Bucket ACL
-* get a Bucket(bk0)'s ACL
-	s3cli b acl bk0
-* set a Bucket(bk0)'s ACL to public-read
-	s3cli b acl bk0 public-read
+* get Bucket ACL
+	s3cli b acl bucket-name
+* set Bucket ACL to public-read
+	s3cli b acl bucket-name public-read
 * all canned Bucket ACL(private, public-read, public-read-write, authenticated-read)
 `,
 		Args: cobra.RangeArgs(1, 2),
@@ -222,10 +222,10 @@ Credential EnvVar:
 		Aliases: []string{"p"},
 		Short:   "get/set Bucket Policy",
 		Long: `get/set Bucket Policy
-* get a Bucket(bk0)'s policy
-	s3cli b p bk0
-* set a Bucket(bk0)'s policy
-	s3cli b p bk0 '{policy}'`,
+* get Bucket policy
+	s3cli b p bucket-name
+* set Bucket policy(a json string)
+	s3cli b p bucket-name '{json}'`,
 		Args: cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 1 {
@@ -245,41 +245,43 @@ Credential EnvVar:
 
 	// bucket sub-command version
 	bucketVersionCmd := &cobra.Command{
-		Use:     "version <bucket>",
+		Use:     "version <bucket> [status]",
 		Aliases: []string{"v"},
 		Short:   "bucket versioning",
-		Long: `list Object from Bucket
+		Long: `get/set bucket versioning status
 * get Bucket versioning status
-	s3cli b v bucket
+	s3cli b v bucket-name
 * enable bucket versioning
-	s3cli b v bucket --status enable
-* disable Bucket versioning
-	s3cli b v bucket --status disable`,
-		Args: cobra.ExactArgs(1),
+	s3cli b v bucket-name Enabled
+* suspend Bucket versioning
+	s3cli b v bucket-name Suspended`,
+		Args: cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
-			switch cmd.Flag("status").Value.String() {
-			case "enable":
-				if err := sc.bucketVersioningSet(args[0], true); err != nil {
-					fmt.Println("enable bucketVersioning failed: ", err)
-					os.Exit(1)
-				}
-			case "disable":
-				if err := sc.bucketVersioningSet(args[0], false); err != nil {
-					fmt.Println("disable bucketVersioning failed: ", err)
-					os.Exit(1)
-				}
-			case "":
+			if len(args) == 1 {
 				if err := sc.bucketVersioningGet(args[0]); err != nil {
-					fmt.Printf("listObjectVersions failed: %s\n", err)
+					fmt.Printf("get versioning status failed: %s\n", err)
 					os.Exit(1)
 				}
-			default:
-				fmt.Println("invalid bucketVersioning status")
-				os.Exit(1)
+			} else {
+				var status s3.BucketVersioningStatus
+				switch s3.BucketVersioningStatus(args[1]) {
+				case s3.BucketVersioningStatusEnabled:
+					status = s3.BucketVersioningStatusEnabled
+					break
+				case s3.BucketVersioningStatusSuspended:
+					status = s3.BucketVersioningStatusSuspended
+					break
+				default:
+					fmt.Println("invalid versioning: ", args[1])
+					os.Exit(1)
+				}
+				if err := sc.bucketVersioningSet(args[0], status); err != nil {
+					fmt.Printf("set versioning status failed: %s\n", err)
+					os.Exit(1)
+				}
 			}
 		},
 	}
-	bucketVersionCmd.Flags().StringP("status", "", "", "Set bucketVersioning status(enable, disable)")
 	bucketCmd.AddCommand(bucketVersionCmd)
 
 	// bucket sub-command delete
@@ -314,8 +316,8 @@ Credential EnvVar:
 	s3cli put bucket file1 file2 file3
 * put(upload) files to Bucket
 	s3cli up bucket *.txt
-* put(upload) files to Bucket with specified common prefix
-	s3cli put bucket/prefix file1 file2 file3
+* put(upload) files to Bucket with specified common prefix(dir/)
+	s3cli put bucket/dir/ file1 file2 file3
 * presign a PUT Object URL
 	s3cli up bucket/key --presign`,
 		Args: cobra.MinimumNArgs(1),
