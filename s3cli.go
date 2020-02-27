@@ -2,11 +2,16 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -26,6 +31,36 @@ type S3Cli struct {
 	verbose    bool
 	debug      bool
 	Client     *s3.Client // manual init this field
+}
+
+// presignV2 presigne URL with escaped key(Object name).
+func (sc *S3Cli) presignV2(method, addr, contentType string) (string, error) {
+	secret, err := sc.Client.Client.Credentials.Retrieve(context.Background())
+	if err != nil {
+		return "", errors.New("invalid access-key")
+	}
+
+	fmt.Printf("method: %s, ak: %s, sk: %s\n", method, secret.AccessKeyID, secret.SecretAccessKey)
+
+	u, err := url.Parse(addr)
+	if err != nil {
+		return "", err
+	}
+	exp := strconv.FormatInt(time.Now().Unix()+int64(sc.presignExp.Seconds()), 10)
+	bucket, key := splitBucketObject(u.Path)
+	q := u.Query()
+	q.Set("AWSAccessKeyId", secret.AccessKeyID)
+	q.Set("Expires", exp)
+	u.Path = fmt.Sprintf("%s/%s", bucket, key)
+	strToSign := fmt.Sprintf("%s\n%s\n%s\n%v\n%s", method, "", contentType, exp, u.EscapedPath())
+
+	mac := hmac.New(sha1.New, []byte(secret.SecretAccessKey))
+	mac.Write([]byte(strToSign))
+
+	q.Set("Signature", base64.StdEncoding.EncodeToString(mac.Sum(nil)))
+	u.RawQuery = q.Encode()
+
+	return u.String(), nil
 }
 
 // bucketCreate create a Bucket

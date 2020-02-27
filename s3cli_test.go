@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	mrand "math/rand"
+	"net/http"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -27,6 +28,13 @@ func randomID() string {
 		}
 	}
 	return hex.EncodeToString(buf)
+}
+
+func Test_presignV2(t *testing.T) {
+	_, err := s3cliTest.presignV2(http.MethodGet, "http://127.0.0.1/bk/key", "")
+	if err != nil {
+		t.Errorf("presignV2 failed: %s", err)
+	}
 }
 
 func Test_bucketCreate(t *testing.T) {

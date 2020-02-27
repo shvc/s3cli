@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -104,6 +105,43 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", endpoints.CnNorth1RegionID, "region")
 	rootCmd.PersistentFlags().StringVarP(&sc.ak, "ak", "", "", "access key")
 	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "", "", "secret key")
+
+	// presign V2 command
+	presignCmd := &cobra.Command{
+		Use:     "presign <URL>",
+		Aliases: []string{"ps"},
+		Short:   "presign(v2) URL",
+		Long: `presign(v2) URL
+* presign a GET Object URL
+	s3cli ps http://172.16.3.99:9020/bucket/key01
+* presign a DELETE Object URL
+	s3cli ps -X delete http://172.16.3.99:9020/bucket/key01
+* presign a PUT Object URL
+	s3cli ps -X PUT -T text/plain http://192.168.55.2:9020/bucket/key02
+	curl -X PUT -H content-type:text/plain -d uploadstr 'presign-url'`,
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			method := strings.ToUpper(cmd.Flag("method").Value.String())
+			switch method {
+			case http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPost, http.MethodDelete:
+				break
+			default:
+				fmt.Println("invalid method: ", method)
+				os.Exit(1)
+			}
+			ctype := cmd.Flag("content-type").Value.String()
+			s, err := sc.presignV2(method, args[0], ctype)
+			if err != nil {
+				fmt.Printf("presign %s failed: %s\n", args[0], err)
+				os.Exit(1)
+			} else {
+				fmt.Println(s)
+			}
+		},
+	}
+	presignCmd.Flags().StringP("method", "X", http.MethodGet, "http method")
+	presignCmd.Flags().StringP("content-type", "T", "", "http content-type")
+	rootCmd.AddCommand(presignCmd)
 
 	// bucket command
 	bucketCmd := &cobra.Command{
@@ -553,32 +591,33 @@ Credential EnvVar:
 		Args: cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[0])
-			destination := ""
-			if len(args) == 2 {
-				destination = args[1]
-			} else {
-				destination = filepath.Base(key)
-			}
-			// Create a file to write the S3 Object contents to.
-			fd, err := os.Create(destination)
+			objRange := cmd.Flag("range").Value.String()
+			version := cmd.Flag("version").Value.String()
+			r, err := sc.getObject(bucket, key, objRange, version)
 			if err != nil {
-				fmt.Printf("failed to create file %s, %s", destination, err)
+				fmt.Printf("get %s failed: %s\n", args[0], err)
+				os.Exit(1)
+			}
+			if r == nil {
+				return
+			}
+			defer r.Close()
+			filename := filepath.Base(key)
+			if len(args) == 2 {
+				filename = args[1]
+			}
+			// Create a file to write the S3 Object contents
+			fd, err := os.Create(filename)
+			if err != nil {
+				fmt.Printf("create file %s failed, %s", filename, err)
 				os.Exit(1)
 				return
 			}
 			defer fd.Close()
-			objRange := cmd.Flag("range").Value.String()
-			version := cmd.Flag("version").Value.String()
-			if r, err := sc.getObject(bucket, key, objRange, version); err != nil {
-				fmt.Printf("get %s failed: %s\n", args[0], err)
+			if _, err := io.Copy(fd, r); err != nil {
+				fmt.Printf("download %s failed: %s\n", args[0], err)
 				os.Exit(1)
-			} else {
-				defer r.Close()
-				if _, err := io.Copy(fd, r); err != nil {
-					fmt.Printf("download %s failed: %s\n", args[0], err)
-					os.Exit(1)
-					return
-				}
+				return
 			}
 		},
 	}
