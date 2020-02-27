@@ -1,6 +1,6 @@
 BINARY=s3cli
 BUILDDATE=$(shell date +'%Y-%m-%dT%H:%M:%SZ')
-VERSION=2.2.4
+VERSION=2.2.5
 LONGVER=${VERSION}@${BUILDDATE}@$(shell git rev-parse --short HEAD)
 
 LDFLAGS=-ldflags "-X main.version=${LONGVER}"

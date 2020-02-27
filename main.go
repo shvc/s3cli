@@ -75,7 +75,7 @@ func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "s3cli",
 		Short: "s3cli client tool",
-		Long: `S3 command-line tool
+		Long: `S3 command-line tool usage:
 Endpoint EnvVar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 
@@ -111,7 +111,7 @@ Credential EnvVar:
 		Use:     "presign <URL>",
 		Aliases: []string{"ps"},
 		Short:   "presign(v2) URL",
-		Long: `presign(v2) URL
+		Long: `presign(v2) URL usage:
 * presign a GET Object URL
 	s3cli ps http://172.16.3.99:9020/bucket/key01
 * presign a DELETE Object URL
@@ -148,7 +148,7 @@ Credential EnvVar:
 		Use:     "bucket",
 		Aliases: []string{"b"},
 		Short:   "bucket sub-command",
-		Long:    `bucket sub-command`,
+		Long:    `bucket sub-command usage:`,
 	}
 	rootCmd.AddCommand(bucketCmd)
 
@@ -157,7 +157,7 @@ Credential EnvVar:
 		Use:     "create <bucket> [<bucket> ...]",
 		Aliases: []string{"c"},
 		Short:   "create Bucket(s)",
-		Long: `create Bucket(s)
+		Long: `create Bucket(s) usage:
 * create a Bucket
 	s3cli b c bucket-name
 * create 3 Buckets(bk1, bk2, bk3)
@@ -177,7 +177,7 @@ Credential EnvVar:
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "list Buckets",
-		Long: `list all my Buckets
+		Long: `list all my Buckets usage:
 * list all my Buckets
   s3cli b ls`,
 		Args: cobra.ExactArgs(0),
@@ -195,7 +195,7 @@ Credential EnvVar:
 		Use:     "head <bucket>",
 		Aliases: []string{"h"},
 		Short:   "head Bucket",
-		Long: `head Bucket
+		Long: `head Bucket usage:
 * head a Bucket
 	s3cli b h bucket-name`,
 		Args: cobra.ExactArgs(1),
@@ -212,7 +212,7 @@ Credential EnvVar:
 	bucketACLCmd := &cobra.Command{
 		Use:   "acl <bucket> [ACL]",
 		Short: "get/set Bucket ACL",
-		Long: `get/set Bucket ACL
+		Long: `get/set Bucket ACL usage:
 * get Bucket ACL
 	s3cli b acl bucket-name
 * set Bucket ACL to public-read
@@ -259,7 +259,7 @@ Credential EnvVar:
 		Use:     "policy <bucket> [policy]",
 		Aliases: []string{"p"},
 		Short:   "get/set Bucket Policy",
-		Long: `get/set Bucket Policy
+		Long: `get/set Bucket Policy usage:
 * get Bucket policy
 	s3cli b p bucket-name
 * set Bucket policy(a json string)
@@ -286,7 +286,7 @@ Credential EnvVar:
 		Use:     "version <bucket> [status]",
 		Aliases: []string{"v"},
 		Short:   "bucket versioning",
-		Long: `get/set bucket versioning status
+		Long: `get/set bucket versioning status usage:
 * get Bucket versioning status
 	s3cli b v bucket-name
 * enable bucket versioning
@@ -327,9 +327,9 @@ Credential EnvVar:
 		Use:     "delete <bucket>",
 		Aliases: []string{"d"},
 		Short:   "delete Bucket",
-		Long: `delete Bucket
-* delete a Bucket(bk0)
-	s3cli b d bk0`,
+		Long: `delete Bucket usage:
+* delete a Bucket
+	s3cli b d bucket-name`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := sc.bucketDelete(args[0]); err != nil {
@@ -345,7 +345,7 @@ Credential EnvVar:
 		Use:     "put <bucket[/key]> [<local-file> ...]",
 		Aliases: []string{"up", "upload"},
 		Short:   "put Object(s)",
-		Long: `upload Object(s) to Bucket
+		Long: `put(upload) Object(s) usage:
 * put(upload) a file
 	s3cli put bucket /path/to/file
 * put(upload) a file to Bucket/Key
@@ -396,7 +396,7 @@ Credential EnvVar:
 		Use:     "head <bucket/key>",
 		Aliases: []string{"head"},
 		Short:   "head Bucket/Object",
-		Long: `get Bucket/Object metadata
+		Long: `head Bucket/Object usage:
 * head a Bucket
 	s3cli head bucket
 * head a Object
@@ -426,7 +426,7 @@ Credential EnvVar:
 	aclCmd := &cobra.Command{
 		Use:   "acl <bucket/key> [ACL]",
 		Short: "get/set Bucket/Object ACL",
-		Long: `get/set Bucket/Object ACL
+		Long: `get/set Bucket/Object ACL usage:
 * get a Bucket's ACL
 	s3cli acl bucket
 * get a Object's ACL
@@ -515,11 +515,11 @@ Credential EnvVar:
 	listObjectCmd := &cobra.Command{
 		Use:     "list [bucket[/prefix]]",
 		Aliases: []string{"ls"},
-		Short:   "list Buckets or Objects",
-		Long: `list Buckets or Objects
+		Short:   "list Buckets or Bucket",
+		Long: `list Buckets or Bucket usage:
 * list all my Buckets
 	s3cli ls
-* list Objects
+* list Objects in a Bucket
 	s3cli ls bucket
 * list Objects with prefix(2019)
 	s3cli ls bucket/2019`,
@@ -564,7 +564,7 @@ Credential EnvVar:
 		Use:     "listVersion <bucket>",
 		Aliases: []string{"lv"},
 		Short:   "list Object versions",
-		Long: `list Object versions
+		Long: `list Object versions usage:
 * list Object Version
 	s3cli lv Bucket`,
 		Args: cobra.ExactArgs(1),
@@ -581,7 +581,7 @@ Credential EnvVar:
 		Use:     "get <bucket/key> [destination]",
 		Aliases: []string{"download", "down"},
 		Short:   "get Object",
-		Long: `get(download) Object
+		Long: `get(download) Object usage:
 * get(download) a Object to ./
 	s3cli get bucket/key
 * get(download) a Object to /path/to/file
@@ -629,7 +629,7 @@ Credential EnvVar:
 	catObjectCmd := &cobra.Command{
 		Use:   "cat <bucket/key>",
 		Short: "cat Object",
-		Long: `cat Object contents
+		Long: `cat Object contents usage:
 * cat a Object
 	s3cli cat bucket/key`,
 		Args: cobra.ExactArgs(1),
@@ -651,11 +651,11 @@ Credential EnvVar:
 		Use:     "rename <bucket/key> <bucket/key>",
 		Aliases: []string{"ren", "mv"},
 		Short:   "rename Object",
-		Long: `rename Bucket/key to Bucket/key
+		Long: `rename Bucket/key to Bucket/key usage:
 * spedify destination key
-	s3cli mv bucket1/key1 bucket2/key2
+	s3cli mv bucket/key1 bucket2/key2
 * default destionation key
-	s3cli mv bucket1/key1 bucket2`,
+	s3cli mv bucket/key1 bucket2`,
 		Args: cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[1])
@@ -674,11 +674,11 @@ Credential EnvVar:
 		Use:     "copy <bucket/key> <bucket/key>",
 		Aliases: []string{"cp"},
 		Short:   "copy Object",
-		Long: `copy Bucket/key to Bucket/key
+		Long: `copy Bucket/key to Bucket/key usage:
 * spedify destination key
-	s3cli copy bucket1/key1 bucket2/key2
+	s3cli copy bucket/key1 bucket2/key2
 * default destionation key
-	s3cli copy bucket1/key1 bucket2`,
+	s3cli copy bucket/key1 bucket2`,
 		Args: cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			bucket, key := splitBucketObject(args[1])
@@ -697,9 +697,9 @@ Credential EnvVar:
 		Use:     "delete <bucket/key>",
 		Aliases: []string{"del", "rm"},
 		Short:   "delete Object or Bucket",
-		Long: `delete Bucket or Object(s)
+		Long: `delete Bucket or Object(s) usage:
 * delete Bucket and all Objects
-	s3cli delete Bucket
+	s3cli delete bucket
 * delete a Object
 	s3cli delete bucket/key
 * delete all Objects with same Prefix
@@ -737,7 +737,7 @@ Credential EnvVar:
 	mpuCmd := &cobra.Command{
 		Use:   "mpu",
 		Short: "mpu sub-command",
-		Long:  `mpu sub-command`,
+		Long:  `mpu sub-command usage:`,
 	}
 	rootCmd.AddCommand(mpuCmd)
 
@@ -745,7 +745,7 @@ Credential EnvVar:
 		Use:     "create <bucket/key>",
 		Aliases: []string{"c"},
 		Short:   "create a MPU request",
-		Long: `create a mutiPartUpload request
+		Long: `create a mutiPartUpload request usage:
 * create a MPU request
 	s3cli mpu c bucket/key`,
 		Args: cobra.ExactArgs(1),
@@ -763,7 +763,7 @@ Credential EnvVar:
 		Use:     "upload <bucket/key> <upload-id> <part-num> <file>",
 		Aliases: []string{"put", "up"},
 		Short:   "upload a MPU part",
-		Long: `upload a mutiPartUpload part
+		Long: `upload a mutiPartUpload part usage:
 * upload MPU part 1
 	s3cli mpu up bucket/key upload-id 1 /path/to/file`,
 		Args: cobra.ExactArgs(4),
@@ -786,7 +786,7 @@ Credential EnvVar:
 		Use:     "abort <bucket/key> <upload-id>",
 		Aliases: []string{"a"},
 		Short:   "abort a MPU request",
-		Long: `abort a mutiPartUpload request
+		Long: `abort a mutiPartUpload request usage:
 1. abort a mpu request
 	s3cli mpu a bucket/key upload-id`,
 		Args: cobra.ExactArgs(2),
@@ -804,7 +804,7 @@ Credential EnvVar:
 		Use:     "list <bucket/prefix>",
 		Aliases: []string{"ls"},
 		Short:   "list MPU",
-		Long: `list mutiPartUploads
+		Long: `list mutiPartUploads usage:
 1. list MPU
 	s3cli mpu ls bucket/prefix`,
 		Args: cobra.ExactArgs(1),
@@ -822,7 +822,7 @@ Credential EnvVar:
 		Use:     "complete <bucket/key> <upload-id> <part-etag> [<part-etag> ...]",
 		Aliases: []string{"cl"},
 		Short:   "complete a MPU request",
-		Long: `complete a mutiPartUpload request
+		Long: `complete a mutiPartUpload request usage:
 1. complete a MPU request
 	s3cli mpu cl bucket/key upload-id etag01 etag02 etag03`,
 		Args: cobra.MinimumNArgs(3),

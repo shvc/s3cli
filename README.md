@@ -17,9 +17,9 @@ aws_secret_access_key=mySecretKey
 ```
 
 #### Usage
-```
-./s3cli -h
-S3 command-line tool
+```sh
+s3cli -h
+S3 command-line tool usage:
 Endpoint EnvVar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 
@@ -41,9 +41,10 @@ Available Commands:
   get         get Object
   head        head Bucket/Object
   help        Help about any command
-  list        list Buckets or Objects
+  list        list Buckets or Bucket
   listVersion list Object versions
   mpu         mpu sub-command
+  presign     presign(v2) URL
   put         put Object(s)
   rename      rename Object
 
@@ -99,7 +100,7 @@ s3cli put bucket-name *.txt            # upload files and use filename as key
 s3cli put bucket-name/dir/ *.txt       # upload files and set prefix(dir/) to all uploaded Object
 s3cli put bucket-name/key2 /etc/hosts  # specify key(key2)
 
-# presign a PUT Object URL
+# presign(V4) a PUT Object URL
 s3cli put bucket-name/key3 --presign
 
 # MPU
@@ -111,7 +112,7 @@ s3cli mpu -h
 s3cli get bucket-name/key            # to . and use key as filename
 s3cli down bucket-name/key /tmp/file # specify local-filename
 
-# presign a GET Object URL
+# presign(V4) a GET Object URL
 s3cli get bucket-name/key --presign
 ```
 
@@ -123,13 +124,18 @@ s3cli ls bucket-name -a     # list all Objects
 s3cli ls bucket-name/prefix # list Objects with specified prefix
 ```
 
-- Delete(rm) Object(s)  
+- delete(rm) Object(s)  
 ```sh
 # delete Object(s)
 s3cli rm bucket-name/key      # delete an Object
 s3cli rm bucket-name/dir/ -x  # delete all Objects with specified prefix(dir/)
 s3cli rm bucket-name --force  # delete Bucket and all Objects
 
-# presign an DELETE Object URL
+# presign(V4) an DELETE Object URL
 s3cli rm bucket-name/key2 --presign
+```
+
+- presign(V2) URL  
+```
+s3cli ps -h
 ```
