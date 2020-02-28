@@ -491,10 +491,14 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 }
 
 // listObjectVersions list Objects versions in Bucket
-func (sc *S3Cli) listObjectVersions(bucket string) error {
-	req := sc.Client.ListObjectVersionsRequest(&s3.ListObjectVersionsInput{
+func (sc *S3Cli) listObjectVersions(bucket, prefix string) error {
+	lovi := &s3.ListObjectVersionsInput{
 		Bucket: aws.String(bucket),
-	})
+	}
+	if prefix != "" {
+		lovi.Prefix = aws.String(prefix)
+	}
+	req := sc.Client.ListObjectVersionsRequest(lovi)
 
 	if sc.presign {
 		s, err := req.Presign(sc.presignExp)

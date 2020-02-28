@@ -315,11 +315,11 @@ Credential EnvVar:
 	s3cli up bucket/key /path/to/file
 * put(upload) files to Bucket
 	s3cli put bucket file1 file2 file3
-* put(upload) files to Bucket
 	s3cli up bucket *.txt
 * put(upload) files to Bucket with specified common prefix(dir/)
 	s3cli put bucket/dir/ file1 file2 file3
-* presign a PUT Object URL
+	s3cli up bucket/dir2/ *.txt
+* presign(V4) a PUT Object URL
 	s3cli up bucket/key --presign`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
@@ -493,15 +493,18 @@ Credential EnvVar:
 	rootCmd.AddCommand(listObjectCmd)
 
 	listVersionCmd := &cobra.Command{
-		Use:     "listVersion <bucket>",
+		Use:     "listVersion <bucket[/prefix]>",
 		Aliases: []string{"lv"},
 		Short:   "list Object versions",
 		Long: `list Object versions usage:
-* list Object Version
-	s3cli lv Bucket`,
+* list Object Versions
+	s3cli lv bucket-name
+* list Object Versions with specified prefix
+	s3cli lv bucket-name/prefix`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return sc.listObjectVersions(args[0])
+			bucket, prefix := splitBucketObject(args[0])
+			return sc.listObjectVersions(bucket, prefix)
 		},
 	}
 	rootCmd.AddCommand(listVersionCmd)
@@ -515,7 +518,7 @@ Credential EnvVar:
 	s3cli get bucket/key
 * get(download) a Object to /path/to/file
 	s3cli get bucket/key /path/to/file
-* presign a get(download) Object URL
+* presign(V4) a get(download) Object URL
 	s3cli get bucket/key --presign`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
