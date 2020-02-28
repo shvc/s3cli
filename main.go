@@ -108,18 +108,18 @@ Credential EnvVar:
 
 	// presign(V2) command
 	presignCmd := &cobra.Command{
-		Use:     "presign <server> <bucket/key>",
+		Use:     "presign <bucket/key>",
 		Aliases: []string{"ps"},
 		Short:   "presign(V2) URL",
 		Long: `presign(V2) URL usage:
 * presign(ps) a GET Object URL
-	s3cli ps http://192.168.55.2:9000 bucket/key01
+	s3cli ps bucket/key01
 * presign(ps) a DELETE Object URL
-	s3cli ps -X delete http://192.168.55.2:9000 bucket/key01
+	s3cli ps -X delete bucket/key01
 * presign(ps) a PUT Object URL
-	s3cli ps -X PUT -T text/plain http://192.168.55.2:9000 bucket/key02
+	s3cli ps -X PUT -T text/plain bucket/key02
 	curl -X PUT -H content-type:text/plain -d test-str 'presign-url'`,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			method := strings.ToUpper(cmd.Flag("method").Value.String())
 			switch method {
@@ -129,7 +129,7 @@ Credential EnvVar:
 				return fmt.Errorf("invalid http method: %s", method)
 			}
 			ctype := cmd.Flag("content-type").Value.String()
-			s, err := sc.presignV2(method, args[0], args[1], ctype)
+			s, err := sc.presignV2(method, args[0], ctype)
 			if err != nil {
 				return err
 			}

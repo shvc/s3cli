@@ -34,7 +34,7 @@ type S3Cli struct {
 }
 
 // presignV2 presigne URL with escaped key(Object name).
-func (sc *S3Cli) presignV2(method, addr, bucketKey, contentType string) (string, error) {
+func (sc *S3Cli) presignV2(method, bucketKey, contentType string) (string, error) {
 	if bucketKey == "" || bucketKey[0] == '/' {
 		return "", fmt.Errorf("invalid bucket/key: %s", bucketKey)
 	}
@@ -43,7 +43,7 @@ func (sc *S3Cli) presignV2(method, addr, bucketKey, contentType string) (string,
 		return "", errors.New("invalid access-key")
 	}
 
-	u, err := url.Parse(addr)
+	u, err := url.Parse(sc.endpoint)
 	if err != nil {
 		return "", err
 	}

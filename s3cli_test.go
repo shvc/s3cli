@@ -31,7 +31,7 @@ func randomString() string {
 }
 
 func Test_presignV2(t *testing.T) {
-	_, err := s3cliTest.presignV2(http.MethodGet, "http://127.0.0.1", "bucket/key", "")
+	_, err := s3cliTest.presignV2(http.MethodGet, "bucket/key", "")
 	if err != nil {
 		t.Errorf("presignV2 failed: %s", err)
 	}
