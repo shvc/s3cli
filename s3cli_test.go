@@ -159,7 +159,7 @@ func Test_listObjects(t *testing.T) {
 }
 
 func Test_listObjectVersions(t *testing.T) {
-	if err := s3cliTest.listObjectVersions(testBucketName); err != nil {
+	if err := s3cliTest.listObjectVersions(testBucketName, ""); err != nil {
 		t.Errorf("listObjectVersions failed: %s", err)
 	}
 }

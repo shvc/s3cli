@@ -493,15 +493,16 @@ Credential EnvVar:
 	rootCmd.AddCommand(listObjectCmd)
 
 	listVersionCmd := &cobra.Command{
-		Use:     "listVersion <bucket>",
+		Use:     "listVersion <bucket[/prefix]>",
 		Aliases: []string{"lv"},
 		Short:   "list Object versions",
 		Long: `list Object versions usage:
 * list Object Version
-	s3cli lv Bucket`,
+	s3cli lv bucket-name`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return sc.listObjectVersions(args[0])
+			bucket, prefix := splitBucketObject(args[0])
+			return sc.listObjectVersions(bucket, prefix)
 		},
 	}
 	rootCmd.AddCommand(listVersionCmd)
