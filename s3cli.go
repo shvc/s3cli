@@ -34,24 +34,25 @@ type S3Cli struct {
 }
 
 // presignV2 presigne URL with escaped key(Object name).
-func (sc *S3Cli) presignV2(method, addr, contentType string) (string, error) {
+func (sc *S3Cli) presignV2(method, addr, bucketKey, contentType string) (string, error) {
+	if bucketKey == "" || bucketKey[0] == '/' {
+		return "", fmt.Errorf("invalid bucket/key: %s", bucketKey)
+	}
 	secret, err := sc.Client.Client.Credentials.Retrieve(context.Background())
 	if err != nil {
 		return "", errors.New("invalid access-key")
 	}
-
-	fmt.Printf("method: %s, ak: %s, sk: %s\n", method, secret.AccessKeyID, secret.SecretAccessKey)
 
 	u, err := url.Parse(addr)
 	if err != nil {
 		return "", err
 	}
 	exp := strconv.FormatInt(time.Now().Unix()+int64(sc.presignExp.Seconds()), 10)
-	bucket, key := splitBucketObject(u.Path)
+
 	q := u.Query()
 	q.Set("AWSAccessKeyId", secret.AccessKeyID)
 	q.Set("Expires", exp)
-	u.Path = fmt.Sprintf("%s/%s", bucket, key)
+	u.Path = fmt.Sprintf("/%s", bucketKey)
 	strToSign := fmt.Sprintf("%s\n%s\n%s\n%v\n%s", method, "", contentType, exp, u.EscapedPath())
 
 	mac := hmac.New(sha1.New, []byte(secret.SecretAccessKey))

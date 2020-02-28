@@ -19,7 +19,7 @@ var (
 	testObjectContent = []byte("testObjectContents")
 )
 
-func randomID() string {
+func randomString() string {
 	buf := make([]byte, 10)
 	_, err := rand.Read(buf)
 	if err != nil {
@@ -31,7 +31,7 @@ func randomID() string {
 }
 
 func Test_presignV2(t *testing.T) {
-	_, err := s3cliTest.presignV2(http.MethodGet, "http://127.0.0.1/bk/key", "")
+	_, err := s3cliTest.presignV2(http.MethodGet, "http://127.0.0.1", "bucket/key", "")
 	if err != nil {
 		t.Errorf("presignV2 failed: %s", err)
 	}
@@ -40,7 +40,7 @@ func Test_presignV2(t *testing.T) {
 func Test_bucketCreate(t *testing.T) {
 	buckets := make([]string, 3)
 	for i := range buckets {
-		bucket := randomID()
+		bucket := randomString()
 		if exists, err := s3Backend.BucketExists(bucket); err != nil || exists {
 			continue
 		}
