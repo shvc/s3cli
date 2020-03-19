@@ -719,6 +719,15 @@ func (sc *S3Cli) mpuCreate(bucket, key string) error {
 	if err != nil {
 		return err
 	}
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
 	fmt.Println(resp.CreateMultipartUploadOutput)
 	return err
 }
@@ -741,6 +750,15 @@ func (sc *S3Cli) mpuUpload(bucket, key, uid string, pid int64, filename string) 
 	if err != nil {
 		return err
 	}
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
 	fmt.Println(resp.UploadPartOutput)
 	return err
 }
@@ -756,6 +774,15 @@ func (sc *S3Cli) mpuAbort(bucket, key, uid string) error {
 	if err != nil {
 		return err
 	}
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
 	fmt.Println(resp.AbortMultipartUploadOutput)
 	return err
 }
@@ -774,6 +801,15 @@ func (sc *S3Cli) mpuList(bucket, prefix string) error {
 	if err != nil {
 		return err
 	}
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
 	fmt.Println(resp.ListMultipartUploadsOutput)
 	return err
 }
@@ -795,6 +831,15 @@ func (sc *S3Cli) mpuComplete(bucket, key, uid string, etags []string) error {
 		},
 		UploadId: aws.String(uid),
 	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
 	resp, err := req.Send(context.Background())
 	if err != nil {
 		return err
