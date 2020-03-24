@@ -21,7 +21,7 @@ aws_secret_access_key=mySecretKey
 s3cli -h
 S3 command-line tool usage:
 Endpoint EnvVar:
-	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
+	S3ENDPOINT=http://host:port (only read if flag -e is not set)
 
 Credential EnvVar:
 	AWS_ACCESS_KEY_ID=AK      (only read if flag -p is not set or --ak is not set)
@@ -70,7 +70,7 @@ Use "s3cli [command] --help" for more information about a command.
 # bucket(b) create(c)
 s3cli -e http://192.168.55.2:9020 b c bucket-name
 # or pass endpoint from ENV
-export S3_ENDPOINT=http://192.168.55.2:9020
+export S3ENDPOINT=http://192.168.55.2:9020
 s3cli b c bucket-name
 
 # list(ls) Buckets

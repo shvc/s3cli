@@ -53,7 +53,9 @@ func (sc *S3Cli) presignV2(method, bucketKey, contentType string) (string, error
 	q.Set("AWSAccessKeyId", secret.AccessKeyID)
 	q.Set("Expires", exp)
 	u.Path = fmt.Sprintf("/%s", bucketKey)
-	strToSign := fmt.Sprintf("%s\n%s\n%s\n%v\n%s", method, "", contentType, exp, u.EscapedPath())
+
+	contentMd5 := "" // header Content-MD5
+	strToSign := fmt.Sprintf("%s\n%s\n%s\n%v\n%s", method, contentMd5, contentType, exp, u.EscapedPath())
 
 	mac := hmac.New(sha1.New, []byte(secret.SecretAccessKey))
 	mac.Write([]byte(strToSign))
