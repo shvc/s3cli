@@ -46,7 +46,7 @@ func newS3Client(sc *S3Cli) (*s3.Client, error) {
 	//	URL: sc.endpoint,
 	//}
 	defaultResolver := endpoints.NewDefaultResolver()
-	myCustomResolver := func(service, region string) (aws.Endpoint, error) {
+	cfg.EndpointResolver = aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
 		if service == s3.EndpointsID {
 			return aws.Endpoint{
 				URL: sc.endpoint,
@@ -55,8 +55,7 @@ func newS3Client(sc *S3Cli) (*s3.Client, error) {
 			}, nil
 		}
 		return defaultResolver.ResolveEndpoint(service, region)
-	}
-	cfg.EndpointResolver = aws.EndpointResolverFunc(myCustomResolver)
+	})
 	if sc.debug {
 		cfg.LogLevel = aws.LogDebug
 	}
