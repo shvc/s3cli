@@ -21,7 +21,7 @@ var (
 	// version to record s3cli version
 	version = "1.2.3"
 	// endpoint ENV Var
-	endpointEnvVar = "S3ENDPOINT"
+	endpointEnvVar = "S3_ENDPOINT"
 )
 
 func splitBucketObject(bucketObject string) (bucket, object string) {
@@ -76,7 +76,7 @@ func main() {
 		Short: "s3cli client tool",
 		Long: `S3 command-line tool usage:
 Endpoint EnvVar:
-	S3ENDPOINT=http://host:port (only read if flag -e is not set)
+	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 
 Credential EnvVar:
 	AWS_ACCESS_KEY_ID=AK      (only read if flag -p is not set or --ak is not set)
