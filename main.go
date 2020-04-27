@@ -101,7 +101,7 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().DurationVarP(&sc.presignExp, "expire", "", 24*time.Hour, "presign URL expiration")
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", "S3 endpoint(http://host:port)")
 	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credentials file")
-	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", endpoints.CnNorth1RegionID, "region")
+	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", "", "region")
 	rootCmd.PersistentFlags().StringVarP(&sc.ak, "ak", "", "", "access key")
 	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "", "", "secret key")
 
