@@ -127,8 +127,15 @@ Credential EnvVar:
 			default:
 				return fmt.Errorf("invalid http method: %s", method)
 			}
-			ctype := cmd.Flag("content-type").Value.String()
-			s, err := sc.presignV2(method, args[0], ctype)
+			var s string
+			var err error
+			contentType := cmd.Flag("content-type").Value.String()
+			raw := cmd.Flag("raw").Changed
+			if raw == true {
+				s, err = sc.presignV2Raw(method, args[0], contentType)
+			} else {
+				s, err = sc.presignV2(method, args[0], contentType)
+			}
 			if err != nil {
 				return err
 			}
@@ -138,6 +145,7 @@ Credential EnvVar:
 	}
 	presignCmd.Flags().StringP("method", "X", http.MethodGet, "http request method")
 	presignCmd.Flags().StringP("content-type", "T", "", "http request content-type")
+	presignCmd.Flags().BoolP("raw", "", false, "raw(not escape) object name")
 	rootCmd.AddCommand(presignCmd)
 
 	// bucket command
