@@ -101,7 +101,7 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().DurationVarP(&sc.presignExp, "expire", "", 24*time.Hour, "presign URL expiration")
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", "S3 endpoint(http://host:port)")
 	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credentials file")
-	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", "", "region")
+	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", "default", "S3 region")
 	rootCmd.PersistentFlags().StringVarP(&sc.ak, "ak", "", "", "access key")
 	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "", "", "secret key")
 
@@ -115,7 +115,7 @@ Credential EnvVar:
 	s3cli ps bucket/key01
 * presign(ps) a DELETE Object URL
 	s3cli ps -X delete bucket/key01
-* presign(ps) a PUT Object URL
+* presign(ps) a PUT Object URL and specify content-type
 	s3cli ps -X PUT -T text/plain bucket/key02
 	curl -X PUT -H content-type:text/plain -d test-str 'presign-url'`,
 		Args: cobra.ExactArgs(1),
@@ -582,7 +582,7 @@ Credential EnvVar:
 		Aliases: []string{"ren", "mv"},
 		Short:   "rename Object",
 		Long: `rename Bucket/key to Bucket/key usage:
-* spedify destination key
+* specify destination key
 	s3cli mv bucket/key1 bucket2/key2
 * default destionation key
 	s3cli mv bucket/key1 bucket2`,

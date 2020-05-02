@@ -18,7 +18,7 @@ aws_secret_access_key=mySecretKey
 
 #### Usage
 ```sh
-s3cli -h
+./s3cli -h
 S3 command-line tool usage:
 Endpoint EnvVar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
@@ -44,7 +44,7 @@ Available Commands:
   list        list Buckets or Bucket
   listVersion list Object versions
   mpu         mpu sub-command
-  presign     presign(v2) URL
+  presign     presign(V2) URL
   put         put Object(s)
   rename      rename Object
 
@@ -56,7 +56,7 @@ Flags:
   -h, --help              help for s3cli
       --presign           presign URL and exit
   -p, --profile string    profile in credentials file
-  -R, --region string     region (default "cn-north-1")
+  -R, --region string     S3 region (default "default")
       --sk string         secret key
   -v, --verbose           verbose output
       --version           version for s3cli
@@ -137,5 +137,11 @@ s3cli rm bucket-name/key2 --presign
 
 - presign(V2) URL  
 ```
-s3cli ps -h
+# presign URL and escape key
+s3cli ps 'bucket/key(0*1).txt'
+http://192.168.55.2:9000/bucket/key%280%2A1%29.txt?AWSAccessKeyId=object_user1&Expires=1588503069&Signature=dVy1V1E%2FurLvzvpiF3dYhJrNMRY%3D
+
+# presign URL and not escape key
+s3cli ps --raw 'bucket/key(0*1).txt'
+http://192.168.55.2:9000/bucket/key(0*1).txt?AWSAccessKeyId=object_user1&Expires=1588503108&Signature=93gNcprC%2BQTvlvaBxr0EizIpehM%3D
 ```
