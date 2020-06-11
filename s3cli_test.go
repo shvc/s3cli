@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
@@ -152,13 +153,13 @@ func Test_setObjectACL(t *testing.T) {
 }
 
 func Test_listAllObjects(t *testing.T) {
-	if err := s3cliTest.listAllObjects(testBucketName, "t", "/", true); err != nil {
+	if err := s3cliTest.listAllObjects(testBucketName, "t", "/", true, time.Time{}, time.Time{}); err != nil {
 		t.Errorf("listAllObjects failed: %s", err)
 	}
 }
 
 func Test_listObjects(t *testing.T) {
-	if err := s3cliTest.listObjects(testBucketName, "t", "/", "", 1000, true); err != nil {
+	if err := s3cliTest.listObjects(testBucketName, "t", "/", "", 1000, true, time.Time{}, time.Time{}); err != nil {
 		t.Errorf("listObjects failed: %s", err)
 	}
 }
