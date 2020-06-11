@@ -213,6 +213,7 @@ Credential EnvVar:
 	s3cli b acl bucket-name
 * set Bucket ACL to public-read
 	s3cli b acl bucket-name public-read
+
 * all canned Bucket ACL(private, public-read, public-read-write, authenticated-read)
 `,
 		Args: cobra.RangeArgs(1, 2),
@@ -391,13 +392,16 @@ Credential EnvVar:
 		Use:   "acl <bucket/key> [ACL]",
 		Short: "get/set Bucket/Object ACL",
 		Long: `get/set Bucket/Object ACL usage:
-* get a Bucket's ACL
+* get Bucket ACL
 	s3cli acl bucket
-* get a Object's ACL
+* set Bucket ACL to public-read
+	s3cli acl bucket public-read
+* get Object ACL
 	s3cli acl bucket/key
-* set a Object's ACL to public-read
+* set Object ACL to public-read
 	s3cli acl bucket/key public-read
-* all canned Object ACL(private,public-read,public-read-write,authenticated-read,aws-exec-read,bucket-owner-read,bucket-owner-full-control)
+
+* all canned ACL(private,public-read,public-read-write,authenticated-read,aws-exec-read,bucket-owner-read,bucket-owner-full-control)
 `,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -470,22 +474,36 @@ Credential EnvVar:
 * list Objects in a Bucket
 	s3cli ls bucket
 * list Objects with prefix(2019)
-	s3cli ls bucket/2019`,
+	s3cli ls bucket/2019
+* list Objects(2020-03-03 00:00:00 < modifyTime < 2020-06-03 00:00:00)
+	s3cli search bucket --start-time '2020-03-03 00:00:00' --end-time '2020-06-03 00:00:00'
+* list Objects(2020-03-03 00:00:00 < modifyTime < 2020-06-03 00:00:00) start with common prefix
+	s3cli search bucket/prefix --start-time '2020-03-03 00:00:00' --end-time '2020-06-03 00:00:00'
+`,
 		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			index := cmd.Flag("index").Changed
 			delimiter := cmd.Flag("delimiter").Value.String()
 			if len(args) == 1 { // list Objects
+				stime, err := time.Parse("2006-01-02 15:04:05", cmd.Flag("start-time").Value.String())
+				if err != nil {
+					return fmt.Errorf("invalid start-time %s, error %s", cmd.Flag("start-time").Value.String(), err)
+				}
+				etime, err := time.Parse("2006-01-02 15:04:05", cmd.Flag("end-time").Value.String())
+				if err != nil {
+					return fmt.Errorf("invalid enf-time %s, error %s", cmd.Flag("end-time").Value.String(), err)
+				}
+
 				bucket, prefix := splitBucketObject(args[0])
 				if cmd.Flag("all").Changed {
-					return sc.listAllObjects(bucket, prefix, delimiter, index)
+					return sc.listAllObjects(bucket, prefix, delimiter, index, stime, etime)
 				}
 				maxKeys, err := cmd.Flags().GetInt64("maxkeys")
 				if err != nil {
 					maxKeys = 1000
 				}
 				marker := cmd.Flag("marker").Value.String()
-				return sc.listObjects(bucket, prefix, delimiter, marker, maxKeys, index)
+				return sc.listObjects(bucket, prefix, delimiter, marker, maxKeys, index, stime, etime)
 			}
 
 			// list all my Buckets
@@ -497,6 +515,8 @@ Credential EnvVar:
 	listObjectCmd.Flags().StringP("delimiter", "d", "", "Object delimiter")
 	listObjectCmd.Flags().BoolP("index", "i", false, "show Object index ")
 	listObjectCmd.Flags().BoolP("all", "a", false, "list all Objects")
+	listObjectCmd.Flags().StringP("start-time", "", "2006-01-02 15:04:05", "show Objects modify-time after start-time(UTC)")
+	listObjectCmd.Flags().StringP("end-time", "", "2080-01-02 15:04:05", "show Objects modify-time before end-time(UTC)")
 	rootCmd.AddCommand(listObjectCmd)
 
 	listVersionCmd := &cobra.Command{

@@ -456,7 +456,7 @@ func (sc *S3Cli) setObjectACL(bucket, key string, acl s3.ObjectCannedACL) error 
 }
 
 // listAllObjects list all Objects in specified bucket
-func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool) error {
+func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool, startTime, endTime time.Time) error {
 	var i int64
 	req := sc.Client.ListObjectsRequest(&s3.ListObjectsInput{
 		Bucket:    aws.String(bucket),
@@ -471,7 +471,16 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool) er
 			continue
 		}
 		for _, obj := range page.Contents {
-			if index {
+			if obj.LastModified.Before(startTime) {
+				continue
+			}
+			if obj.LastModified.After(endTime) {
+				continue
+			}
+
+			if sc.verbose {
+				fmt.Println(obj)
+			} else if index {
 				fmt.Printf("%d\t%s\n", i, *obj.Key)
 				i++
 			} else {
@@ -486,7 +495,7 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool) er
 }
 
 // listObjects (S3 listBucket)list Objects in specified bucket
-func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys int64, index bool) error {
+func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys int64, index bool, startTime, endTime time.Time) error {
 	req := sc.Client.ListObjectsRequest(&s3.ListObjectsInput{
 		Bucket:    aws.String(bucket),
 		Prefix:    aws.String(prefix),
@@ -507,15 +516,19 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 	if err != nil {
 		return fmt.Errorf("list objects failed: %w", err)
 	}
-	if sc.verbose {
-		fmt.Println(resp)
-		return nil
-	}
 	for _, p := range resp.CommonPrefixes {
 		fmt.Println(*p.Prefix)
 	}
 	for i, obj := range resp.Contents {
-		if index {
+		if obj.LastModified.Before(startTime) {
+			continue
+		}
+		if obj.LastModified.After(endTime) {
+			continue
+		}
+		if sc.verbose {
+			fmt.Println(obj)
+		} else if index {
 			fmt.Printf("%d\t%s\n", i, *obj.Key)
 		} else {
 			fmt.Println(*obj.Key)
