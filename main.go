@@ -24,6 +24,20 @@ var (
 	endpointEnvVar = "S3_ENDPOINT"
 )
 
+var defaultAWSConfigResolvers = []external.AWSConfigResolver{
+	external.ResolveDefaultAWSConfig,
+	external.ResolveHandlersFunc,
+	external.ResolveEndpointResolverFunc,
+	external.ResolveCustomCABundle,
+	external.ResolveEnableEndpointDiscovery,
+
+	external.ResolveRegion,
+	//external.ResolveEC2Region, // slow code path
+	external.ResolveDefaultRegion,
+
+	external.ResolveCredentials,
+}
+
 func splitBucketObject(bucketObject string) (bucket, object string) {
 	bo := strings.SplitN(bucketObject, "/", 2)
 	if len(bo) == 2 {
@@ -37,9 +51,17 @@ func newS3Client(sc *S3Cli) (*s3.Client, error) {
 		os.Setenv("AWS_ACCESS_KEY_ID", sc.ak)
 		os.Setenv("AWS_SECRET_ACCESS_KEY", sc.sk)
 	}
-	cfg, err := external.LoadDefaultAWSConfig(external.WithSharedConfigProfile(sc.profile))
+
+	var cfgs external.Configs
+	cfgs = append(cfgs, external.WithSharedConfigProfile(sc.profile))
+
+	cfgs, err := cfgs.AppendFromLoaders(external.DefaultConfigLoaders)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config, %w", err)
+		return nil, err
+	}
+	cfg, err := cfgs.ResolveAWSConfig(defaultAWSConfigResolvers)
+	if err != nil {
+		return nil, err
 	}
 	cfg.Region = sc.region
 	//cfg.EndpointResolver = aws.ResolveWithEndpoint{
