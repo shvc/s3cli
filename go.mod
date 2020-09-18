@@ -1,4 +1,4 @@
-module github.com/vager/s3cli
+module github.com/shvc/s3cli
 
 go 1.14
 

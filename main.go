@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,6 +25,14 @@ var (
 	// endpoint ENV Var
 	endpointEnvVar = "S3_ENDPOINT"
 )
+
+var httpClient = http.Client{
+	Transport: &http.Transport{
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+		Dial:                  (&net.Dialer{Timeout: 1 * time.Second}).Dial,
+		ResponseHeaderTimeout: 5 * time.Second,
+	},
+}
 
 var defaultAWSConfigResolvers = []external.AWSConfigResolver{
 	external.ResolveDefaultAWSConfig,
@@ -81,6 +91,8 @@ func newS3Client(sc *S3Cli) (*s3.Client, error) {
 	if sc.debug {
 		cfg.LogLevel = aws.LogDebug
 	}
+	cfg.HTTPClient = &httpClient
+
 	client := s3.New(cfg)
 	if sc.endpoint == "" {
 		sc.endpoint = os.Getenv(endpointEnvVar)
