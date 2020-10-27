@@ -24,6 +24,11 @@ var (
 	version = "1.2.3"
 	// endpoint ENV Var
 	endpointEnvVar = "S3_ENDPOINT"
+	// With ForcePathStyle(virtualhost=false):
+	// 	https://s3.us-west-2.amazonaws.com/BUCKET/KEY
+	// Without ForcePathStyle(virtualhost=true):
+	// 	https://BUCKET.s3.us-west-2.amazonaws.com/KEY
+	virtualhost = false
 )
 
 var httpClient = http.Client{
@@ -97,8 +102,10 @@ func newS3Client(sc *S3Cli) (*s3.Client, error) {
 	if sc.endpoint == "" {
 		sc.endpoint = os.Getenv(endpointEnvVar)
 	}
-	if sc.endpoint != "" {
+	if virtualhost == false {
 		client.ForcePathStyle = true
+	} else {
+		client.ForcePathStyle = false
 	}
 	return client, nil
 }
@@ -138,6 +145,8 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", "default", "S3 region")
 	rootCmd.PersistentFlags().StringVarP(&sc.ak, "ak", "", "", "access key")
 	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "", "", "secret key")
+	// pathStyle
+	rootCmd.PersistentFlags().BoolVarP(&virtualhost, "virtualhost", "", false, "use virtualhosting style(not use path style)")
 
 	// presign(V2) command
 	presignCmd := &cobra.Command{
