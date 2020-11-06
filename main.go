@@ -519,9 +519,9 @@ Credential EnvVar:
 * list Objects with prefix(2019)
 	s3cli ls bucket/2019
 * list Objects(2020-03-03 00:00:00 < modifyTime < 2020-06-03 00:00:00)
-	s3cli search bucket --start-time '2020-03-03 00:00:00' --end-time '2020-06-03 00:00:00'
+	s3cli ls bucket --start-time '2020-03-03 00:00:00' --end-time '2020-06-03 00:00:00'
 * list Objects(2020-03-03 00:00:00 < modifyTime < 2020-06-03 00:00:00) start with common prefix
-	s3cli search bucket/prefix --start-time '2020-03-03 00:00:00' --end-time '2020-06-03 00:00:00'
+	s3cli ls bucket/prefix --start-time '2020-03-03 00:00:00' --end-time '2020-06-03 00:00:00'
 `,
 		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -561,6 +561,61 @@ Credential EnvVar:
 	listObjectCmd.Flags().StringP("start-time", "", "2006-01-02 15:04:05", "show Objects modify-time after start-time(UTC)")
 	listObjectCmd.Flags().StringP("end-time", "", "2080-01-02 15:04:05", "show Objects modify-time before end-time(UTC)")
 	rootCmd.AddCommand(listObjectCmd)
+
+	listObjectV2Cmd := &cobra.Command{
+		Use:     "list2 [bucket[/prefix]]",
+		Aliases: []string{"ls2"},
+		Short:   "list Buckets or Bucket(V2)",
+		Long: `list2 Buckets or Bucket usage:
+* list all my Buckets
+	s3cli ls2
+* list Objects in a Bucket
+	s3cli ls2 bucket
+* list Objects with prefix(2019)
+	s3cli ls2 bucket/2019
+* list Objects(2020-03-03 00:00:00 < modifyTime < 2020-06-03 00:00:00)
+	s3cli ls2 bucket --start-time '2020-03-03 00:00:00' --end-time '2020-06-03 00:00:00'
+* list Objects(2020-03-03 00:00:00 < modifyTime < 2020-06-03 00:00:00) start with common prefix
+	s3cli ls2 bucket/prefix --start-time '2020-03-03 00:00:00' --end-time '2020-06-03 00:00:00'
+`,
+		Args: cobra.RangeArgs(0, 1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			index := cmd.Flag("index").Changed
+			delimiter := cmd.Flag("delimiter").Value.String()
+			if len(args) == 1 { // list Objects
+				stime, err := time.Parse("2006-01-02 15:04:05", cmd.Flag("start-time").Value.String())
+				if err != nil {
+					return fmt.Errorf("invalid start-time %s, error %s", cmd.Flag("start-time").Value.String(), err)
+				}
+				etime, err := time.Parse("2006-01-02 15:04:05", cmd.Flag("end-time").Value.String())
+				if err != nil {
+					return fmt.Errorf("invalid enf-time %s, error %s", cmd.Flag("end-time").Value.String(), err)
+				}
+
+				bucket, prefix := splitBucketObject(args[0])
+				if cmd.Flag("all").Changed {
+					return sc.listAllObjectsV2(bucket, prefix, delimiter, index, stime, etime)
+				}
+				maxKeys, err := cmd.Flags().GetInt64("maxkeys")
+				if err != nil {
+					maxKeys = 1000
+				}
+				marker := cmd.Flag("marker").Value.String()
+				return sc.listObjectsV2(bucket, prefix, delimiter, marker, maxKeys, index, stime, etime)
+			}
+
+			// list all my Buckets
+			return sc.bucketList()
+		},
+	}
+	listObjectV2Cmd.Flags().StringP("marker", "m", "", "marker")
+	listObjectV2Cmd.Flags().Int64P("maxkeys", "M", 1000, "max keys")
+	listObjectV2Cmd.Flags().StringP("delimiter", "d", "", "Object delimiter")
+	listObjectV2Cmd.Flags().BoolP("index", "i", false, "show Object index ")
+	listObjectV2Cmd.Flags().BoolP("all", "a", false, "list all Objects")
+	listObjectV2Cmd.Flags().StringP("start-time", "", "2006-01-02 15:04:05", "show Objects modify-time after start-time(UTC)")
+	listObjectV2Cmd.Flags().StringP("end-time", "", "2080-01-02 15:04:05", "show Objects modify-time before end-time(UTC)")
+	rootCmd.AddCommand(listObjectV2Cmd)
 
 	listVersionCmd := &cobra.Command{
 		Use:     "listVersion <bucket[/prefix]>",
