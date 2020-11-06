@@ -389,6 +389,7 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 	if err != nil {
 		return err
 	}
+
 	if resp == nil {
 		return nil
 	}
@@ -494,6 +495,47 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool, st
 	return nil
 }
 
+// listAllObjectsV2 list all Objects in specified bucket
+func (sc *S3Cli) listAllObjectsV2(bucket, prefix, delimiter string, index, owner bool, startTime, endTime time.Time) error {
+	var i int64
+	req := sc.Client.ListObjectsV2Request(&s3.ListObjectsV2Input{
+		Bucket:     aws.String(bucket),
+		Prefix:     aws.String(prefix),
+		Delimiter:  aws.String(delimiter),
+		FetchOwner: aws.Bool(owner),
+	})
+
+	p := s3.NewListObjectsV2Paginator(req)
+	for p.Next(context.TODO()) {
+		page := p.CurrentPage()
+		if sc.verbose {
+			fmt.Println(page)
+			continue
+		}
+		for _, obj := range page.Contents {
+			if obj.LastModified.Before(startTime) {
+				continue
+			}
+			if obj.LastModified.After(endTime) {
+				continue
+			}
+
+			if sc.verbose {
+				fmt.Println(obj)
+			} else if index {
+				fmt.Printf("%d\t%s\n", i, *obj.Key)
+				i++
+			} else {
+				fmt.Println(*obj.Key)
+			}
+		}
+	}
+	if err := p.Err(); err != nil {
+		return fmt.Errorf("list all objects failed: %w", err)
+	}
+	return nil
+}
+
 // listObjects (S3 listBucket)list Objects in specified bucket
 func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys int64, index bool, startTime, endTime time.Time) error {
 	req := sc.Client.ListObjectsRequest(&s3.ListObjectsInput{
@@ -502,6 +544,50 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 		Marker:    aws.String(marker),
 		Delimiter: aws.String(delimiter),
 		MaxKeys:   aws.Int64(maxkeys),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	resp, err := req.Send(context.Background())
+	if err != nil {
+		return fmt.Errorf("list objects failed: %w", err)
+	}
+	for _, p := range resp.CommonPrefixes {
+		fmt.Println(*p.Prefix)
+	}
+	for i, obj := range resp.Contents {
+		if obj.LastModified.Before(startTime) {
+			continue
+		}
+		if obj.LastModified.After(endTime) {
+			continue
+		}
+		if sc.verbose {
+			fmt.Println(obj)
+		} else if index {
+			fmt.Printf("%d\t%s\n", i, *obj.Key)
+		} else {
+			fmt.Println(*obj.Key)
+		}
+	}
+	return nil
+}
+
+// listObjectsV2 (S3 listBucket)list Objects in specified bucket
+func (sc *S3Cli) listObjectsV2(bucket, prefix, delimiter, marker string, maxkeys int64, index, owner bool, startTime, endTime time.Time) error {
+	req := sc.Client.ListObjectsV2Request(&s3.ListObjectsV2Input{
+		Bucket:     aws.String(bucket),
+		Prefix:     aws.String(prefix),
+		StartAfter: aws.String(marker),
+		Delimiter:  aws.String(delimiter),
+		MaxKeys:    aws.Int64(maxkeys),
+		FetchOwner: aws.Bool(owner),
 	})
 
 	if sc.presign {
