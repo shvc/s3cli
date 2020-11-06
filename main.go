@@ -581,6 +581,7 @@ Credential EnvVar:
 		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			index := cmd.Flag("index").Changed
+			fetchOwner := cmd.Flag("owner").Changed
 			delimiter := cmd.Flag("delimiter").Value.String()
 			if len(args) == 1 { // list Objects
 				stime, err := time.Parse("2006-01-02 15:04:05", cmd.Flag("start-time").Value.String())
@@ -594,14 +595,14 @@ Credential EnvVar:
 
 				bucket, prefix := splitBucketObject(args[0])
 				if cmd.Flag("all").Changed {
-					return sc.listAllObjectsV2(bucket, prefix, delimiter, index, stime, etime)
+					return sc.listAllObjectsV2(bucket, prefix, delimiter, index, fetchOwner, stime, etime)
 				}
 				maxKeys, err := cmd.Flags().GetInt64("maxkeys")
 				if err != nil {
 					maxKeys = 1000
 				}
 				marker := cmd.Flag("marker").Value.String()
-				return sc.listObjectsV2(bucket, prefix, delimiter, marker, maxKeys, index, stime, etime)
+				return sc.listObjectsV2(bucket, prefix, delimiter, marker, maxKeys, index, fetchOwner, stime, etime)
 			}
 
 			// list all my Buckets
@@ -611,7 +612,8 @@ Credential EnvVar:
 	listObjectV2Cmd.Flags().StringP("marker", "m", "", "marker")
 	listObjectV2Cmd.Flags().Int64P("maxkeys", "M", 1000, "max keys")
 	listObjectV2Cmd.Flags().StringP("delimiter", "d", "", "Object delimiter")
-	listObjectV2Cmd.Flags().BoolP("index", "i", false, "show Object index ")
+	listObjectV2Cmd.Flags().BoolP("index", "i", false, "show Object index")
+	listObjectV2Cmd.Flags().BoolP("owner", "", false, "fetch owner")
 	listObjectV2Cmd.Flags().BoolP("all", "a", false, "list all Objects")
 	listObjectV2Cmd.Flags().StringP("start-time", "", "2006-01-02 15:04:05", "show Objects modify-time after start-time(UTC)")
 	listObjectV2Cmd.Flags().StringP("end-time", "", "2080-01-02 15:04:05", "show Objects modify-time before end-time(UTC)")
