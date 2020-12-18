@@ -94,7 +94,7 @@ func newS3Client(sc *S3Cli) (*s3.Client, error) {
 		return defaultResolver.ResolveEndpoint(service, region)
 	})
 	if sc.debug {
-		cfg.LogLevel = aws.LogDebug
+		cfg.LogLevel = aws.LogDebugWithSigning
 	}
 	cfg.HTTPClient = &httpClient
 
