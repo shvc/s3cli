@@ -1,4 +1,4 @@
-APP=s3cli
+APP?=s3cli
 BUILDDATE=$(shell date +'%Y-%m-%dT%H:%M:%SZ')
 VERSION=2.2.7
 LONGVER=${VERSION}@${BUILDDATE}@$(shell git rev-parse --short HEAD)
@@ -41,11 +41,10 @@ default:
 ## clean: cleans the build results
 .PHONY: clean
 clean:
-	rm -rf *zip
-	rm -rf ${APP}
+	rm -rf *zip ${APP}
 
 ## help: prints this help message
-.PHONY: clean
+.PHONY: help
 help:
 	@echo "Usage: \n"
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' |  sed -e 's/^/ /'
