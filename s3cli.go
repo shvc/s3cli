@@ -869,13 +869,13 @@ func (sc *S3Cli) mpuCreate(bucket, key string) error {
 // mpuUpload do a Multi-Part-Upload
 func (sc *S3Cli) mpuUpload(bucket, key, uid string, file map[int64]string) error {
 	wg := sync.WaitGroup{}
-	for i, filename := range file {
+	for i, localfile := range file {
 		wg.Add(1)
-		go func(i int64, filename string) {
+		go func(num int64, filename string) {
 			defer wg.Done()
 			fd, err := os.Open(filename)
 			if err != nil {
-				fmt.Printf("%2d   error: %s\n", i, err)
+				fmt.Printf("%2d   error: %s\n", num, err)
 				return
 			}
 			defer fd.Close()
@@ -883,17 +883,16 @@ func (sc *S3Cli) mpuUpload(bucket, key, uid string, file map[int64]string) error
 				Body:       fd,
 				Bucket:     aws.String(bucket),
 				Key:        aws.String(key),
-				PartNumber: aws.Int64(i),
+				PartNumber: aws.Int64(num),
 				UploadId:   aws.String(uid),
 			})
 			resp, err := req.Send(context.Background())
 			if err != nil {
-				fmt.Printf("%2d   error: %s\n", i, err)
+				fmt.Printf("%2d   error: %s\n", num, err)
 				return
 			}
-			fmt.Printf("%2d success: %s\n", i, *resp.UploadPartOutput.ETag)
-		}(i, filename)
-
+			fmt.Printf("%2d success: %s\n", num, *resp.UploadPartOutput.ETag)
+		}(i, localfile)
 	}
 	wg.Wait()
 	return nil

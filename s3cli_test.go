@@ -265,7 +265,8 @@ func Test_mpuCreate(t *testing.T) {
 func Test_mpuUpload(t *testing.T) {
 	t.Skip("not ready to test")
 	files := map[int64]string{
-		1: "filename",
+		1: "filename1",
+		2: "filename2",
 	}
 	if err := s3cliTest.mpuUpload(testBucketName, "key", "upload-id", files); err != nil {
 		t.Errorf("mpuUpload failed: %s", err)
