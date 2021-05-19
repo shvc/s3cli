@@ -800,7 +800,7 @@ Credential EnvVar:
 	s3cli mpu up bucket/key upload-id 2:localfile2
 * upload MPU part1 and part2
 	s3cli mpu up bucket/key upload-id 1:localfile1 2:localfile2`,
-		Args: cobra.MinimumNArgs(4),
+		Args: cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			files := map[int64]string{}
 			for _, v := range args[2:] {
