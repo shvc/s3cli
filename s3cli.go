@@ -12,6 +12,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -866,34 +867,36 @@ func (sc *S3Cli) mpuCreate(bucket, key string) error {
 }
 
 // mpuUpload do a Multi-Part-Upload
-func (sc *S3Cli) mpuUpload(bucket, key, uid string, pid int64, filename string) error {
-	fd, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer fd.Close()
-	req := sc.Client.UploadPartRequest(&s3.UploadPartInput{
-		Body:       fd,
-		Bucket:     aws.String(bucket),
-		Key:        aws.String(key),
-		PartNumber: aws.Int64(pid),
-		UploadId:   aws.String(uid),
-	})
-	resp, err := req.Send(context.Background())
-	if err != nil {
-		return err
-	}
+func (sc *S3Cli) mpuUpload(bucket, key, uid string, file map[int64]string) error {
+	wg := sync.WaitGroup{}
+	for i, filename := range file {
+		wg.Add(1)
+		go func(i int64, filename string) {
+			defer wg.Done()
+			fd, err := os.Open(filename)
+			if err != nil {
+				fmt.Printf("%2d   error: %s\n", i, err)
+				return
+			}
+			defer fd.Close()
+			req := sc.Client.UploadPartRequest(&s3.UploadPartInput{
+				Body:       fd,
+				Bucket:     aws.String(bucket),
+				Key:        aws.String(key),
+				PartNumber: aws.Int64(i),
+				UploadId:   aws.String(uid),
+			})
+			resp, err := req.Send(context.Background())
+			if err != nil {
+				fmt.Printf("%2d   error: %s\n", i, err)
+				return
+			}
+			fmt.Printf("%2d success: %s\n", i, *resp.UploadPartOutput.ETag)
+		}(i, filename)
 
-	if sc.presign {
-		s, err := req.Presign(sc.presignExp)
-		if err == nil {
-			fmt.Println(s)
-		}
-		return err
 	}
-
-	fmt.Println(resp.UploadPartOutput)
-	return err
+	wg.Wait()
+	return nil
 }
 
 // mpuAbort abort Multi-Part-Upload

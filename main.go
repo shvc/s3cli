@@ -790,20 +790,33 @@ Credential EnvVar:
 	mpuCmd.AddCommand(mpuCreateCmd)
 
 	mpuUploadCmd := &cobra.Command{
-		Use:     "upload <bucket/key> <upload-id> <part-num> <file>",
+		Use:     "upload <bucket/key> <upload-id> <part-num:file>",
 		Aliases: []string{"put", "up"},
 		Short:   "upload a MPU part",
 		Long: `upload a mutiPartUpload part usage:
-* upload MPU part 1
-	s3cli mpu up bucket/key upload-id 1 /path/to/file`,
-		Args: cobra.ExactArgs(4),
+* upload MPU part1
+	s3cli mpu up bucket/key upload-id 1:localfile1
+* upload MPU part2
+	s3cli mpu up bucket/key upload-id 2:localfile2
+* upload MPU part1 and part2
+	s3cli mpu up bucket/key upload-id 1:localfile1 2:localfile2`,
+		Args: cobra.MinimumNArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			part, err := strconv.ParseInt(args[2], 10, 64)
-			if err != nil {
-				return fmt.Errorf("invalid part num: %s", err)
+			files := map[int64]string{}
+			for _, v := range args[2:] {
+				findex := strings.Split(v, ":")
+				if len(findex) < 2 {
+					return fmt.Errorf("invalid part num: %s", v)
+				}
+				part, err := strconv.ParseInt(findex[0], 10, 64)
+				if err != nil {
+					return fmt.Errorf("invalid part num: %s", err)
+				}
+				files[part] = findex[1]
 			}
+
 			bucket, key := splitBucketObject(args[0])
-			return sc.mpuUpload(bucket, key, args[1], part, args[3])
+			return sc.mpuUpload(bucket, key, args[1], files)
 		},
 	}
 	mpuCmd.AddCommand(mpuUploadCmd)
@@ -813,7 +826,7 @@ Credential EnvVar:
 		Aliases: []string{"a"},
 		Short:   "abort a MPU request",
 		Long: `abort a mutiPartUpload request usage:
-1. abort a mpu request
+* abort a mpu request
 	s3cli mpu a bucket/key upload-id`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
