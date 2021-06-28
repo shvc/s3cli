@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/johannesboyne/gofakes3"
 	"github.com/johannesboyne/gofakes3/backend/s3mem"
 )
@@ -20,7 +21,7 @@ var (
 var s3cliTest = S3Cli{
 	ak:     "my-ak",
 	sk:     "my-sk",
-	region: "default",
+	region: s3.BucketLocationConstraintCnNorth1,
 	Client: nil,
 }
 

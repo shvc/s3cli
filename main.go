@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/endpoints"
-	"github.com/aws/aws-sdk-go-v2/aws/external"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3control"
 	"github.com/spf13/cobra"
 )
 
@@ -39,20 +39,6 @@ var httpClient = http.Client{
 	},
 }
 
-var defaultAWSConfigResolvers = []external.AWSConfigResolver{
-	external.ResolveDefaultAWSConfig,
-	external.ResolveHandlersFunc,
-	external.ResolveEndpointResolverFunc,
-	external.ResolveCustomCABundle,
-	external.ResolveEnableEndpointDiscovery,
-
-	external.ResolveRegion,
-	//external.ResolveEC2Region, // slow code path
-	external.ResolveDefaultRegion,
-
-	external.ResolveCredentials,
-}
-
 func splitBucketObject(bucketObject string) (bucket, object string) {
 	bo := strings.SplitN(bucketObject, "/", 2)
 	if len(bo) == 2 {
@@ -61,53 +47,22 @@ func splitBucketObject(bucketObject string) (bucket, object string) {
 	return bucketObject, ""
 }
 
-func newS3Client(sc *S3Cli) (*s3.Client, error) {
+func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	if sc.ak != "" && sc.sk != "" {
 		os.Setenv("AWS_ACCESS_KEY_ID", sc.ak)
 		os.Setenv("AWS_SECRET_ACCESS_KEY", sc.sk)
 	}
 
-	var cfgs external.Configs
-	cfgs = append(cfgs, external.WithSharedConfigProfile(sc.profile))
+	sess := session.Must(session.NewSession())
+	sess.Config.Region = aws.String(sc.region)
+	sess.Config.Endpoint = aws.String(sc.endpoint)
+	if !virtualhost {
+		sess.Config.S3ForcePathStyle = aws.Bool(true)
+	}
 
-	cfgs, err := cfgs.AppendFromLoaders(external.DefaultConfigLoaders)
-	if err != nil {
-		return nil, err
-	}
-	cfg, err := cfgs.ResolveAWSConfig(defaultAWSConfigResolvers)
-	if err != nil {
-		return nil, err
-	}
-	cfg.Region = sc.region
-	//cfg.EndpointResolver = aws.ResolveWithEndpoint{
-	//	URL: sc.endpoint,
-	//}
-	defaultResolver := endpoints.NewDefaultResolver()
-	cfg.EndpointResolver = aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
-		if service == s3.EndpointsID {
-			return aws.Endpoint{
-				URL: sc.endpoint,
-				//SigningRegion: "custom-signing-region",
-				SigningNameDerived: true,
-			}, nil
-		}
-		return defaultResolver.ResolveEndpoint(service, region)
-	})
-	if sc.debug {
-		cfg.LogLevel = aws.LogDebugWithSigning
-	}
-	cfg.HTTPClient = &httpClient
+	svc := s3.New(sess)
 
-	client := s3.New(cfg)
-	if sc.endpoint == "" {
-		sc.endpoint = os.Getenv(endpointEnvVar)
-	}
-	if virtualhost == false {
-		client.ForcePathStyle = true
-	} else {
-		client.ForcePathStyle = false
-	}
-	return client, nil
+	return svc, nil
 }
 
 func main() {
@@ -142,7 +97,7 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().DurationVarP(&sc.presignExp, "expire", "", 24*time.Hour, "presign URL expiration")
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", "S3 endpoint(http://host:port)")
 	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credentials file")
-	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", "default", "S3 region")
+	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", s3.BucketLocationConstraintCnNorth1, "S3 region")
 	rootCmd.PersistentFlags().StringVarP(&sc.ak, "ak", "", "", "access key")
 	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "", "", "secret key")
 	// pathStyle
@@ -264,19 +219,20 @@ Credential EnvVar:
 			if len(args) == 1 {
 				return sc.bucketACLGet(args[0])
 			}
-			var acl s3.BucketCannedACL
-			switch s3.BucketCannedACL(args[1]) {
-			case s3.BucketCannedACLPrivate:
-				acl = s3.BucketCannedACLPrivate
+
+			var acl string
+			switch args[1] {
+			case s3control.BucketCannedACLPrivate:
+				acl = s3control.BucketCannedACLPrivate
 				break
-			case s3.BucketCannedACLPublicRead:
-				acl = s3.BucketCannedACLPublicRead
+			case s3control.BucketCannedACLPublicRead:
+				acl = s3control.BucketCannedACLPublicRead
 				break
-			case s3.BucketCannedACLPublicReadWrite:
-				acl = s3.BucketCannedACLPublicReadWrite
+			case s3control.BucketCannedACLPublicReadWrite:
+				acl = s3control.BucketCannedACLPublicReadWrite
 				break
-			case s3.BucketCannedACLAuthenticatedRead:
-				acl = s3.BucketCannedACLAuthenticatedRead
+			case s3control.BucketCannedACLAuthenticatedRead:
+				acl = s3control.BucketCannedACLAuthenticatedRead
 				break
 			default:
 				return fmt.Errorf("invalid ACL: %v", args[1])
@@ -323,8 +279,9 @@ Credential EnvVar:
 			if len(args) == 1 {
 				return sc.bucketVersioningGet(args[0])
 			}
-			var status s3.BucketVersioningStatus
-			switch s3.BucketVersioningStatus(args[1]) {
+
+			var status string
+			switch args[1] {
 			case s3.BucketVersioningStatusEnabled:
 				status = s3.BucketVersioningStatusEnabled
 				break
@@ -453,8 +410,8 @@ Credential EnvVar:
 				if len(args) == 1 {
 					return sc.getObjectACL(bucket, key)
 				}
-				var acl s3.ObjectCannedACL
-				switch s3.ObjectCannedACL(args[1]) {
+				var acl string
+				switch args[1] {
 				case s3.ObjectCannedACLPrivate:
 					acl = s3.ObjectCannedACLPrivate
 					break
@@ -485,8 +442,8 @@ Credential EnvVar:
 			if len(args) == 1 {
 				return sc.bucketACLGet(bucket)
 			}
-			var acl s3.BucketCannedACL
-			switch s3.BucketCannedACL(args[1]) {
+			var acl string
+			switch args[1] {
 			case s3.BucketCannedACLPrivate:
 				acl = s3.BucketCannedACLPrivate
 				break
