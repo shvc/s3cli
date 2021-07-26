@@ -53,6 +53,10 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 		os.Setenv("AWS_SECRET_ACCESS_KEY", sc.sk)
 	}
 
+	if sc.endpoint == "" {
+		sc.endpoint = os.Getenv(endpointEnvVar)
+	}
+
 	sess := session.Must(session.NewSession())
 	sess.Config.Region = aws.String(sc.region)
 	sess.Config.Endpoint = aws.String(sc.endpoint)
@@ -129,7 +133,7 @@ Credential EnvVar:
 			var err error
 			contentType := cmd.Flag("content-type").Value.String()
 			raw := cmd.Flag("raw").Changed
-			if raw == true {
+			if raw {
 				s, err = sc.presignV2Raw(method, args[0], contentType)
 			} else {
 				s, err = sc.presignV2(method, args[0], contentType)
@@ -224,16 +228,12 @@ Credential EnvVar:
 			switch args[1] {
 			case s3control.BucketCannedACLPrivate:
 				acl = s3control.BucketCannedACLPrivate
-				break
 			case s3control.BucketCannedACLPublicRead:
 				acl = s3control.BucketCannedACLPublicRead
-				break
 			case s3control.BucketCannedACLPublicReadWrite:
 				acl = s3control.BucketCannedACLPublicReadWrite
-				break
 			case s3control.BucketCannedACLAuthenticatedRead:
 				acl = s3control.BucketCannedACLAuthenticatedRead
-				break
 			default:
 				return fmt.Errorf("invalid ACL: %v", args[1])
 			}
@@ -284,10 +284,8 @@ Credential EnvVar:
 			switch args[1] {
 			case s3.BucketVersioningStatusEnabled:
 				status = s3.BucketVersioningStatusEnabled
-				break
 			case s3.BucketVersioningStatusSuspended:
 				status = s3.BucketVersioningStatusSuspended
-				break
 			default:
 				return fmt.Errorf("invalid versioning: %v", args[1])
 			}
@@ -414,25 +412,18 @@ Credential EnvVar:
 				switch args[1] {
 				case s3.ObjectCannedACLPrivate:
 					acl = s3.ObjectCannedACLPrivate
-					break
 				case s3.ObjectCannedACLPublicRead:
 					acl = s3.ObjectCannedACLPublicRead
-					break
 				case s3.ObjectCannedACLPublicReadWrite:
 					acl = s3.ObjectCannedACLPublicReadWrite
-					break
 				case s3.ObjectCannedACLAuthenticatedRead:
 					acl = s3.ObjectCannedACLAuthenticatedRead
-					break
 				case s3.ObjectCannedACLAwsExecRead:
 					acl = s3.ObjectCannedACLAwsExecRead
-					break
 				case s3.ObjectCannedACLBucketOwnerRead:
 					acl = s3.ObjectCannedACLBucketOwnerRead
-					break
 				case s3.ObjectCannedACLBucketOwnerFullControl:
 					acl = s3.ObjectCannedACLBucketOwnerFullControl
-					break
 				default:
 					return fmt.Errorf("invalid ACL: %s", args[1])
 				}
@@ -446,16 +437,12 @@ Credential EnvVar:
 			switch args[1] {
 			case s3.BucketCannedACLPrivate:
 				acl = s3.BucketCannedACLPrivate
-				break
 			case s3.BucketCannedACLPublicRead:
 				acl = s3.BucketCannedACLPublicRead
-				break
 			case s3.BucketCannedACLPublicReadWrite:
 				acl = s3.BucketCannedACLPublicReadWrite
-				break
 			case s3.BucketCannedACLAuthenticatedRead:
 				acl = s3.BucketCannedACLAuthenticatedRead
-				break
 			default:
 				return fmt.Errorf("invalid ACL: %s", args[1])
 			}
