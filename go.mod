@@ -1,10 +1,19 @@
 module github.com/shvc/s3cli
 
-go 1.16
+go 1.17
 
 require (
-	github.com/aws/aws-sdk-go v1.40.7
-	github.com/johannesboyne/gofakes3 v0.0.0-20210704111953-6a9f95c2941c
+	github.com/aws/aws-sdk-go v1.40.31
+	github.com/johannesboyne/gofakes3 v0.0.0-20210819161434-5c8dfcfe5310
 	github.com/spf13/cobra v1.2.1
 
+)
+
+require (
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46 // indirect
+	github.com/shabbyrobe/gocovmerge v0.0.0-20180507124511-f6ea450bfb63 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
+	golang.org/x/tools v0.1.2 // indirect
 )

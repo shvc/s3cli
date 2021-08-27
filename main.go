@@ -58,6 +58,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	}
 
 	sess := session.Must(session.NewSession())
+	sess.Config.MaxRetries = aws.Int(0)
 	sess.Config.Region = aws.String(sc.region)
 	sess.Config.Endpoint = aws.String(sc.endpoint)
 	if !virtualhost {
