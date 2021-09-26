@@ -65,6 +65,9 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 		sess.Config.S3ForcePathStyle = aws.Bool(true)
 	}
 
+	if sc.debug {
+		sess.Config.LogLevel = aws.LogLevel(aws.LogDebug)
+	}
 	svc := s3.New(sess)
 
 	return svc, nil
