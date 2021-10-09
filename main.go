@@ -90,7 +90,6 @@ Credential EnvVar:
 		Version: version,
 		Hidden:  true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			// mannual init S3 client
 			client, err := newS3Client(&sc)
 			if err != nil {
 				return err
