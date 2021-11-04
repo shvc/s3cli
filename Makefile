@@ -13,9 +13,17 @@ pkg:
 	@echo "Building Linux amd64 ${APP}-${VERSION}"
 	GOOS=linux GOARCH=amd64 go build ${LDFLAGS}
 	zip -m ${APP}-${VERSION}-linux.zip ${APP}
+
+	@echo "Building Linux arm64 ${APP}-${VERSION}"
+	GOOS=linux GOARCH=arm64 go build ${LDFLAGS}
+	zip -m ${APP}-${VERSION}-linux.zip ${APP}
 	
 	@echo "Building Macos amd64 ${APP}-${VERSION}"
 	GOOS=darwin GOARCH=amd64 go build ${LDFLAGS}
+	zip -m ${APP}-${VERSION}-macos.zip ${APP}
+
+	@echo "Building Macos arm64 ${APP}-${VERSION}"
+	GOOS=darwin GOARCH=arm64 go build ${LDFLAGS}
 	zip -m ${APP}-${VERSION}-macos.zip ${APP}
 	
 	@echo "Building Windows amd64 ${APP}-${VERSION}"
