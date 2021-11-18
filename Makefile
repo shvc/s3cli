@@ -1,6 +1,6 @@
 APP?=s3cli
 BUILDDATE=$(shell date +'%Y-%m-%dT%H:%M:%SZ')
-VERSION=2.2.8
+VERSION=2.2.9
 LONGVER=${VERSION}@${BUILDDATE}@$(shell git rev-parse --short HEAD)
 
 LDFLAGS=-ldflags "-X main.version=${LONGVER}"

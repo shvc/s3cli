@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"os"
@@ -302,8 +303,8 @@ Credential EnvVar:
 		Use:     "delete <bucket>",
 		Aliases: []string{"d", "rm"},
 		Short:   "delete Bucket",
-		Long: `delete Bucket usage:
-* delete a Bucket
+		Long: `delete(rm) Bucket usage:
+* delete(rm) a Bucket
 	s3cli b d bucket-name`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -335,7 +336,7 @@ Credential EnvVar:
 			var fd *os.File
 			bucket, key := splitBucketObject(args[0])
 			if len(args) < 2 { // upload zero-size file
-				err = sc.putObject(bucket, key, fd)
+				err = sc.putObject(bucket, key, "", fd)
 			} else if len(args) == 2 { // upload one file
 				if key == "" {
 					key = filepath.Base(args[1])
@@ -345,7 +346,8 @@ Credential EnvVar:
 					return err
 				}
 				defer fd.Close()
-				err = sc.putObject(bucket, key, fd)
+				cType := mime.TypeByExtension(filepath.Ext(args[1]))
+				err = sc.putObject(bucket, key, cType, fd)
 			} else { // upload multi files
 				for _, v := range args[1:] {
 					newKey := fmt.Sprintf("%s%s", key, filepath.Base(v))
@@ -353,7 +355,8 @@ Credential EnvVar:
 					if err != nil {
 						return err
 					}
-					err = sc.putObject(bucket, newKey, fd)
+					cType := mime.TypeByExtension(filepath.Ext(args[1]))
+					err = sc.putObject(bucket, newKey, cType, fd)
 					if err != nil {
 						fd.Close()
 						return err
@@ -583,6 +586,48 @@ Credential EnvVar:
 	}
 	rootCmd.AddCommand(listVersionCmd)
 
+	deleteVersionCmd := &cobra.Command{
+		Use:     "rmVersion <bucket[/prefix]>",
+		Aliases: []string{"rv"},
+		Short:   "delete(rm) Object version(s)",
+		Long: `list Object versions usage:
+* delete(rm) Object Version
+	s3cli rv bucket-name/key --id 
+* delete(rm) Object Versions with specified prefix
+	s3cli lv bucket-name/prefix`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			bucket, prefix := splitBucketObject(args[0])
+			version := cmd.Flag("id").Value.String()
+			return sc.deleteObjectVersion(bucket, prefix, version)
+		},
+	}
+	deleteVersionCmd.Flags().StringP("id", "", "", "Object versionID to delete")
+	rootCmd.AddCommand(deleteVersionCmd)
+
+	restoreObjectCmd := &cobra.Command{
+		Use:     "restore <bucket/key> [versionID]",
+		Aliases: []string{"restore"},
+		Short:   "restore Object",
+		Long: `restore Object usage:
+* restore a Object
+	s3cli restore bucket/key
+* restore a Object version
+	s3cli restore bucket/key versionID
+`,
+		Args: cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			bucket, key := splitBucketObject(args[0])
+			version := ""
+			if len(args) > 1 {
+				version = args[1]
+			}
+			err := sc.restoreObject(bucket, key, version)
+			return err
+		},
+	}
+	rootCmd.AddCommand(restoreObjectCmd)
+
 	getObjectCmd := &cobra.Command{
 		Use:     "get <bucket/key> [destination]",
 		Aliases: []string{"download", "down"},
@@ -703,13 +748,12 @@ Credential EnvVar:
 			if prefixMode {
 				return sc.deleteObjects(bucket, key)
 			} else if key != "" {
-				return sc.deleteObject(bucket, key, cmd.Flag("version").Value.String())
+				return sc.deleteObject(bucket, key)
 			}
 			return sc.deleteBucketAndObjects(bucket, force)
 		},
 	}
 	deleteObjectCmd.Flags().BoolP("force", "", false, "delete Bucket and all Objects")
-	deleteObjectCmd.Flags().StringP("version", "", "", "Object version ID to delete")
 	deleteObjectCmd.Flags().BoolP("prefix", "x", false, "delete Objects start with specified prefix")
 	rootCmd.AddCommand(deleteObjectCmd)
 
