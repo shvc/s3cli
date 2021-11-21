@@ -99,6 +99,15 @@ func (sc *S3Cli) presignV2Raw(method, bucketKey, contentType string) (string, er
 	return u.String(), nil
 }
 
+// errorHandler
+func (sc *S3Cli) errorHandler(err error) error {
+	if sc.verbose {
+		return err
+	}
+	fmt.Println(err)
+	return nil
+}
+
 // bucketCreate create a Bucket
 func (sc *S3Cli) bucketCreate(buckets []string) error {
 	for _, b := range buckets {
