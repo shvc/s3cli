@@ -104,7 +104,9 @@ func (sc *S3Cli) errorHandler(err error) error {
 	if sc.verbose {
 		return err
 	}
-	fmt.Println(err)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return nil
 }
 
