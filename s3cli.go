@@ -99,6 +99,17 @@ func (sc *S3Cli) presignV2Raw(method, bucketKey, contentType string) (string, er
 	return u.String(), nil
 }
 
+// errorHandler
+func (sc *S3Cli) errorHandler(err error) error {
+	if sc.verbose {
+		return err
+	}
+	if err != nil {
+		fmt.Println(err)
+	}
+	return nil
+}
+
 // bucketCreate create a Bucket
 func (sc *S3Cli) bucketCreate(buckets []string) error {
 	for _, b := range buckets {
@@ -343,10 +354,15 @@ func (sc *S3Cli) bucketDelete(bucket string) error {
 }
 
 // putObject upload a Object
-func (sc *S3Cli) putObject(bucket, key string, r io.ReadSeeker) error {
+func (sc *S3Cli) putObject(bucket, key, contentType string, r io.ReadSeeker) error {
+	var objContentType *string
+	if contentType != "" {
+		objContentType = aws.String(contentType)
+	}
 	putObjectInput := &s3.PutObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
+		Bucket:      aws.String(bucket),
+		Key:         aws.String(key),
+		ContentType: objContentType,
 	}
 	if !reflect.ValueOf(r).IsNil() {
 		putObjectInput.Body = r
@@ -814,16 +830,115 @@ func (sc *S3Cli) deleteBucketAndObjects(bucket string, force bool) error {
 	return sc.bucketDelete(bucket)
 }
 
+// deleteObjectVersion delete a Object(version)
+func (sc *S3Cli) deleteObjectVersion(bucket, key, versionID string) error {
+	if versionID != "" {
+		req, resp := sc.Client.DeleteObjectRequest(&s3.DeleteObjectInput{
+			Bucket:    aws.String(bucket),
+			Key:       aws.String(key),
+			VersionId: aws.String(versionID),
+		})
+
+		if sc.presign {
+			s, err := req.Presign(sc.presignExp)
+			if err == nil {
+				fmt.Println(s)
+			}
+			return err
+		}
+
+		err := req.Send()
+		if err != nil {
+			return err
+		}
+		if sc.verbose {
+			fmt.Println(resp)
+		}
+	} else {
+		req, resp := sc.Client.ListObjectVersionsRequest(&s3.ListObjectVersionsInput{
+			Bucket: aws.String(bucket),
+			Prefix: aws.String(key),
+		})
+
+		err := req.Send()
+		if err != nil {
+			return err
+		}
+		if resp == nil {
+			return nil
+		}
+
+		for _, v := range resp.DeleteMarkers {
+			req, _ := sc.Client.DeleteObjectRequest(&s3.DeleteObjectInput{
+				Bucket:    aws.String(bucket),
+				Key:       v.Key,
+				VersionId: v.VersionId,
+			})
+			err := req.Send()
+			if err != nil {
+				return err
+			}
+			if sc.verbose {
+				fmt.Printf("deleteMarker %s deleted\n", *v.VersionId)
+			}
+		}
+
+		for _, v := range resp.Versions {
+			req, _ := sc.Client.DeleteObjectRequest(&s3.DeleteObjectInput{
+				Bucket:    aws.String(bucket),
+				Key:       v.Key,
+				VersionId: v.VersionId,
+			})
+			err := req.Send()
+			if err != nil {
+				return err
+			}
+			if sc.verbose {
+				fmt.Printf("version %s deleted\n", *v.VersionId)
+			}
+		}
+	}
+	return nil
+}
+
 // deleteObject delete a Object(version)
-func (sc *S3Cli) deleteObject(bucket, key, version string) error {
+func (sc *S3Cli) deleteObject(bucket, key string) error {
+	req, resp := sc.Client.DeleteObjectRequest(&s3.DeleteObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	err := req.Send()
+	if err != nil {
+		return err
+	}
+	if sc.verbose {
+		fmt.Println(resp)
+	}
+	return nil
+}
+
+// restoreObject restore a Object
+func (sc *S3Cli) restoreObject(bucket, key, version string) error {
 	var versionID *string
 	if version != "" {
 		versionID = aws.String(version)
 	}
-	req, resp := sc.Client.DeleteObjectRequest(&s3.DeleteObjectInput{
+	req, resp := sc.Client.RestoreObjectRequest(&s3.RestoreObjectInput{
 		Bucket:    aws.String(bucket),
 		Key:       aws.String(key),
 		VersionId: versionID,
+		RestoreRequest: &s3.RestoreRequest{
+			Days: aws.Int64(1),
+		},
 	})
 
 	if sc.presign {
