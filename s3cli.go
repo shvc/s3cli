@@ -474,16 +474,18 @@ func (sc *S3Cli) setObjectACL(bucket, key string, acl string) error {
 }
 
 // listAllObjects list all Objects in specified bucket
-func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool, startTime, endTime time.Time) error {
+func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index, oneline bool, startTime, endTime time.Time) error {
 	var i int64
 	err := sc.Client.ListObjectsPages(&s3.ListObjectsInput{
 		Bucket:    aws.String(bucket),
 		Prefix:    aws.String(prefix),
 		Delimiter: aws.String(delimiter),
 	}, func(p *s3.ListObjectsOutput, last bool) (shouldContinue bool) {
-		fmt.Println("Page,", i)
+		if !oneline {
+			fmt.Println("Page,", i)
+		}
 		i++
-		if sc.verbose {
+		if sc.verbose && !oneline {
 			fmt.Println(p)
 			return true
 		}
@@ -494,13 +496,15 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool, st
 			if obj.LastModified.After(endTime) {
 				continue
 			}
-			if sc.verbose {
+			if oneline {
+				fmt.Println(aws.StringValue(obj.ETag), aws.StringValue(obj.StorageClass), aws.TimeValue(obj.LastModified).Format(time.RFC3339), aws.Int64Value(obj.Size), aws.StringValue(obj.Key))
+			} else if sc.verbose {
 				fmt.Println(obj)
 			} else if index {
-				fmt.Printf("%d\t%s\n", i, *obj.Key)
+				fmt.Printf("%d\t%s\n", i, aws.StringValue(obj.Key))
 				i++
 			} else {
-				fmt.Println(*obj.Key)
+				fmt.Println(aws.StringValue(obj.Key))
 			}
 		}
 		return true
@@ -553,7 +557,7 @@ func (sc *S3Cli) listAllObjectsV2(bucket, prefix, delimiter string, index, owner
 }
 
 // listObjects (S3 listBucket)list Objects in specified bucket
-func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys int64, index bool, startTime, endTime time.Time) error {
+func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys int64, index, oneline bool, startTime, endTime time.Time) error {
 	req, resp := sc.Client.ListObjectsRequest(&s3.ListObjectsInput{
 		Bucket:    aws.String(bucket),
 		Prefix:    aws.String(prefix),
@@ -575,7 +579,9 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 		return fmt.Errorf("list objects failed: %w", err)
 	}
 	for _, p := range resp.CommonPrefixes {
-		fmt.Println(*p.Prefix)
+		if !oneline {
+			fmt.Println(aws.StringValue(p.Prefix))
+		}
 	}
 	for i, obj := range resp.Contents {
 		if obj.LastModified.Before(startTime) {
@@ -584,12 +590,14 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 		if obj.LastModified.After(endTime) {
 			continue
 		}
-		if sc.verbose {
+		if oneline {
+			fmt.Println(aws.StringValue(obj.ETag), aws.StringValue(obj.StorageClass), aws.TimeValue(obj.LastModified).Format(time.RFC3339), aws.Int64Value(obj.Size), aws.StringValue(obj.Key))
+		} else if sc.verbose {
 			fmt.Println(obj)
 		} else if index {
-			fmt.Printf("%d\t%s\n", i, *obj.Key)
+			fmt.Printf("%d\t%s\n", i, aws.StringValue(obj.Key))
 		} else {
-			fmt.Println(*obj.Key)
+			fmt.Println(aws.StringValue(obj.Key))
 		}
 	}
 	return nil
