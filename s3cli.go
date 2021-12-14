@@ -19,6 +19,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
+const (
+	outputVerbose = "verbose"
+	outputSimple  = "simple"
+	outputLine    = "line"
+	outputJson    = "json"
+)
+
 // S3Cli represent a S3Cli Client
 type S3Cli struct {
 	profile    string // profile in credentials file
@@ -28,7 +35,7 @@ type S3Cli struct {
 	region     string
 	presign    bool // just presign
 	presignExp time.Duration
-	verbose    bool
+	output     string
 	debug      bool
 	Client     *s3.S3 // manual init this field
 }
@@ -101,7 +108,7 @@ func (sc *S3Cli) presignV2Raw(method, bucketKey, contentType string) (string, er
 
 // errorHandler
 func (sc *S3Cli) errorHandler(err error) error {
-	if sc.verbose {
+	if sc.output == outputVerbose {
 		return err
 	}
 	if err != nil {
@@ -133,7 +140,7 @@ func (sc *S3Cli) bucketCreate(buckets []string) error {
 		if err != nil {
 			return err
 		}
-		if sc.verbose {
+		if sc.output == outputVerbose {
 			fmt.Println(resp)
 		}
 	}
@@ -156,7 +163,7 @@ func (sc *S3Cli) bucketList() error {
 	if err != nil {
 		return err
 	}
-	if sc.verbose {
+	if sc.output == outputVerbose {
 		fmt.Println(resp)
 		return nil
 	}
@@ -381,7 +388,7 @@ func (sc *S3Cli) putObject(bucket, key, contentType string, r io.ReadSeeker) err
 	if err != nil {
 		return err
 	}
-	if sc.verbose {
+	if sc.output == outputVerbose {
 		fmt.Println(resp)
 	}
 	return nil
@@ -410,7 +417,7 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 	if resp == nil {
 		return nil
 	}
-	if sc.verbose {
+	if sc.output == outputVerbose {
 		fmt.Println(resp)
 	} else if mtime {
 		fmt.Println(resp.LastModified)
@@ -474,20 +481,22 @@ func (sc *S3Cli) setObjectACL(bucket, key string, acl string) error {
 }
 
 // listAllObjects list all Objects in specified bucket
-func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index, oneline bool, startTime, endTime time.Time) error {
+func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool, startTime, endTime time.Time) error {
 	var i int64
 	err := sc.Client.ListObjectsPages(&s3.ListObjectsInput{
 		Bucket:    aws.String(bucket),
 		Prefix:    aws.String(prefix),
 		Delimiter: aws.String(delimiter),
 	}, func(p *s3.ListObjectsOutput, last bool) (shouldContinue bool) {
-		if !oneline {
-			fmt.Println("Page,", i)
-		}
 		i++
-		if sc.verbose && !oneline {
+		if sc.output == outputVerbose {
 			fmt.Println(p)
 			return true
+		}
+		for _, p := range p.CommonPrefixes {
+			if sc.output != outputLine {
+				fmt.Println(aws.StringValue(p.Prefix))
+			}
 		}
 		for _, obj := range p.Contents {
 			if obj.LastModified.Before(startTime) {
@@ -496,16 +505,15 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index, oneline
 			if obj.LastModified.After(endTime) {
 				continue
 			}
-			if oneline {
+			if sc.output == outputSimple {
 				fmt.Println(
 					aws.StringValue(obj.StorageClass),
 					aws.TimeValue(obj.LastModified).Format(time.RFC3339),
 					aws.StringValue(obj.ETag),
 					aws.Int64Value(obj.Size),
 					aws.StringValue(obj.Owner.DisplayName),
-					aws.StringValue(obj.Key))
-			} else if sc.verbose {
-				fmt.Println(obj)
+					aws.StringValue(obj.Key),
+				)
 			} else if index {
 				fmt.Printf("%d\t%s\n", i, aws.StringValue(obj.Key))
 				i++
@@ -531,11 +539,15 @@ func (sc *S3Cli) listAllObjectsV2(bucket, prefix, delimiter string, index, owner
 		Delimiter:  aws.String(delimiter),
 		FetchOwner: aws.Bool(owner),
 	}, func(p *s3.ListObjectsV2Output, last bool) (shouldContinue bool) {
-		fmt.Println("Page,", i)
 		i++
-		if sc.verbose {
+		if sc.output == outputVerbose {
 			fmt.Println(p)
 			return true
+		}
+		for _, p := range p.CommonPrefixes {
+			if sc.output != outputLine {
+				fmt.Println(aws.StringValue(p.Prefix))
+			}
 		}
 		for _, obj := range p.Contents {
 			if obj.LastModified.Before(startTime) {
@@ -544,9 +556,7 @@ func (sc *S3Cli) listAllObjectsV2(bucket, prefix, delimiter string, index, owner
 			if obj.LastModified.After(endTime) {
 				continue
 			}
-			if sc.verbose {
-				fmt.Println(obj)
-			} else if index {
+			if index {
 				fmt.Printf("%d\t%s\n", i, *obj.Key)
 				i++
 			} else {
@@ -563,7 +573,7 @@ func (sc *S3Cli) listAllObjectsV2(bucket, prefix, delimiter string, index, owner
 }
 
 // listObjects (S3 listBucket)list Objects in specified bucket
-func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys int64, index, oneline bool, startTime, endTime time.Time) error {
+func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys int64, index bool, startTime, endTime time.Time) error {
 	req, resp := sc.Client.ListObjectsRequest(&s3.ListObjectsInput{
 		Bucket:    aws.String(bucket),
 		Prefix:    aws.String(prefix),
@@ -584,8 +594,12 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 	if err != nil {
 		return fmt.Errorf("list objects failed: %w", err)
 	}
+	if sc.output == outputVerbose {
+		fmt.Println(resp)
+		return nil
+	}
 	for _, p := range resp.CommonPrefixes {
-		if !oneline {
+		if sc.output != outputLine {
 			fmt.Println(aws.StringValue(p.Prefix))
 		}
 	}
@@ -596,7 +610,7 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 		if obj.LastModified.After(endTime) {
 			continue
 		}
-		if oneline {
+		if sc.output == outputLine {
 			fmt.Println(
 				aws.StringValue(obj.StorageClass),
 				aws.TimeValue(obj.LastModified).Format(time.RFC3339),
@@ -604,8 +618,6 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 				aws.Int64Value(obj.Size),
 				aws.StringValue(obj.Owner.DisplayName),
 				aws.StringValue(obj.Key))
-		} else if sc.verbose {
-			fmt.Println(obj)
 		} else if index {
 			fmt.Printf("%d\t%s\n", i, aws.StringValue(obj.Key))
 		} else {
@@ -638,8 +650,14 @@ func (sc *S3Cli) listObjectsV2(bucket, prefix, delimiter, marker string, maxkeys
 	if err != nil {
 		return fmt.Errorf("list objects failed: %w", err)
 	}
+	if sc.output == outputVerbose {
+		fmt.Println(resp)
+		return nil
+	}
 	for _, p := range resp.CommonPrefixes {
-		fmt.Println(*p.Prefix)
+		if sc.output != outputLine {
+			fmt.Println(*p.Prefix)
+		}
 	}
 	for i, obj := range resp.Contents {
 		if obj.LastModified.Before(startTime) {
@@ -648,8 +666,14 @@ func (sc *S3Cli) listObjectsV2(bucket, prefix, delimiter, marker string, maxkeys
 		if obj.LastModified.After(endTime) {
 			continue
 		}
-		if sc.verbose {
-			fmt.Println(obj)
+		if sc.output == outputLine {
+			fmt.Println(
+				aws.StringValue(obj.StorageClass),
+				aws.TimeValue(obj.LastModified).Format(time.RFC3339),
+				aws.StringValue(obj.ETag),
+				aws.Int64Value(obj.Size),
+				aws.StringValue(obj.Owner.DisplayName),
+				aws.StringValue(obj.Key))
 		} else if index {
 			fmt.Printf("%d\t%s\n", i, *obj.Key)
 		} else {
@@ -781,7 +805,7 @@ func (sc *S3Cli) copyObject(source, bucket, key string) error {
 	if err != nil {
 		return fmt.Errorf("copy object failed: %w", err)
 	}
-	if sc.verbose {
+	if sc.output == outputVerbose {
 		fmt.Println(resp)
 		return nil
 	}
@@ -805,7 +829,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 		if objectNum == 0 {
 			break
 		}
-		if sc.verbose {
+		if sc.output == outputVerbose {
 			fmt.Printf("Got %d Objects, ", objectNum)
 		}
 		objects := make([]*s3.ObjectIdentifier, 0, 1000)
@@ -825,7 +849,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 		} else {
 			objNum = objNum + int64(objectNum)
 		}
-		if sc.verbose {
+		if sc.output == outputVerbose {
 			fmt.Printf("%d Objects deleted\n", objNum)
 		}
 
@@ -871,7 +895,7 @@ func (sc *S3Cli) deleteObjectVersion(bucket, key, versionID string) error {
 		if err != nil {
 			return err
 		}
-		if sc.verbose {
+		if sc.output == outputVerbose {
 			fmt.Println(resp)
 		}
 	} else {
@@ -898,7 +922,7 @@ func (sc *S3Cli) deleteObjectVersion(bucket, key, versionID string) error {
 			if err != nil {
 				return err
 			}
-			if sc.verbose {
+			if sc.output == outputVerbose {
 				fmt.Printf("deleteMarker %s deleted\n", *v.VersionId)
 			}
 		}
@@ -913,7 +937,7 @@ func (sc *S3Cli) deleteObjectVersion(bucket, key, versionID string) error {
 			if err != nil {
 				return err
 			}
-			if sc.verbose {
+			if sc.output == outputVerbose {
 				fmt.Printf("version %s deleted\n", *v.VersionId)
 			}
 		}
@@ -940,7 +964,7 @@ func (sc *S3Cli) deleteObject(bucket, key string) error {
 	if err != nil {
 		return err
 	}
-	if sc.verbose {
+	if sc.output == outputVerbose {
 		fmt.Println(resp)
 	}
 	return nil
@@ -973,7 +997,7 @@ func (sc *S3Cli) restoreObject(bucket, key, version string) error {
 	if err != nil {
 		return err
 	}
-	if sc.verbose {
+	if sc.output == outputVerbose {
 		fmt.Println(resp)
 	}
 	return nil
