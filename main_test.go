@@ -25,14 +25,6 @@ var s3cliTest = S3Cli{
 	Client: nil,
 }
 
-func setEnv() error {
-	err := os.Setenv("AWS_ACCESS_KEY", "Q3AM3UQ867SPQQA43P2F")
-	if err != nil {
-		return err
-	}
-	return os.Setenv("AWS_SECRET_KEY", "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG")
-}
-
 func TestMain(m *testing.M) {
 	mand.Seed(time.Now().UTC().UnixNano())
 	// init fake s3

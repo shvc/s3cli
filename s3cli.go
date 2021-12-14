@@ -497,9 +497,10 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index, oneline
 				continue
 			}
 			if oneline {
-				fmt.Println(aws.StringValue(obj.ETag),
+				fmt.Println(
 					aws.StringValue(obj.StorageClass),
 					aws.TimeValue(obj.LastModified).Format(time.RFC3339),
+					aws.StringValue(obj.ETag),
 					aws.Int64Value(obj.Size),
 					aws.StringValue(obj.Owner.DisplayName),
 					aws.StringValue(obj.Key))
@@ -596,9 +597,10 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 			continue
 		}
 		if oneline {
-			fmt.Println(aws.StringValue(obj.ETag),
+			fmt.Println(
 				aws.StringValue(obj.StorageClass),
 				aws.TimeValue(obj.LastModified).Format(time.RFC3339),
+				aws.StringValue(obj.ETag),
 				aws.Int64Value(obj.Size),
 				aws.StringValue(obj.Owner.DisplayName),
 				aws.StringValue(obj.Key))

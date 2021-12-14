@@ -2,17 +2,12 @@ package main
 
 import (
 	"bytes"
-	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha1"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	mrand "math/rand"
 	"net/http"
-	"net/url"
-	"strconv"
 	"testing"
 	"time"
 
@@ -177,14 +172,10 @@ func Test_getObject(t *testing.T) {
 		return
 	}
 	defer r.Close()
-	data, err := ioutil.ReadAll(r)
+	_, err = ioutil.ReadAll(r)
 	if err != nil {
 		t.Errorf("getObject download failed: %s", err)
 		return
-	}
-	if !bytes.Equal(data, testObjectContent) {
-		// TODO
-		//t.Errorf("epect %s, got %s", testObjectContent, data)
 	}
 }
 
@@ -292,25 +283,4 @@ func Test_mpuComplete(t *testing.T) {
 	if err := s3cliTest.mpuComplete(testBucketName, "key", "upload-id", []string{"tag1", "tag2"}); err != nil {
 		t.Errorf("mpuComplete failed: %s", err)
 	}
-}
-
-// presignV2Escaped gen a presigned URL with raw key(Object name).
-func presignV2Raw(method, server, bucket, key, ak, sk, contentType string, exp int64) (string, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/%s/%s", server, bucket, key))
-	if err != nil {
-		return "", err
-	}
-	q := u.Query()
-	q.Set("AWSAccessKeyId", ak)
-	q.Set("Expires", strconv.FormatInt(exp, 10))
-
-	strToSign := fmt.Sprintf("%s\n%s\n%s\n%d\n%s", method, "", contentType, exp, u.EscapedPath())
-
-	mac := hmac.New(sha1.New, []byte(sk))
-	mac.Write([]byte(strToSign))
-
-	q.Set("Signature", base64.StdEncoding.EncodeToString(mac.Sum(nil)))
-	u.RawQuery = q.Encode()
-
-	return u.String(), nil
 }
