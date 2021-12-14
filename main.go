@@ -16,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3control"
 	"github.com/spf13/cobra"
 )
 
@@ -99,12 +98,12 @@ Credential EnvVar:
 			return nil
 		},
 	}
-	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "print debug log")
+	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "SDK debug output")
 	rootCmd.PersistentFlags().StringVarP(&sc.output, "output", "o", outputSimple, "output format(raw,simple,json,line)")
 	rootCmd.PersistentFlags().BoolVarP(&sc.presign, "presign", "", false, "presign URL and exit")
 	rootCmd.PersistentFlags().DurationVarP(&sc.presignExp, "expire", "", 24*time.Hour, "presign URL expiration")
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", "S3 endpoint(http://host:port)")
-	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credentials file")
+	//rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credentials file")
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", s3.BucketLocationConstraintCnNorth1, "S3 region")
 	rootCmd.PersistentFlags().StringVarP(&sc.ak, "ak", "", "", "access key")
 	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "", "", "secret key")
@@ -154,108 +153,31 @@ Credential EnvVar:
 	presignCmd.Flags().BoolP("raw", "", false, "raw(not escape) object name")
 	rootCmd.AddCommand(presignCmd)
 
-	// bucket command
-	bucketCmd := &cobra.Command{
-		Use:     "bucket",
-		Aliases: []string{"b"},
-		Short:   "bucket sub-command",
-		Long:    `bucket sub-command usage:`,
-	}
-	rootCmd.AddCommand(bucketCmd)
-
-	// bucket sub-command create
 	bucketCreateCmd := &cobra.Command{
-		Use:     "create <bucket> [<bucket> ...]",
-		Aliases: []string{"c"},
-		Short:   "create Bucket(s)",
+		Use:     "create-bucket <bucket> [<bucket> ...]",
+		Aliases: []string{"cb"},
+		Short:   "create-bucket",
 		Long: `create Bucket(s) usage:
 * create a Bucket
-	s3cli b c bucket-name
+	s3cli create-bucket bucket-name
 * create 3 Buckets(bk1, bk2, bk3)
-	s3cli b c bk1 bk2 bk3`,
+	s3cli create-bucket bk1 bk2 bk3`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return sc.errorHandler(sc.bucketCreate(args))
 		},
 	}
-	bucketCmd.AddCommand(bucketCreateCmd)
+	rootCmd.AddCommand(bucketCreateCmd)
 
-	// bucket sub-command list
-	bucketListCmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"ls"},
-		Short:   "list Buckets",
-		Long: `list all my Buckets usage:
-* list all my Buckets
-  s3cli b ls`,
-		Args: cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return sc.errorHandler(sc.bucketList())
-		},
-	}
-	bucketCmd.AddCommand(bucketListCmd)
-
-	// bucket sub-command head
-	bucketHeadCmd := &cobra.Command{
-		Use:     "head <bucket>",
-		Aliases: []string{"h"},
-		Short:   "head Bucket",
-		Long: `head Bucket usage:
-* head a Bucket
-	s3cli b h bucket-name`,
-		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return sc.errorHandler(sc.bucketHead(args[0]))
-		},
-	}
-	bucketCmd.AddCommand(bucketHeadCmd)
-
-	// bucket sub-command acl
-	bucketACLCmd := &cobra.Command{
-		Use:   "acl <bucket> [ACL]",
-		Short: "get/set Bucket ACL",
-		Long: `get/set Bucket ACL usage:
-* get Bucket ACL
-	s3cli b acl bucket-name
-* set Bucket ACL to public-read
-	s3cli b acl bucket-name public-read
-
-* all canned Bucket ACL(private, public-read, public-read-write, authenticated-read)
-`,
-		Args: cobra.RangeArgs(1, 2),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 1 {
-				return sc.errorHandler(sc.bucketACLGet(args[0]))
-			}
-
-			var acl string
-			switch args[1] {
-			case s3control.BucketCannedACLPrivate:
-				acl = s3control.BucketCannedACLPrivate
-			case s3control.BucketCannedACLPublicRead:
-				acl = s3control.BucketCannedACLPublicRead
-			case s3control.BucketCannedACLPublicReadWrite:
-				acl = s3control.BucketCannedACLPublicReadWrite
-			case s3control.BucketCannedACLAuthenticatedRead:
-				acl = s3control.BucketCannedACLAuthenticatedRead
-			default:
-				return sc.errorHandler(fmt.Errorf("invalid ACL: %v", args[1]))
-			}
-			return sc.errorHandler(sc.bucketACLSet(args[0], acl))
-		},
-	}
-	bucketCmd.AddCommand(bucketACLCmd)
-
-	// bucket sub-command policy
 	bucketPolicyCmd := &cobra.Command{
 		Use:     "policy <bucket> [policy]",
 		Aliases: []string{"p"},
 		Short:   "get/set Bucket Policy",
 		Long: `get/set Bucket Policy usage:
 * get Bucket policy
-	s3cli b p bucket-name
+	s3cli policy bucket-name
 * set Bucket policy(a json string)
-	s3cli b p bucket-name '{json}'`,
+	s3cli policy bucket-name '{json}'`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 {
@@ -264,24 +186,32 @@ Credential EnvVar:
 			return sc.errorHandler(sc.bucketPolicySet(args[0], args[1]))
 		},
 	}
-	bucketCmd.AddCommand(bucketPolicyCmd)
+	rootCmd.AddCommand(bucketPolicyCmd)
 
-	// bucket sub-command version
 	bucketVersionCmd := &cobra.Command{
-		Use:     "version <bucket> [status]",
+		Use:     "version <bucket/key> [arg]",
 		Aliases: []string{"v"},
 		Short:   "bucket versioning",
 		Long: `get/set bucket versioning status usage:
 * get Bucket versioning status
-	s3cli b v bucket-name
+	s3cli version bucket-name
 * enable bucket versioning
-	s3cli b v bucket-name Enabled
+	s3cli version bucket-name Enabled
 * suspend Bucket versioning
-	s3cli b v bucket-name Suspended`,
+	s3cli version bucket-name Suspended
+* get Object versions
+	s3cli version bucket-name/key
+* get Object versions with specified prefix
+	s3cli version bucket-name/prefix
+	`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 {
-				return sc.errorHandler(sc.bucketVersioningGet(args[0]))
+				bucket, prefix := splitBucketObject(args[0])
+				if prefix == "" {
+					return sc.errorHandler(sc.bucketVersioningGet(bucket))
+				}
+				return sc.errorHandler(sc.listObjectVersions(bucket, prefix))
 			}
 
 			var status string
@@ -296,22 +226,7 @@ Credential EnvVar:
 			return sc.errorHandler(sc.bucketVersioningSet(args[0], status))
 		},
 	}
-	bucketCmd.AddCommand(bucketVersionCmd)
-
-	// bucket sub-command delete
-	bucketDeleteCmd := &cobra.Command{
-		Use:     "delete <bucket>",
-		Aliases: []string{"d", "rm"},
-		Short:   "delete Bucket",
-		Long: `delete(rm) Bucket usage:
-* delete(rm) a Bucket
-	s3cli b d bucket-name`,
-		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return sc.errorHandler(sc.bucketDelete(args[0]))
-		},
-	}
-	bucketCmd.AddCommand(bucketDeleteCmd)
+	rootCmd.AddCommand(bucketVersionCmd)
 
 	// object put(upload)
 	putObjectCmd := &cobra.Command{
@@ -515,8 +430,8 @@ Credential EnvVar:
 	listObjectV2Cmd := &cobra.Command{
 		Use:     "list2 [bucket[/prefix]]",
 		Aliases: []string{"ls2"},
-		Short:   "list Buckets or Bucket(V2)",
-		Long: `list2 Buckets or Bucket usage:
+		Short:   "list Buckets or Objects(V2)",
+		Long: `list2 Buckets or Objects usage:
 * list all my Buckets
 	s3cli ls2
 * list Objects in a Bucket
@@ -570,7 +485,7 @@ Credential EnvVar:
 	rootCmd.AddCommand(listObjectV2Cmd)
 
 	listVersionCmd := &cobra.Command{
-		Use:     "listVersion <bucket[/prefix]>",
+		Use:     "list-version <bucket[/prefix]>",
 		Aliases: []string{"lv"},
 		Short:   "list Object versions",
 		Long: `list Object versions usage:
@@ -587,14 +502,14 @@ Credential EnvVar:
 	rootCmd.AddCommand(listVersionCmd)
 
 	deleteVersionCmd := &cobra.Command{
-		Use:     "rmVersion <bucket[/prefix]>",
-		Aliases: []string{"rv"},
-		Short:   "delete(rm) Object version(s)",
-		Long: `list Object versions usage:
-* delete(rm) Object Version
-	s3cli rv bucket-name/key --id 
-* delete(rm) Object Versions with specified prefix
-	s3cli lv bucket-name/prefix`,
+		Use:     "delete-version <bucket[/prefix]>",
+		Aliases: []string{"dv"},
+		Short:   "delete-version of Object",
+		Long: `delete Object versions usage:
+* delete Object Version
+	s3cli delete-version bucket-name/key --id version-id
+* delete Object Versions with specified prefix
+	s3cli delete-version bucket-name/prefix`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, prefix := splitBucketObject(args[0])

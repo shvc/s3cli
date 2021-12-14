@@ -28,7 +28,7 @@ const (
 
 // S3Cli represent a S3Cli Client
 type S3Cli struct {
-	profile    string // profile in credentials file
+	//profile    string // profile in credentials file
 	endpoint   string // Server endpoine(URL)
 	ak         string // access-key
 	sk         string // secret-key
