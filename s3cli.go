@@ -168,7 +168,15 @@ func (sc *S3Cli) bucketList() error {
 		return nil
 	}
 	for _, b := range resp.Buckets {
-		fmt.Println(*b.Name)
+		if sc.output == outputLine {
+			fmt.Println(
+				aws.TimeValue(b.CreationDate).Format(time.RFC3339),
+				aws.StringValue(resp.Owner.DisplayName),
+				aws.StringValue(b.Name),
+			)
+		} else {
+			fmt.Println(aws.StringValue(b.Name))
+		}
 	}
 	return nil
 }
@@ -264,7 +272,7 @@ func (sc *S3Cli) bucketPolicyGet(bucket string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(*resp.Policy)
+	fmt.Println(aws.StringValue(resp.Policy))
 	return nil
 }
 
@@ -424,7 +432,7 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 	} else if mtimestamp {
 		fmt.Println(resp.LastModified.Unix())
 	} else {
-		fmt.Printf("%d\t%s\n", *resp.ContentLength, resp.LastModified)
+		fmt.Printf("%d\t%s\n", aws.Int64Value(resp.ContentLength), resp.LastModified)
 	}
 	return nil
 }
@@ -557,10 +565,10 @@ func (sc *S3Cli) listAllObjectsV2(bucket, prefix, delimiter string, index, owner
 				continue
 			}
 			if index {
-				fmt.Printf("%d\t%s\n", i, *obj.Key)
+				fmt.Printf("%d\t%s\n", i, aws.StringValue(obj.Key))
 				i++
 			} else {
-				fmt.Println(*obj.Key)
+				fmt.Println(aws.StringValue(obj.Key))
 			}
 		}
 		return true
@@ -617,7 +625,8 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 				aws.StringValue(obj.ETag),
 				aws.Int64Value(obj.Size),
 				aws.StringValue(obj.Owner.DisplayName),
-				aws.StringValue(obj.Key))
+				aws.StringValue(obj.Key),
+			)
 		} else if index {
 			fmt.Printf("%d\t%s\n", i, aws.StringValue(obj.Key))
 		} else {
@@ -656,7 +665,7 @@ func (sc *S3Cli) listObjectsV2(bucket, prefix, delimiter, marker string, maxkeys
 	}
 	for _, p := range resp.CommonPrefixes {
 		if sc.output != outputLine {
-			fmt.Println(*p.Prefix)
+			fmt.Println(aws.StringValue(p.Prefix))
 		}
 	}
 	for i, obj := range resp.Contents {
@@ -675,9 +684,9 @@ func (sc *S3Cli) listObjectsV2(bucket, prefix, delimiter, marker string, maxkeys
 				aws.StringValue(obj.Owner.DisplayName),
 				aws.StringValue(obj.Key))
 		} else if index {
-			fmt.Printf("%d\t%s\n", i, *obj.Key)
+			fmt.Printf("%d\t%s\n", i, aws.StringValue(obj.Key))
 		} else {
-			fmt.Println(*obj.Key)
+			fmt.Println(aws.StringValue(obj.Key))
 		}
 	}
 	return nil
@@ -923,7 +932,7 @@ func (sc *S3Cli) deleteObjectVersion(bucket, key, versionID string) error {
 				return err
 			}
 			if sc.output == outputVerbose {
-				fmt.Printf("deleteMarker %s deleted\n", *v.VersionId)
+				fmt.Printf("deleteMarker %s deleted\n", aws.StringValue(v.VersionId))
 			}
 		}
 
@@ -938,7 +947,7 @@ func (sc *S3Cli) deleteObjectVersion(bucket, key, versionID string) error {
 				return err
 			}
 			if sc.output == outputVerbose {
-				fmt.Printf("version %s deleted\n", *v.VersionId)
+				fmt.Printf("version %s deleted\n", aws.StringValue(v.VersionId))
 			}
 		}
 	}

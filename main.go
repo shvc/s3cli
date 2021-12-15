@@ -98,15 +98,15 @@ Credential EnvVar:
 			return nil
 		},
 	}
-	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "SDK debug output")
-	rootCmd.PersistentFlags().StringVarP(&sc.output, "output", "o", outputSimple, "output format(raw,simple,json,line)")
+	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "show SDK debug log")
+	rootCmd.PersistentFlags().StringVarP(&sc.output, "output", "o", outputSimple, "output format(verbose,simple,json,line)")
 	rootCmd.PersistentFlags().BoolVarP(&sc.presign, "presign", "", false, "presign URL and exit")
 	rootCmd.PersistentFlags().DurationVarP(&sc.presignExp, "expire", "", 24*time.Hour, "presign URL expiration")
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", "S3 endpoint(http://host:port)")
 	//rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credentials file")
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", s3.BucketLocationConstraintCnNorth1, "S3 region")
-	rootCmd.PersistentFlags().StringVarP(&sc.ak, "ak", "", "", "access key")
-	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "", "", "secret key")
+	rootCmd.PersistentFlags().StringVarP(&sc.ak, "ak", "", "", "S3 access key")
+	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "", "", "S3 secret key")
 	// pathStyle
 	rootCmd.PersistentFlags().BoolVarP(&virtualhost, "virtualhost", "", false, "use virtualhosting style(not use path style)")
 
@@ -156,12 +156,12 @@ Credential EnvVar:
 	bucketCreateCmd := &cobra.Command{
 		Use:     "create-bucket <bucket> [<bucket> ...]",
 		Aliases: []string{"cb"},
-		Short:   "create-bucket",
+		Short:   "create Bucket(s)",
 		Long: `create Bucket(s) usage:
 * create a Bucket
 	s3cli create-bucket bucket-name
-* create 3 Buckets(bk1, bk2, bk3)
-	s3cli create-bucket bk1 bk2 bk3`,
+* create 3 Buckets(bkt1, bkt2 and bkt3)
+	s3cli create-bucket bkt1 bkt2 bkt3`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return sc.errorHandler(sc.bucketCreate(args))
@@ -170,9 +170,8 @@ Credential EnvVar:
 	rootCmd.AddCommand(bucketCreateCmd)
 
 	bucketPolicyCmd := &cobra.Command{
-		Use:     "policy <bucket> [policy]",
-		Aliases: []string{"p"},
-		Short:   "get/set Bucket Policy",
+		Use:   "policy <bucket> [policy]",
+		Short: "get/set Bucket Policy",
 		Long: `get/set Bucket Policy usage:
 * get Bucket policy
 	s3cli policy bucket-name
@@ -201,8 +200,6 @@ Credential EnvVar:
 	s3cli version bucket-name Suspended
 * get Object versions
 	s3cli version bucket-name/key
-* get Object versions with specified prefix
-	s3cli version bucket-name/prefix
 	`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -215,10 +212,10 @@ Credential EnvVar:
 			}
 
 			var status string
-			switch args[1] {
-			case s3.BucketVersioningStatusEnabled:
+			switch strings.ToLower(args[1]) {
+			case strings.ToLower(s3.BucketVersioningStatusEnabled):
 				status = s3.BucketVersioningStatusEnabled
-			case s3.BucketVersioningStatusSuspended:
+			case strings.ToLower(s3.BucketVersioningStatusSuspended):
 				status = s3.BucketVersioningStatusSuspended
 			default:
 				return sc.errorHandler(fmt.Errorf("invalid versioning: %v", args[1]))
@@ -375,29 +372,29 @@ Credential EnvVar:
 	listObjectCmd := &cobra.Command{
 		Use:     "list [bucket[/prefix]]",
 		Aliases: []string{"ls"},
-		Short:   "list Buckets or Bucket",
-		Long: `list Buckets or Bucket usage:
+		Short:   "list Buckets or Objects",
+		Long: `list Buckets or Objects usage:
 * list all my Buckets
 	s3cli ls
 * list Objects in a Bucket
 	s3cli ls bucket
 * list Objects with prefix(2019)
 	s3cli ls bucket/2019
-* list Objects(2020-03-03 00:00:00 < modifyTime < 2020-06-03 00:00:00)
-	s3cli ls bucket --start-time '2020-03-03 00:00:00' --end-time '2020-06-03 00:00:00'
-* list Objects(2020-03-03 00:00:00 < modifyTime < 2020-06-03 00:00:00) start with common prefix
-	s3cli ls bucket/prefix --start-time '2020-03-03 00:00:00' --end-time '2020-06-03 00:00:00'
+* list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z)
+	s3cli ls bucket --start-time '2006-01-02T15:04:05Z' --end-time '2020-06-03T00:00:00Z'
+* list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z) start with common prefix
+	s3cli ls bucket/prefix --start-time '2006-01-02T15:04:05Z' --end-time '2020-06-03T00:00:00Z'
 `,
 		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			index := cmd.Flag("index").Changed
 			delimiter := cmd.Flag("delimiter").Value.String()
 			if len(args) == 1 { // list Objects
-				stime, err := time.Parse("2006-01-02 15:04:05", cmd.Flag("start-time").Value.String())
+				stime, err := time.Parse("2006-01-02T15:04:05Z", cmd.Flag("start-time").Value.String())
 				if err != nil {
 					return sc.errorHandler(fmt.Errorf("invalid start-time %s, error %s", cmd.Flag("start-time").Value.String(), err))
 				}
-				etime, err := time.Parse("2006-01-02 15:04:05", cmd.Flag("end-time").Value.String())
+				etime, err := time.Parse("2006-01-02T15:04:05Z", cmd.Flag("end-time").Value.String())
 				if err != nil {
 					return sc.errorHandler(fmt.Errorf("invalid enf-time %s, error %s", cmd.Flag("end-time").Value.String(), err))
 				}
@@ -423,8 +420,8 @@ Credential EnvVar:
 	listObjectCmd.Flags().StringP("delimiter", "d", "", "Object delimiter")
 	listObjectCmd.Flags().BoolP("index", "i", false, "show Object index ")
 	listObjectCmd.Flags().BoolP("all", "a", false, "list all Objects")
-	listObjectCmd.Flags().StringP("start-time", "", "2006-01-02 15:04:05", "show Objects modify-time after start-time(UTC)")
-	listObjectCmd.Flags().StringP("end-time", "", "2080-01-02 15:04:05", "show Objects modify-time before end-time(UTC)")
+	listObjectCmd.Flags().StringP("start-time", "", "2006-01-02T15:04:05Z", "show Objects modify-time after start-time(UTC)")
+	listObjectCmd.Flags().StringP("end-time", "", "2060-01-02T15:04:05Z", "show Objects modify-time before end-time(UTC)")
 	rootCmd.AddCommand(listObjectCmd)
 
 	listObjectV2Cmd := &cobra.Command{
@@ -438,10 +435,10 @@ Credential EnvVar:
 	s3cli ls2 bucket
 * list Objects with prefix(2019)
 	s3cli ls2 bucket/2019
-* list Objects(2020-03-03 00:00:00 < modifyTime < 2020-06-03 00:00:00)
-	s3cli ls2 bucket --start-time '2020-03-03 00:00:00' --end-time '2020-06-03 00:00:00'
-* list Objects(2020-03-03 00:00:00 < modifyTime < 2020-06-03 00:00:00) start with common prefix
-	s3cli ls2 bucket/prefix --start-time '2020-03-03 00:00:00' --end-time '2020-06-03 00:00:00'
+* list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z)
+	s3cli ls2 bucket --start-time '2006-01-02T15:04:05Z' --end-time '2020-06-03T00:00:00Z'
+* list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z) start with common prefix
+	s3cli ls2 bucket/prefix --start-time '2006-01-02T15:04:05Z' --end-time '2020-06-03T00:00:00Z'
 `,
 		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -449,11 +446,11 @@ Credential EnvVar:
 			fetchOwner := cmd.Flag("owner").Changed
 			delimiter := cmd.Flag("delimiter").Value.String()
 			if len(args) == 1 { // list Objects
-				stime, err := time.Parse("2006-01-02 15:04:05", cmd.Flag("start-time").Value.String())
+				stime, err := time.Parse("2006-01-02T15:04:05Z", cmd.Flag("start-time").Value.String())
 				if err != nil {
 					return sc.errorHandler(fmt.Errorf("invalid start-time %s, error %s", cmd.Flag("start-time").Value.String(), err))
 				}
-				etime, err := time.Parse("2006-01-02 15:04:05", cmd.Flag("end-time").Value.String())
+				etime, err := time.Parse("2006-01-02T15:04:05Z", cmd.Flag("end-time").Value.String())
 				if err != nil {
 					return sc.errorHandler(fmt.Errorf("invalid enf-time %s, error %s", cmd.Flag("end-time").Value.String(), err))
 				}
@@ -480,8 +477,8 @@ Credential EnvVar:
 	listObjectV2Cmd.Flags().BoolP("index", "i", false, "show Object index")
 	listObjectV2Cmd.Flags().BoolP("owner", "", false, "fetch owner")
 	listObjectV2Cmd.Flags().BoolP("all", "a", false, "list all Objects")
-	listObjectV2Cmd.Flags().StringP("start-time", "", "2006-01-02 15:04:05", "show Objects modify-time after start-time(UTC)")
-	listObjectV2Cmd.Flags().StringP("end-time", "", "2080-01-02 15:04:05", "show Objects modify-time before end-time(UTC)")
+	listObjectV2Cmd.Flags().StringP("start-time", "", "2006-01-02T15:04:05Z", "show Objects modify-time after start-time(UTC)")
+	listObjectV2Cmd.Flags().StringP("end-time", "", "2060-01-02T15:04:05Z", "show Objects modify-time before end-time(UTC)")
 	rootCmd.AddCommand(listObjectV2Cmd)
 
 	listVersionCmd := &cobra.Command{
@@ -506,9 +503,9 @@ Credential EnvVar:
 		Aliases: []string{"dv"},
 		Short:   "delete-version of Object",
 		Long: `delete Object versions usage:
-* delete Object Version
+* delete a Object Version
 	s3cli delete-version bucket-name/key --id version-id
-* delete Object Versions with specified prefix
+* delete all Objects Versions with specified prefix
 	s3cli delete-version bucket-name/prefix`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -646,7 +643,7 @@ Credential EnvVar:
 
 	deleteObjectCmd := &cobra.Command{
 		Use:     "delete <bucket/key>",
-		Aliases: []string{"del", "rm"},
+		Aliases: []string{"rm"},
 		Short:   "delete Object or Bucket",
 		Long: `delete Bucket or Object(s) usage:
 * delete Bucket and all Objects
