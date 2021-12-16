@@ -18,7 +18,7 @@ aws_secret_access_key=mySecretKey
 
 #### Usage
 ```sh
-./s3cli -h
+./s3cli help
 S3 command-line tool usage:
 Endpoint EnvVar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
@@ -33,33 +33,38 @@ Usage:
   s3cli [command]
 
 Available Commands:
-  acl         get/set Bucket/Object ACL
-  bucket      bucket sub-command
-  cat         cat Object
-  copy        copy Object
-  delete      delete Object or Bucket
-  get         get Object
-  head        head Bucket/Object
-  help        Help about any command
-  list        list Buckets or Bucket
-  listVersion list Object versions
-  mpu         mpu sub-command
-  presign     presign(V2) URL
-  put         put Object(s)
-  rename      rename Object
+  acl            get/set Bucket/Object ACL
+  cat            cat Object
+  completion     generate the autocompletion script for the specified shell
+  copy           copy Object
+  create-bucket  create Bucket(s)
+  delete         delete Object or Bucket
+  delete-version delete-version of Object
+  get            get Object
+  head           head Bucket or Object
+  help           Help about any command
+  list           list Buckets or Objects
+  list-version   list Object versions
+  list2          list Buckets or Objects(V2)
+  mpu            mpu sub-command
+  policy         get/set Bucket Policy
+  presign        presign(V2) URL
+  put            put Object(s)
+  rename         rename Object
+  restore        restore Object
+  version        bucket versioning
 
 Flags:
-      --ak string         access key
-      --debug             print debug log
+      --ak string         S3 access key
+      --debug             show SDK debug log
   -e, --endpoint string   S3 endpoint(http://host:port)
       --expire duration   presign URL expiration (default 24h0m0s)
   -h, --help              help for s3cli
+  -o, --output string     output format(verbose,simple,json,line) (default "simple")
       --presign           presign URL and exit
-  -p, --profile string    profile in credentials file
-  -R, --region string     S3 region (default "default")
-      --sk string         secret key
-  -v, --verbose           verbose output
-      --version           version for s3cli
+  -R, --region string     S3 region (default "cn-north-1")
+      --sk string         S3 secret key
+      --virtualhost       use virtualhosting style(not use path style)
 
 Use "s3cli [command] --help" for more information about a command.
 ```

@@ -117,11 +117,11 @@ Credential EnvVar:
 		Short:   "presign(V2) URL",
 		Long: `presign(V2) URL usage:
 * presign(ps) a GET Object URL
-	s3cli ps bucket/key01
+	s3cli ps bucket-name/key01
 * presign(ps) a DELETE Object URL
-	s3cli ps -X delete bucket/key01
+	s3cli ps -X delete bucket-name/key01
 * presign(ps) a PUT Object URL and specify content-type
-	s3cli ps -X PUT -T text/plain bucket/key02
+	s3cli ps -X PUT -T text/plain bucket-name/key02
 	curl -X PUT -H content-type:text/plain -d test-str 'presign-url'`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -234,15 +234,15 @@ Credential EnvVar:
 * put(upload) a file
 	s3cli put bucket /path/to/file
 * put(upload) a file to Bucket/Key
-	s3cli up bucket/key /path/to/file
+	s3cli up bucket-name/key /path/to/file
 * put(upload) files to Bucket
-	s3cli put bucket file1 file2 file3
-	s3cli up bucket *.txt
+	s3cli put bucket-name file1 file2 file3
+	s3cli up bucket-name *.txt
 * put(upload) files to Bucket with specified common prefix(dir/)
-	s3cli put bucket/dir/ file1 file2 file3
-	s3cli up bucket/dir2/ *.txt
+	s3cli put bucket-name/dir/ file1 file2 file3
+	s3cli up bucket-name/dir2/ *.txt
 * presign(V4) a PUT Object URL
-	s3cli up bucket/key --presign`,
+	s3cli up bucket-name/key --presign`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			var fd *os.File
@@ -283,12 +283,12 @@ Credential EnvVar:
 
 	headCmd := &cobra.Command{
 		Use:   "head <bucket/key>",
-		Short: "head Bucket/Object",
-		Long: `head Bucket/Object usage:
+		Short: "head Bucket or Object",
+		Long: `head Bucket or Object usage:
 * head a Bucket
-	s3cli head bucket
+	s3cli head bucket-name
 * head a Object
-	s3cli head bucket/key`,
+	s3cli head bucket-name/key`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := splitBucketObject(args[0])
@@ -309,13 +309,13 @@ Credential EnvVar:
 		Short: "get/set Bucket/Object ACL",
 		Long: `get/set Bucket/Object ACL usage:
 * get Bucket ACL
-	s3cli acl bucket
+	s3cli acl bucket-name
 * set Bucket ACL to public-read
-	s3cli acl bucket public-read
+	s3cli acl bucket-name public-read
 * get Object ACL
-	s3cli acl bucket/key
+	s3cli acl bucket-name/key
 * set Object ACL to public-read
-	s3cli acl bucket/key public-read
+	s3cli acl bucket-name/key public-read
 
 * all canned ACL(private,public-read,public-read-write,authenticated-read,aws-exec-read,bucket-owner-read,bucket-owner-full-control)
 `,
@@ -377,13 +377,13 @@ Credential EnvVar:
 * list all my Buckets
 	s3cli ls
 * list Objects in a Bucket
-	s3cli ls bucket
+	s3cli ls bucket-name
 * list Objects with prefix(2019)
-	s3cli ls bucket/2019
+	s3cli ls bucket-name/2019
 * list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z)
-	s3cli ls bucket --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
+	s3cli ls bucket-name --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
 * list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z) start with common prefix
-	s3cli ls bucket/prefix --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
+	s3cli ls bucket-name/prefix --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
 `,
 		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -432,13 +432,13 @@ Credential EnvVar:
 * list all my Buckets
 	s3cli ls2
 * list Objects in a Bucket
-	s3cli ls2 bucket
+	s3cli ls2 bucket-name
 * list Objects with prefix(2019)
-	s3cli ls2 bucket/2019
+	s3cli ls2 bucket-name/2019
 * list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z)
-	s3cli ls2 bucket --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
+	s3cli ls2 bucket-name --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
 * list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z) start with common prefix
-	s3cli ls2 bucket/prefix --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
+	s3cli ls2 bucket-name/prefix --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
 `,
 		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -523,9 +523,9 @@ Credential EnvVar:
 		Short:   "restore Object",
 		Long: `restore Object usage:
 * restore a Object
-	s3cli restore bucket/key
+	s3cli restore bucket-name/key
 * restore a Object version
-	s3cli restore bucket/key versionID
+	s3cli restore bucket-name/key versionID
 `,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -546,11 +546,11 @@ Credential EnvVar:
 		Short:   "get Object",
 		Long: `get(download) Object usage:
 * get(download) a Object to ./
-	s3cli get bucket/key
+	s3cli get bucket-name/key
 * get(download) a Object to /path/to/file
-	s3cli get bucket/key /path/to/file
+	s3cli get bucket-name/key /path/to/file
 * presign(V4) a get(download) Object URL
-	s3cli get bucket/key --presign`,
+	s3cli get bucket-name/key --presign`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := splitBucketObject(args[0])
@@ -588,7 +588,7 @@ Credential EnvVar:
 		Short: "cat Object",
 		Long: `cat Object contents usage:
 * cat a Object
-	s3cli cat bucket/key`,
+	s3cli cat bucket-name/key`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			objRange := cmd.Flag("range").Value.String()
@@ -607,9 +607,9 @@ Credential EnvVar:
 		Short:   "rename Object",
 		Long: `rename Bucket/key to Bucket/key usage:
 * specify destination key
-	s3cli mv bucket/key1 bucket2/key2
+	s3cli mv bucket-name/key1 bucket-name2/key2
 * default destionation key
-	s3cli mv bucket/key1 bucket2`,
+	s3cli mv bucket-name/key1 bucket-name2`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := splitBucketObject(args[1])
@@ -627,9 +627,9 @@ Credential EnvVar:
 		Short:   "copy Object",
 		Long: `copy Bucket/key to Bucket/key usage:
 * spedify destination key
-	s3cli copy bucket/key1 bucket2/key2
+	s3cli copy bucket-name/key1 bucket-name2/key2
 * default destionation key
-	s3cli copy bucket/key1 bucket2`,
+	s3cli copy bucket-name/key1 bucket-name2`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := splitBucketObject(args[1])
@@ -647,11 +647,11 @@ Credential EnvVar:
 		Short:   "delete Object or Bucket",
 		Long: `delete Bucket or Object(s) usage:
 * delete Bucket and all Objects
-	s3cli delete bucket
+	s3cli delete bucket-name
 * delete a Object
-	s3cli delete bucket/key
+	s3cli delete bucket-name/key
 * delete all Objects with same Prefix
-	s3cli delete bucket/prefix -x`,
+	s3cli delete bucket-name/prefix -x`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prefixMode := cmd.Flag("prefix").Changed
@@ -682,7 +682,7 @@ Credential EnvVar:
 		Short: "create a MPU request",
 		Long: `create a mutiPartUpload request usage:
 * create a MPU request
-	s3cli mpu create bucket/key`,
+	s3cli mpu create bucket-name/key`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := splitBucketObject(args[0])
@@ -696,11 +696,11 @@ Credential EnvVar:
 		Short: "upload MPU part(s)",
 		Long: `upload a mutiPartUpload part usage:
 * upload MPU part1
-	s3cli mpu upload bucket/key UploadId 1:localfile1
+	s3cli mpu upload bucket-name/key UploadId 1:localfile1
 * upload MPU part2
-	s3cli mpu upload bucket/key UploadId 2:localfile2
+	s3cli mpu upload bucket-name/key UploadId 2:localfile2
 * upload MPU part1 and part2
-	s3cli mpu upload bucket/key UploadId 1:localfile1 2:localfile2`,
+	s3cli mpu upload bucket-name/key UploadId 1:localfile1 2:localfile2`,
 		Args: cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			files := map[int64]string{}
@@ -727,7 +727,7 @@ Credential EnvVar:
 		Short: "abort a MPU request",
 		Long: `abort a mutiPartUpload request usage:
 * abort a mpu request
-	s3cli mpu abort bucket/key UploadId`,
+	s3cli mpu abort bucket-name/key UploadId`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := splitBucketObject(args[0])
@@ -742,7 +742,7 @@ Credential EnvVar:
 		Short:   "list MPU",
 		Long: `list mutiPartUploads usage:
 * list MPU
-	s3cli mpu ls bucket/prefix`,
+	s3cli mpu ls bucket-name/prefix`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := splitBucketObject(args[0])
@@ -756,7 +756,7 @@ Credential EnvVar:
 		Short: "complete a MPU request",
 		Long: `complete a mutiPartUpload request usage:
 * complete a MPU request
-	s3cli mpu complete bucket/key UploadId etag01 etag02 etag03`,
+	s3cli mpu complete bucket-name/key UploadId etag01 etag02 etag03`,
 		Args: cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := splitBucketObject(args[0])
