@@ -381,9 +381,9 @@ Credential EnvVar:
 * list Objects with prefix(2019)
 	s3cli ls bucket/2019
 * list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z)
-	s3cli ls bucket --start-time '2006-01-02T15:04:05Z' --end-time '2020-06-03T00:00:00Z'
+	s3cli ls bucket --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
 * list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z) start with common prefix
-	s3cli ls bucket/prefix --start-time '2006-01-02T15:04:05Z' --end-time '2020-06-03T00:00:00Z'
+	s3cli ls bucket/prefix --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
 `,
 		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -396,7 +396,7 @@ Credential EnvVar:
 				}
 				etime, err := time.Parse("2006-01-02T15:04:05Z", cmd.Flag("end-time").Value.String())
 				if err != nil {
-					return sc.errorHandler(fmt.Errorf("invalid enf-time %s, error %s", cmd.Flag("end-time").Value.String(), err))
+					return sc.errorHandler(fmt.Errorf("invalid end-time %s, error %s", cmd.Flag("end-time").Value.String(), err))
 				}
 
 				bucket, prefix := splitBucketObject(args[0])
@@ -436,9 +436,9 @@ Credential EnvVar:
 * list Objects with prefix(2019)
 	s3cli ls2 bucket/2019
 * list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z)
-	s3cli ls2 bucket --start-time '2006-01-02T15:04:05Z' --end-time '2020-06-03T00:00:00Z'
+	s3cli ls2 bucket --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
 * list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z) start with common prefix
-	s3cli ls2 bucket/prefix --start-time '2006-01-02T15:04:05Z' --end-time '2020-06-03T00:00:00Z'
+	s3cli ls2 bucket/prefix --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
 `,
 		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
