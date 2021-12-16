@@ -55,16 +55,18 @@ Available Commands:
   version        bucket versioning
 
 Flags:
-      --ak string         S3 access key
-      --debug             show SDK debug log
-  -e, --endpoint string   S3 endpoint(http://host:port)
-      --expire duration   presign URL expiration (default 24h0m0s)
-  -h, --help              help for s3cli
-  -o, --output string     output format(verbose,simple,json,line) (default "simple")
-      --presign           presign URL and exit
-  -R, --region string     S3 region (default "cn-north-1")
-      --sk string         S3 secret key
-      --virtualhost       use virtualhosting style(not use path style)
+  -a, --ak string                     S3 access key
+      --debug                         show SDK debug log
+      --dial-timeout int              http dial timeout (default 5)
+  -e, --endpoint string               S3 endpoint(http://host:port)
+      --expire duration               presign URL expiration (default 24h0m0s)
+  -h, --help                          help for s3cli
+  -o, --output string                 output format(verbose,simple,json,line) (default "simple")
+      --presign                       presign URL and exit
+  -R, --region string                 S3 region (default "cn-north-1")
+      --response-header-timeout int   http response header timeout (default 5)
+  -s, --sk string                     S3 secret key
+      --virtualhost                   use virtualhosting style(not use path style)
 
 Use "s3cli [command] --help" for more information about a command.
 ```
@@ -72,28 +74,28 @@ Use "s3cli [command] --help" for more information about a command.
 ## Example
 #### Bucket ( s3cli bucket -h )
 ```sh
-# bucket(b) create(c)
-s3cli -e http://192.168.55.2:9020 b c bucket-name
+# create bucket
+s3cli -e http://192.168.55.2:9020 cb bucket-name
 # or pass endpoint from ENV
 export S3_ENDPOINT=http://192.168.55.2:9020
-s3cli b c bucket-name
+s3cli cb bucket-name
 
 # list(ls) Buckets
-s3cli b ls
+s3cli ls
 
-# bucket(b) policy(p) get/set
-s3cli b p bucket-name                 # get
-s3cli b p bucket-name '{policy-json}' # set
+# bucket policy get/set
+s3cli policy bucket-name                 # get
+s3cli policy bucket-name '{policy-json}' # set
 
-# bucket(b) acl get/set
-s3cli b acl bucket-name             # get
-s3cli b acl bucket-name public-read # set
+# bucket acl get/set
+s3cli acl bucket-name             # get
+s3cli acl bucket-name public-read # set
 
-# bucket(b) versioning get/set
-s3cli b v bucket-name
+# bucket versioning get/set
+s3cli version bucket-name
 
-# bucket(b) delete(d)  
-s3cli b d bucket-name
+# bucket delete
+s3cli delete bucket-name
 ```
 
 #### Object
@@ -125,7 +127,7 @@ s3cli get bucket-name/key --presign
 ```sh
 # list Objects
 s3cli ls bucket-name        # list(default 1000 Objects)
-s3cli ls bucket-name -a     # list all Objects
+s3cli ls bucket-name --all     # list all Objects
 s3cli ls bucket-name/prefix # list Objects with specified prefix
 ```
 
@@ -133,7 +135,7 @@ s3cli ls bucket-name/prefix # list Objects with specified prefix
 ```sh
 # delete Object(s)
 s3cli rm bucket-name/key      # delete an Object
-s3cli rm bucket-name/dir/ -x  # delete all Objects with specified prefix(dir/)
+s3cli rm bucket-name/dir/ --prefix  # delete all Objects with specified prefix(dir/)
 s3cli rm bucket-name --force  # delete Bucket and all Objects
 
 # presign(V4) an DELETE Object URL

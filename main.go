@@ -653,7 +653,7 @@ Credential EnvVar:
 * delete a Object
 	s3cli delete bucket-name/key
 * delete all Objects with same Prefix
-	s3cli delete bucket-name/prefix -x`,
+	s3cli delete bucket-name/prefix --prefix`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prefixMode := cmd.Flag("prefix").Changed
@@ -668,7 +668,7 @@ Credential EnvVar:
 		},
 	}
 	deleteObjectCmd.Flags().BoolP("force", "", false, "delete Bucket and all Objects")
-	deleteObjectCmd.Flags().BoolP("prefix", "x", false, "delete Objects start with specified prefix")
+	deleteObjectCmd.Flags().BoolP("prefix", "", false, "delete all Objects start with specified prefix")
 	rootCmd.AddCommand(deleteObjectCmd)
 
 	// MPU sub-command
