@@ -28,16 +28,10 @@ var (
 	// 	https://s3.us-west-2.amazonaws.com/BUCKET/KEY
 	// Without ForcePathStyle(virtualhost=true):
 	// 	https://BUCKET.s3.us-west-2.amazonaws.com/KEY
-	virtualhost = false
+	virtualhost           = false
+	dialTimeout           = 5
+	responseHeaderTimeout = 5
 )
-
-var httpClient = http.Client{
-	Transport: &http.Transport{
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-		Dial:                  (&net.Dialer{Timeout: 1 * time.Second}).Dial,
-		ResponseHeaderTimeout: 5 * time.Second,
-	},
-}
 
 func splitBucketObject(bucketObject string) (bucket, object string) {
 	bo := strings.SplitN(bucketObject, "/", 2)
@@ -61,6 +55,13 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	sess.Config.MaxRetries = aws.Int(0)
 	sess.Config.Region = aws.String(sc.region)
 	sess.Config.Endpoint = aws.String(sc.endpoint)
+	sess.Config.HTTPClient = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+			Dial:                  (&net.Dialer{Timeout: time.Duration(dialTimeout) * time.Second}).Dial,
+			ResponseHeaderTimeout: time.Duration(responseHeaderTimeout) * time.Second,
+		},
+	}
 	if !virtualhost {
 		sess.Config.S3ForcePathStyle = aws.Bool(true)
 	}
@@ -107,8 +108,9 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", s3.BucketLocationConstraintCnNorth1, "S3 region")
 	rootCmd.PersistentFlags().StringVarP(&sc.ak, "ak", "", "", "S3 access key")
 	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "", "", "S3 secret key")
-	// pathStyle
 	rootCmd.PersistentFlags().BoolVarP(&virtualhost, "virtualhost", "", false, "use virtualhosting style(not use path style)")
+	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", 5, "http dial timeout")
+	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", 5, "http response header timeout")
 
 	// presign(V2) command
 	presignCmd := &cobra.Command{
