@@ -421,7 +421,7 @@ Credential EnvVar:
 	listObjectCmd.Flags().Int64P("maxkeys", "M", 1000, "max keys")
 	listObjectCmd.Flags().StringP("delimiter", "d", "", "Object delimiter")
 	listObjectCmd.Flags().BoolP("index", "i", false, "show Object index ")
-	listObjectCmd.Flags().BoolP("all", "a", false, "list all Objects")
+	listObjectCmd.Flags().BoolP("all", "", false, "list all Objects")
 	listObjectCmd.Flags().StringP("start-time", "", "2006-01-02T15:04:05Z", "show Objects modify-time after start-time(UTC)")
 	listObjectCmd.Flags().StringP("end-time", "", "2060-01-02T15:04:05Z", "show Objects modify-time before end-time(UTC)")
 	rootCmd.AddCommand(listObjectCmd)
