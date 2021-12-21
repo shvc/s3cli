@@ -148,13 +148,13 @@ func Test_setObjectACL(t *testing.T) {
 }
 
 func Test_listAllObjects(t *testing.T) {
-	if err := s3cliTest.listAllObjects(testBucketName, "t", "/", true, false, time.Time{}, time.Time{}); err != nil {
+	if err := s3cliTest.listAllObjects(testBucketName, "t", "/", true, time.Time{}, time.Time{}); err != nil {
 		t.Errorf("listAllObjects failed: %s", err)
 	}
 }
 
 func Test_listObjects(t *testing.T) {
-	if err := s3cliTest.listObjects(testBucketName, "t", "/", "", 1000, true, false, time.Time{}, time.Time{}); err != nil {
+	if err := s3cliTest.listObjects(testBucketName, "t", "/", "", 1000, true, time.Time{}, time.Time{}); err != nil {
 		t.Errorf("listObjects failed: %s", err)
 	}
 }
@@ -284,3 +284,57 @@ func Test_mpuComplete(t *testing.T) {
 		t.Errorf("mpuComplete failed: %s", err)
 	}
 }
+
+/*
+aws: error: argument operation: Invalid choice, valid choices are:
+
+abort-multipart-upload                   | complete-multipart-upload
+copy-object                              | create-bucket
+create-multipart-upload                  | delete-bucket
+delete-bucket-analytics-configuration    | delete-bucket-cors
+delete-bucket-encryption                 | delete-bucket-intelligent-tiering-configuration
+delete-bucket-inventory-configuration    | delete-bucket-lifecycle
+delete-bucket-metrics-configuration      | delete-bucket-ownership-controls
+delete-bucket-policy                     | delete-bucket-replication
+delete-bucket-tagging                    | delete-bucket-website
+delete-object                            | delete-object-tagging
+delete-objects                           | delete-public-access-block
+get-bucket-accelerate-configuration      | get-bucket-acl
+get-bucket-analytics-configuration       | get-bucket-cors
+get-bucket-encryption                    | get-bucket-intelligent-tiering-configuration
+get-bucket-inventory-configuration       | get-bucket-lifecycle
+get-bucket-lifecycle-configuration       | get-bucket-location
+get-bucket-logging                       | get-bucket-metrics-configuration
+get-bucket-notification                  | get-bucket-notification-configuration
+get-bucket-ownership-controls            | get-bucket-policy
+get-bucket-policy-status                 | get-bucket-replication
+get-bucket-request-payment               | get-bucket-tagging
+get-bucket-versioning                    | get-bucket-website
+get-object                               | get-object-acl
+get-object-legal-hold                    | get-object-lock-configuration
+get-object-retention                     | get-object-tagging
+get-object-torrent                       | get-public-access-block
+head-bucket                              | head-object
+list-bucket-analytics-configurations     | list-bucket-intelligent-tiering-configurations
+list-bucket-inventory-configurations     | list-bucket-metrics-configurations
+list-buckets                             | list-multipart-uploads
+list-object-versions                     | list-objects
+list-objects-v2                          | list-parts
+put-bucket-accelerate-configuration      | put-bucket-acl
+put-bucket-analytics-configuration       | put-bucket-cors
+put-bucket-encryption                    | put-bucket-intelligent-tiering-configuration
+put-bucket-inventory-configuration       | put-bucket-lifecycle
+put-bucket-lifecycle-configuration       | put-bucket-logging
+put-bucket-metrics-configuration         | put-bucket-notification
+put-bucket-notification-configuration    | put-bucket-ownership-controls
+put-bucket-policy                        | put-bucket-replication
+put-bucket-request-payment               | put-bucket-tagging
+put-bucket-versioning                    | put-bucket-website
+put-object                               | put-object-acl
+put-object-legal-hold                    | put-object-lock-configuration
+put-object-retention                     | put-object-tagging
+put-public-access-block                  | restore-object
+select-object-content                    | upload-part
+upload-part-copy                         | write-get-object-response
+wait                                     | help
+*/
