@@ -60,7 +60,6 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 			Dial:                  (&net.Dialer{Timeout: time.Duration(dialTimeout) * time.Second}).Dial,
 			ResponseHeaderTimeout: time.Duration(responseHeaderTimeout) * time.Second,
 		},
-	}
 
 	sess.Config.S3ForcePathStyle = aws.Bool(pathStyle)
 
@@ -551,9 +550,11 @@ Credential EnvVar:
 		Aliases: []string{"get"},
 		Short:   "download Object",
 		Long: `download(get) Object usage:
-* download(get) a Object to ./
+* download a Object to ./
 	s3cli download bucket-name/key
-* presign(V4) a download(get) Object URL
+* download Objects to ./
+	s3cli download bucket-name/key key2 key3
+* presign(V4) a download Object URL
 	s3cli download bucket-name/key --presign`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
