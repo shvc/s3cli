@@ -271,7 +271,7 @@ Credential EnvVar:
 					if contentType == "" {
 						contentType = mime.TypeByExtension(filepath.Ext(args[1]))
 					}
-					newKey := key + v
+					newKey := key + filepath.Base(v)
 					err = sc.putObject(bucket, newKey, contentType, fd)
 					if err != nil {
 						fd.Close()

@@ -399,12 +399,16 @@ func (sc *S3Cli) putObject(bucket, key, contentType string, r io.ReadSeeker) err
 	}
 
 	if sc.output == outputVerbose {
-		fmt.Println("upload",
+		fmt.Println(resp.String())
+	} else if sc.output == outputLine {
+		fmt.Println(
 			time.Now().Format(time.RFC3339),
+			"upload",
 			aws.StringValue(resp.ETag),
-			filepath.Base(key),
+			key,
 		)
 	}
+
 	return nil
 }
 
@@ -760,14 +764,17 @@ func (sc *S3Cli) getObject(bucket, key, oRange, version string) error {
 	defer resp.Body.Close()
 
 	// Create a file to write the S3 Object contents
-	fd, err := os.Create(filepath.Base(key))
+	filename := filepath.Base(key)
+	fd, err := os.Create(filename)
 	if err != nil {
 		return sc.errorHandler(err)
 	}
 	defer fd.Close()
 	_, err = io.Copy(fd, resp.Body)
 	if sc.output == outputVerbose {
-		fmt.Println("download ", time.Now().Format(time.RFC3339), filepath.Base(key))
+		fmt.Println(time.Now().Format(time.RFC3339), "download", filename)
+	} else if sc.output == outputLine {
+		fmt.Println(time.Now().Format(time.RFC3339), "download", filename)
 	}
 	return err
 }
