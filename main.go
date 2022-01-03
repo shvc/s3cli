@@ -60,6 +60,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 			Dial:                  (&net.Dialer{Timeout: time.Duration(dialTimeout) * time.Second}).Dial,
 			ResponseHeaderTimeout: time.Duration(responseHeaderTimeout) * time.Second,
 		},
+	}
 
 	sess.Config.S3ForcePathStyle = aws.Bool(pathStyle)
 
