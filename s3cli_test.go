@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	mrand "math/rand"
 	"net/http"
 	"testing"
@@ -166,17 +165,12 @@ func Test_listObjectVersions(t *testing.T) {
 }
 
 func Test_getObject(t *testing.T) {
-	r, err := s3cliTest.getObject(testBucketName, testObjectKey, "", "")
+	err := s3cliTest.getObject(testBucketName, testObjectKey, "", "")
 	if err != nil {
 		t.Errorf("getObject failed: %s", err)
 		return
 	}
-	defer r.Close()
-	_, err = ioutil.ReadAll(r)
-	if err != nil {
-		t.Errorf("getObject download failed: %s", err)
-		return
-	}
+
 }
 
 func Test_catObject(t *testing.T) {

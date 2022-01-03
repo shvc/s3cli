@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	"io"
 	"mime"
 	"net"
 	"net/http"
@@ -24,11 +23,11 @@ var (
 	version = "1.2.3"
 	// endpoint ENV Var
 	endpointEnvVar = "S3_ENDPOINT"
-	// With ForcePathStyle(virtualhost=false):
+	// With ForcePathStyle(pathStyle=true):
 	// 	https://s3.us-west-2.amazonaws.com/BUCKET/KEY
-	// Without ForcePathStyle(virtualhost=true):
+	// Without ForcePathStyle(pathStyle=false):
 	// 	https://BUCKET.s3.us-west-2.amazonaws.com/KEY
-	virtualhost           = false
+	pathStyle             = true
 	dialTimeout           = 5
 	responseHeaderTimeout = 5
 )
@@ -62,9 +61,8 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 			ResponseHeaderTimeout: time.Duration(responseHeaderTimeout) * time.Second,
 		},
 	}
-	if !virtualhost {
-		sess.Config.S3ForcePathStyle = aws.Bool(true)
-	}
+
+	sess.Config.S3ForcePathStyle = aws.Bool(pathStyle)
 
 	if sc.debug {
 		sess.Config.LogLevel = aws.LogLevel(aws.LogDebug)
@@ -108,7 +106,7 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", s3.BucketLocationConstraintCnNorth1, "S3 region")
 	rootCmd.PersistentFlags().StringVarP(&sc.ak, "ak", "a", "", "S3 access key")
 	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "s", "", "S3 secret key")
-	rootCmd.PersistentFlags().BoolVarP(&virtualhost, "virtualhost", "", false, "use virtualhosting style(not use path style)")
+	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", 5, "http dial timeout")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", 5, "http response header timeout")
 
@@ -227,29 +225,30 @@ Credential EnvVar:
 	}
 	rootCmd.AddCommand(bucketVersionCmd)
 
-	// object put(upload)
-	putObjectCmd := &cobra.Command{
-		Use:     "put <bucket[/key]> [<local-file> ...]",
-		Aliases: []string{"up", "upload"},
-		Short:   "put Object(s)",
-		Long: `put(upload) Object(s) usage:
-* put(upload) a file
-	s3cli put bucket /path/to/file
-* put(upload) a file to Bucket/Key
-	s3cli up bucket-name/key /path/to/file
-* put(upload) files to Bucket
-	s3cli put bucket-name file1 file2 file3
-	s3cli up bucket-name *.txt
-* put(upload) files to Bucket with specified common prefix(dir/)
-	s3cli put bucket-name/dir/ file1 file2 file3
-	s3cli up bucket-name/dir2/ *.txt
+	// object upload(put)
+	uploadObjectCmd := &cobra.Command{
+		Use:     "upload <bucket[/key]> [file ...]",
+		Aliases: []string{"put"},
+		Short:   "upload Object(s)",
+		Long: `upload Object(s) usage:
+* upload a file
+	s3cli upload bucket /path/to/file
+* upload a file to Bucket/Key
+	s3cli upload bucket-name/key /path/to/file
+* upload files to Bucket
+	s3cli upload bucket-name file1 file2 file3
+	s3cli upload bucket-name *.txt
+* upload files to Bucket with specified common prefix(dir/)
+	s3cli upload bucket-name/dir/ file1 file2 file3
+	s3cli upload bucket-name/dir2/ *.txt
 * presign(V4) a PUT Object URL
-	s3cli up bucket-name/key --presign`,
+	s3cli upload bucket-name/key --presign`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			var fd *os.File
+			contentType := cmd.Flag("content-type").Value.String()
 			bucket, key := splitBucketObject(args[0])
-			if len(args) < 2 { // upload zero-size file
+			if len(args) < 2 { // upload a zero-size file
 				err = sc.putObject(bucket, key, "", fd)
 			} else if len(args) == 2 { // upload one file
 				if key == "" {
@@ -260,17 +259,21 @@ Credential EnvVar:
 					return sc.errorHandler(err)
 				}
 				defer fd.Close()
-				cType := mime.TypeByExtension(filepath.Ext(args[1]))
-				err = sc.putObject(bucket, key, cType, fd)
+				if contentType == "" {
+					contentType = mime.TypeByExtension(filepath.Ext(args[1]))
+				}
+				err = sc.putObject(bucket, key, contentType, fd)
 			} else { // upload multi files
 				for _, v := range args[1:] {
-					newKey := fmt.Sprintf("%s%s", key, filepath.Base(v))
 					fd, err = os.Open(v)
 					if err != nil {
 						return sc.errorHandler(err)
 					}
-					cType := mime.TypeByExtension(filepath.Ext(args[1]))
-					err = sc.putObject(bucket, newKey, cType, fd)
+					if contentType == "" {
+						contentType = mime.TypeByExtension(filepath.Ext(args[1]))
+					}
+					newKey := key + v
+					err = sc.putObject(bucket, newKey, contentType, fd)
 					if err != nil {
 						fd.Close()
 						return sc.errorHandler(err)
@@ -281,7 +284,8 @@ Credential EnvVar:
 			return
 		},
 	}
-	rootCmd.AddCommand(putObjectCmd)
+	uploadObjectCmd.Flags().StringP("content-type", "", "", "specify(not auto detect) Object content-type")
+	rootCmd.AddCommand(uploadObjectCmd)
 
 	headCmd := &cobra.Command{
 		Use:   "head <bucket/key>",
@@ -542,48 +546,41 @@ Credential EnvVar:
 	}
 	rootCmd.AddCommand(restoreObjectCmd)
 
-	getObjectCmd := &cobra.Command{
-		Use:     "get <bucket/key> [destination]",
-		Aliases: []string{"download", "down"},
-		Short:   "get Object",
-		Long: `get(download) Object usage:
-* get(download) a Object to ./
-	s3cli get bucket-name/key
-* get(download) a Object to /path/to/file
-	s3cli get bucket-name/key /path/to/file
-* presign(V4) a get(download) Object URL
-	s3cli get bucket-name/key --presign`,
-		Args: cobra.RangeArgs(1, 2),
+	downloadObjectCmd := &cobra.Command{
+		Use:     "download <bucket/key> [key...]",
+		Aliases: []string{"get"},
+		Short:   "download Object",
+		Long: `download(get) Object usage:
+* download a Object to ./
+	s3cli download bucket-name/key
+* download Objects to ./
+	s3cli download bucket-name/key key2 key3
+* presign(V4) a download Object URL
+	s3cli download bucket-name/key --presign`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := splitBucketObject(args[0])
 			objRange := cmd.Flag("range").Value.String()
 			version := cmd.Flag("version").Value.String()
-			r, err := sc.getObject(bucket, key, objRange, version)
+			err := sc.getObject(bucket, key, objRange, version)
 			if err != nil {
 				return sc.errorHandler(err)
 			}
-			if r == nil { // presign URL return nil
-				return nil
+			if len(args) > 1 {
+				for _, k := range args[1:] {
+					err := sc.getObject(bucket, k, "", "")
+					if err != nil {
+						return sc.errorHandler(err)
+					}
+				}
 			}
-			defer r.Close()
-			filename := filepath.Base(key)
-			if len(args) == 2 {
-				filename = args[1]
-			}
-			// Create a file to write the S3 Object contents
-			fd, err := os.Create(filename)
-			if err != nil {
-				return sc.errorHandler(err)
-			}
-			defer fd.Close()
-			_, err = io.Copy(fd, r)
-			return sc.errorHandler(err)
+			return nil
 		},
 	}
-	getObjectCmd.Flags().StringP("range", "r", "", "Object range to download, 0-64 means [0, 64]")
-	getObjectCmd.Flags().StringP("version", "", "", "Object version ID to delete")
-	getObjectCmd.Flags().BoolP("overwrite", "w", false, "overwrite file if exist")
-	rootCmd.AddCommand(getObjectCmd)
+	downloadObjectCmd.Flags().StringP("range", "r", "", "Object range to download, 0-64 means [0, 64]")
+	downloadObjectCmd.Flags().StringP("version", "", "", "Object version to download")
+	downloadObjectCmd.Flags().BoolP("overwrite", "w", false, "overwrite local file if exist")
+	rootCmd.AddCommand(downloadObjectCmd)
 
 	catObjectCmd := &cobra.Command{
 		Use:   "cat <bucket/key>",

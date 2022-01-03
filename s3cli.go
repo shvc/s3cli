@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"sync"
@@ -396,8 +397,13 @@ func (sc *S3Cli) putObject(bucket, key, contentType string, r io.ReadSeeker) err
 	if err != nil {
 		return err
 	}
+
 	if sc.output == outputVerbose {
-		fmt.Println(resp)
+		fmt.Println("upload",
+			time.Now().Format(time.RFC3339),
+			aws.StringValue(resp.ETag),
+			filepath.Base(key),
+		)
 	}
 	return nil
 }
@@ -723,7 +729,7 @@ func (sc *S3Cli) listObjectVersions(bucket, prefix string) error {
 }
 
 // getObject download a Object from bucket
-func (sc *S3Cli) getObject(bucket, key, oRange, version string) (io.ReadCloser, error) {
+func (sc *S3Cli) getObject(bucket, key, oRange, version string) error {
 	var objRange *string
 	if oRange != "" {
 		objRange = aws.String(fmt.Sprintf("bytes=%s", oRange))
@@ -744,15 +750,26 @@ func (sc *S3Cli) getObject(bucket, key, oRange, version string) (io.ReadCloser, 
 		if err == nil {
 			fmt.Println(s)
 		}
-		return nil, err
+		return err
 	}
 
 	err := req.Send()
 	if err != nil {
-		return nil, fmt.Errorf("get object failed: %w", err)
+		return fmt.Errorf("get object %s failed: %w", key, err)
 	}
-	return resp.Body, nil
+	defer resp.Body.Close()
 
+	// Create a file to write the S3 Object contents
+	fd, err := os.Create(filepath.Base(key))
+	if err != nil {
+		return sc.errorHandler(err)
+	}
+	defer fd.Close()
+	_, err = io.Copy(fd, resp.Body)
+	if sc.output == outputVerbose {
+		fmt.Println("download ", time.Now().Format(time.RFC3339), filepath.Base(key))
+	}
+	return err
 }
 
 // catObject print Object contents
