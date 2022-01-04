@@ -30,6 +30,7 @@ var (
 	pathStyle             = true
 	dialTimeout           = 5
 	responseHeaderTimeout = 5
+	httpKeepAlive         = true
 )
 
 func splitBucketObject(bucketObject string) (bucket, object string) {
@@ -59,6 +60,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
 			Dial:                  (&net.Dialer{Timeout: time.Duration(dialTimeout) * time.Second}).Dial,
 			ResponseHeaderTimeout: time.Duration(responseHeaderTimeout) * time.Second,
+			DisableKeepAlives:     !httpKeepAlive,
 		},
 	}
 
@@ -106,6 +108,7 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.ak, "ak", "a", "", "S3 access key")
 	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "s", "", "S3 secret key")
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
+	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http keep alive")
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", 5, "http dial timeout")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", 5, "http response header timeout")
 
