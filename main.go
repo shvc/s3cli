@@ -13,6 +13,10 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/corehandlers"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/spf13/cobra"
@@ -31,6 +35,7 @@ var (
 	dialTimeout           = 5
 	responseHeaderTimeout = 5
 	httpKeepAlive         = true
+	v2Signer              = false
 )
 
 func splitBucketObject(bucketObject string) (bucket, object string) {
@@ -51,25 +56,47 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 		sc.endpoint = os.Getenv(endpointEnvVar)
 	}
 
-	sess := session.Must(session.NewSession())
-	sess.Config.MaxRetries = aws.Int(0)
-	sess.Config.Region = aws.String(sc.region)
-	sess.Config.Endpoint = aws.String(sc.endpoint)
-	sess.Config.HTTPClient = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-			Dial:                  (&net.Dialer{Timeout: time.Duration(dialTimeout) * time.Second}).Dial,
-			ResponseHeaderTimeout: time.Duration(responseHeaderTimeout) * time.Second,
-			DisableKeepAlives:     !httpKeepAlive,
+	cfg := &aws.Config{
+		Region:           aws.String(sc.region),
+		MaxRetries:       aws.Int(0),
+		S3ForcePathStyle: aws.Bool(pathStyle),
+		HTTPClient: &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+				Dial:                  (&net.Dialer{Timeout: time.Duration(dialTimeout) * time.Second}).Dial,
+				ResponseHeaderTimeout: time.Duration(responseHeaderTimeout) * time.Second,
+				DisableKeepAlives:     !httpKeepAlive,
+			},
 		},
-	}
+		EndpointResolver: endpoints.ResolverFunc(
+			func(service, region string, opts ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
+				return endpoints.ResolvedEndpoint{
+					URL:           sc.endpoint,
+					SigningRegion: sc.region,
+					SigningName:   service,
+					SigningMethod: "v4",
+				}, nil
 
-	sess.Config.S3ForcePathStyle = aws.Bool(pathStyle)
+			}),
+	}
+	sess := session.Must(session.NewSession(cfg))
 
 	if sc.debug {
 		sess.Config.LogLevel = aws.LogLevel(aws.LogDebug)
 	}
 	svc := s3.New(sess)
+	if v2Signer {
+		signer := func(req *request.Request) {
+			// Ignore AnonymousCredentials object
+			if req.Config.Credentials == credentials.AnonymousCredentials {
+				return
+			}
+			sign(sc.ak, sc.sk, req.HTTPRequest)
+		}
+		svc.Handlers.Sign.Clear()
+		svc.Handlers.Sign.PushBackNamed(corehandlers.BuildContentLengthHandler)
+		svc.Handlers.Sign.PushBack(signer)
+	}
 
 	return svc, nil
 }
@@ -109,6 +136,7 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "s", "", "S3 secret key")
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http keep alive")
+	rootCmd.PersistentFlags().BoolVarP(&v2Signer, "v2-signer", "", false, "S3 v2 signer")
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", 5, "http dial timeout")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", 5, "http response header timeout")
 
@@ -283,7 +311,7 @@ Credential EnvVar:
 					fd.Close()
 				}
 			}
-			return
+			return sc.errorHandler(err)
 		},
 	}
 	uploadObjectCmd.Flags().StringP("content-type", "", "", "specify(not auto detect) Object content-type")
