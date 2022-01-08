@@ -280,6 +280,55 @@ func Test_mpuComplete(t *testing.T) {
 }
 
 /*
+aws help
+
+NAME
+       aws -
+
+DESCRIPTION
+       The  AWS  Command  Line  Interface is a unified tool to manage your AWS
+       services.
+
+SYNOPSIS
+          aws [options] <command> <subcommand> [parameters]
+
+       Use aws command help for information on a  specific  command.  Use  aws
+       help  topics  to view a list of available help topics. The synopsis for
+       each command shows its parameters and their usage. Optional  parameters
+       are shown in square brackets.
+
+OPTIONS
+       --debug (boolean)
+
+       Turn on debug logging.
+
+       --endpoint-url (string)
+
+       Override command's default URL with the given URL.
+
+       --no-verify-ssl (boolean)
+
+       By  default, the AWS CLI uses SSL when communicating with AWS services.
+       For each SSL connection, the AWS CLI will verify SSL certificates. This
+       option overrides the default behavior of verifying SSL certificates.
+
+       --no-paginate (boolean)
+
+       Disable automatic pagination.
+
+       --output (string)
+*/
+
+/*
+aws s3api cmd
+
+usage: aws [options] <command> <subcommand> [<subcommand> ...] [parameters]
+To see help text, you can run:
+
+  aws help
+  aws <command> help
+  aws <command> <subcommand> help
+
 aws: error: argument operation: Invalid choice, valid choices are:
 
 abort-multipart-upload                   | complete-multipart-upload

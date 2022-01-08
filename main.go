@@ -136,7 +136,7 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "s", "", "S3 secret key")
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http keep alive")
-	rootCmd.PersistentFlags().BoolVarP(&v2Signer, "v2-signer", "", false, "S3 v2 signer")
+	rootCmd.PersistentFlags().BoolVarP(&v2Signer, "v2sign", "", false, "S3 signature version v2")
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", 5, "http dial timeout")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", 5, "http response header timeout")
 
@@ -461,20 +461,20 @@ Credential EnvVar:
 	rootCmd.AddCommand(listObjectCmd)
 
 	listObjectV2Cmd := &cobra.Command{
-		Use:     "list2 [bucket[/prefix]]",
-		Aliases: []string{"ls2"},
-		Short:   "list Buckets or Objects(V2)",
-		Long: `list2 Buckets or Objects usage:
+		Use:     "list-v2 [bucket[/prefix]]",
+		Aliases: []string{"lsv2"},
+		Short:   "list Buckets or Objects(API V2)",
+		Long: `list-v2 Buckets or Objects(API V2) usage:
 * list all my Buckets
-	s3cli ls2
+	s3cli list-v2
 * list Objects in a Bucket
-	s3cli ls2 bucket-name
+	s3cli list-v2 bucket-name
 * list Objects with prefix(2019)
-	s3cli ls2 bucket-name/2019
+	s3cli list-v2 bucket-name/2019
 * list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z)
-	s3cli ls2 bucket-name --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
+	s3cli list-v2 bucket-name --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
 * list Objects(2006-01-02T15:04:05Z < modifyTime < 2020-06-03T00:00:00Z) start with common prefix
-	s3cli ls2 bucket-name/prefix --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
+	s3cli list-v2 bucket-name/prefix --start-time 2006-01-02T15:04:05Z --end-time 2020-06-03T00:00:00Z
 `,
 		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -512,7 +512,7 @@ Credential EnvVar:
 	listObjectV2Cmd.Flags().StringP("delimiter", "d", "", "Object delimiter")
 	listObjectV2Cmd.Flags().BoolP("index", "i", false, "show Object index")
 	listObjectV2Cmd.Flags().BoolP("owner", "", false, "fetch owner")
-	listObjectV2Cmd.Flags().BoolP("all", "a", false, "list all Objects")
+	listObjectV2Cmd.Flags().BoolP("all", "", false, "list all Objects")
 	listObjectV2Cmd.Flags().StringP("start-time", "", "2006-01-02T15:04:05Z", "show Objects modify-time after start-time(UTC)")
 	listObjectV2Cmd.Flags().StringP("end-time", "", "2060-01-02T15:04:05Z", "show Objects modify-time before end-time(UTC)")
 	rootCmd.AddCommand(listObjectV2Cmd)

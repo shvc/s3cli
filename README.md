@@ -18,7 +18,7 @@ aws_secret_access_key=mySecretKey
 
 #### Usage
 ```shell
-./s3cli -h
+./s3cli -h        
 s3cli usage:
 Endpoint EnvVar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
@@ -34,7 +34,7 @@ Usage:
 Available Commands:
   acl            get/set Bucket/Object ACL
   cat            cat Object
-  completion     generate the autocompletion script for the specified shell
+  completion     Generate the autocompletion script for the specified shell
   copy           copy Object
   create-bucket  create Bucket(s)
   delete         delete Object or Bucket
@@ -43,8 +43,8 @@ Available Commands:
   head           head Bucket or Object
   help           Help about any command
   list           list Buckets or Objects
+  list-v2        list Buckets or Objects(API V2)
   list-version   list Object versions
-  list2          list Buckets or Objects(V2)
   mpu-abort      abort a MPU request
   mpu-complete   complete a MPU request
   mpu-create     create a MPU request
@@ -64,12 +64,14 @@ Flags:
   -e, --endpoint string               S3 endpoint(http://host:port)
       --expire duration               presign URL expiration (default 24h0m0s)
   -h, --help                          help for s3cli
+      --http-keep-alive               http keep alive (default true)
   -o, --output string                 output format(verbose,simple,json,line) (default "simple")
       --path-style                    use path style (default true)
       --presign                       presign URL and exit
   -R, --region string                 S3 region (default "cn-north-1")
       --response-header-timeout int   http response header timeout (default 5)
   -s, --sk string                     S3 secret key
+      --v2sign                        S3 signature version v2
   -v, --version                       version for s3cli
 
 Use "s3cli [command] --help" for more information about a command.
