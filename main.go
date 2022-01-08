@@ -136,7 +136,7 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "s", "", "S3 secret key")
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http keep alive")
-	rootCmd.PersistentFlags().BoolVarP(&v2Signer, "v2sign", "", false, "S3 signature version v2")
+	rootCmd.PersistentFlags().BoolVarP(&v2Signer, "v2sign", "", false, "S3 signature v2")
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", 5, "http dial timeout")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", 5, "http response header timeout")
 
