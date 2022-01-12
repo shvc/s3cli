@@ -277,9 +277,10 @@ Credential EnvVar:
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			var fd *os.File
 			contentType := cmd.Flag("content-type").Value.String()
+			metadata := cmd.Flag("metadata").Value.String()
 			bucket, key := splitBucketObject(args[0])
 			if len(args) < 2 { // upload a zero-size file
-				err = sc.putObject(bucket, key, "", fd)
+				err = sc.putObject(bucket, key, contentType, metadata, fd)
 			} else if len(args) == 2 { // upload one file
 				if key == "" {
 					key = filepath.Base(args[1])
@@ -292,7 +293,7 @@ Credential EnvVar:
 				if contentType == "" {
 					contentType = mime.TypeByExtension(filepath.Ext(args[1]))
 				}
-				err = sc.putObject(bucket, key, contentType, fd)
+				err = sc.putObject(bucket, key, contentType, metadata, fd)
 			} else { // upload multi files
 				for _, v := range args[1:] {
 					fd, err = os.Open(v)
@@ -303,7 +304,7 @@ Credential EnvVar:
 						contentType = mime.TypeByExtension(filepath.Ext(args[1]))
 					}
 					newKey := key + filepath.Base(v)
-					err = sc.putObject(bucket, newKey, contentType, fd)
+					err = sc.putObject(bucket, newKey, contentType, metadata, fd)
 					if err != nil {
 						fd.Close()
 						return sc.errorHandler(err)
@@ -315,6 +316,7 @@ Credential EnvVar:
 		},
 	}
 	uploadObjectCmd.Flags().StringP("content-type", "", "", "specify(not auto detect) Object content-type")
+	uploadObjectCmd.Flags().StringP("metadata", "", "{}", "specify user metadata(json)")
 	rootCmd.AddCommand(uploadObjectCmd)
 
 	headCmd := &cobra.Command{
