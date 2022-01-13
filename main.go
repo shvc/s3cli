@@ -161,10 +161,10 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "ak", "a", "", "S3 access key")
 	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "sk", "s", "", "S3 secret key")
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
-	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http keep alive")
+	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http Keep-Alive")
 	rootCmd.PersistentFlags().BoolVarP(&v2Signer, "v2sign", "", false, "S3 signature v2")
-	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", 5, "http dial timeout")
-	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", 5, "http response header timeout")
+	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", 5, "http dial timeout in seconds")
+	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", 5, "http response header timeout in seconds")
 
 	// presign(V2) command
 	presignCmd := &cobra.Command{
