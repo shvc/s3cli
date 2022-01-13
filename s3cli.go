@@ -780,7 +780,7 @@ func (sc *S3Cli) getObject(bucket, key, oRange, version string) error {
 	defer fd.Close()
 	_, err = io.Copy(fd, resp.Body)
 	if sc.output == outputVerbose {
-		fmt.Println(time.Now().Format(time.RFC3339), "download", filename)
+		fmt.Println(resp)
 	} else if sc.output == outputLine {
 		fmt.Println(time.Now().Format(time.RFC3339), "download", filename)
 	}
