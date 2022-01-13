@@ -8,14 +8,6 @@ https://github.com/vager/s3cli/releases
 unzip s3cli-*.zip -d /usr/local/bin/
 ```
 
-#### AWS credentials configuration
-Add your ak/sk to `~/.aws/credentials` or use cli flag(--ak, --sk)
-```
-[default]
-aws_access_key_id=myAccessKey
-aws_secret_access_key=mySecretKey
-```
-
 #### Usage
 ```shell
 ./s3cli -h        
@@ -23,9 +15,9 @@ s3cli usage:
 Endpoint EnvVar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 Credential EnvVar:
-	AWS_ACCESS_KEY_ID=AK      (only read if flag -p is not set or --ak is not set)
+	AWS_ACCESS_KEY_ID=AK      (only read if flag --ak is not set)
 	AWS_ACCESS_KEY=AK         (only read if AWS_ACCESS_KEY_ID is not set)
-	AWS_SECRET_ACCESS_KEY=SK  (only read if flag -p is not set or --sk is not set)
+	AWS_SECRET_ACCESS_KEY=SK  (only read if flag --sk is not set)
 	AWS_SECRET_KEY=SK         (only read if AWS_SECRET_ACCESS_KEY is not set)
 
 Usage:
@@ -71,7 +63,7 @@ Flags:
   -R, --region string                 S3 region (default "cn-north-1")
       --response-header-timeout int   http response header timeout (default 5)
   -s, --sk string                     S3 secret key
-      --v2sign                        S3 signature version v2
+      --v2sign                        S3 signature v2
   -v, --version                       version for s3cli
 
 Use "s3cli [command] --help" for more information about a command.
