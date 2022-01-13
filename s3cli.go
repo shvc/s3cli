@@ -32,8 +32,8 @@ const (
 type S3Cli struct {
 	//profile    string // profile in credentials file
 	endpoint   string // Server endpoine(URL)
-	ak         string // access-key
-	sk         string // secret-key
+	accessKey  string // access-key
+	secretKey  string // secret-key
 	region     string
 	presign    bool // just presign
 	presignExp time.Duration

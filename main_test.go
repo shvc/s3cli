@@ -19,10 +19,10 @@ var (
 )
 
 var s3cliTest = S3Cli{
-	ak:     "my-ak",
-	sk:     "my-sk",
-	region: s3.BucketLocationConstraintCnNorth1,
-	Client: nil,
+	accessKey: "my-ak",
+	secretKey: "my-sk",
+	region:    s3.BucketLocationConstraintCnNorth1,
+	Client:    nil,
 }
 
 func TestMain(m *testing.M) {

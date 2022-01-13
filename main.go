@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"mime"
 	"net"
@@ -47,13 +48,33 @@ func splitBucketObject(bucketObject string) (bucket, object string) {
 }
 
 func newS3Client(sc *S3Cli) (*s3.S3, error) {
-	if sc.ak != "" && sc.sk != "" {
-		os.Setenv("AWS_ACCESS_KEY_ID", sc.ak)
-		os.Setenv("AWS_SECRET_ACCESS_KEY", sc.sk)
-	}
-
 	if sc.endpoint == "" {
 		sc.endpoint = os.Getenv(endpointEnvVar)
+	}
+	if sc.endpoint == "" {
+		return nil, errors.New("unknown endpoint")
+	}
+
+	if sc.accessKey == "" {
+		sc.accessKey = os.Getenv("AWS_ACCESS_KEY_ID")
+		if sc.accessKey == "" {
+			sc.accessKey = os.Getenv("AWS_ACCESS_KEY")
+		}
+	}
+
+	if sc.secretKey == "" {
+		sc.secretKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
+		if sc.secretKey == "" {
+			sc.secretKey = os.Getenv("AWS_SECRET_KEY")
+		}
+	}
+
+	if sc.accessKey == "" && sc.secretKey != "" {
+		return nil, errors.New("unknown accessKey")
+	}
+
+	if sc.accessKey != "" && sc.secretKey == "" {
+		return nil, errors.New("unknown secretKey")
 	}
 
 	cfg := &aws.Config{
@@ -79,6 +100,11 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 
 			}),
 	}
+	if sc.accessKey == "" && sc.secretKey == "" {
+		cfg.Credentials = credentials.AnonymousCredentials
+	} else {
+		cfg.Credentials = credentials.NewStaticCredentials(sc.accessKey, sc.secretKey, "")
+	}
 	sess := session.Must(session.NewSession(cfg))
 
 	if sc.debug {
@@ -91,7 +117,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 			if req.Config.Credentials == credentials.AnonymousCredentials {
 				return
 			}
-			sign(sc.ak, sc.sk, req.HTTPRequest)
+			sign(sc.accessKey, sc.secretKey, req.HTTPRequest)
 		}
 		svc.Handlers.Sign.Clear()
 		svc.Handlers.Sign.PushBackNamed(corehandlers.BuildContentLengthHandler)
@@ -110,9 +136,9 @@ func main() {
 Endpoint EnvVar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
 Credential EnvVar:
-	AWS_ACCESS_KEY_ID=AK      (only read if flag -p is not set or --ak is not set)
+	AWS_ACCESS_KEY_ID=AK      (only read if flag --ak is not set)
 	AWS_ACCESS_KEY=AK         (only read if AWS_ACCESS_KEY_ID is not set)
-	AWS_SECRET_ACCESS_KEY=SK  (only read if flag -p is not set or --sk is not set)
+	AWS_SECRET_ACCESS_KEY=SK  (only read if flag --sk is not set)
 	AWS_SECRET_KEY=SK         (only read if AWS_SECRET_ACCESS_KEY is not set)`,
 		Version: version,
 		Hidden:  true,
@@ -132,8 +158,8 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", "S3 endpoint(http://host:port)")
 	//rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credentials file")
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", s3.BucketLocationConstraintCnNorth1, "S3 region")
-	rootCmd.PersistentFlags().StringVarP(&sc.ak, "ak", "a", "", "S3 access key")
-	rootCmd.PersistentFlags().StringVarP(&sc.sk, "sk", "s", "", "S3 secret key")
+	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "ak", "a", "", "S3 access key")
+	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "sk", "s", "", "S3 secret key")
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http keep alive")
 	rootCmd.PersistentFlags().BoolVarP(&v2Signer, "v2sign", "", false, "S3 signature v2")
