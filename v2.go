@@ -6,8 +6,10 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -33,6 +35,25 @@ var s3ParamsToSign = map[string]struct{}{
 	"response-cache-control":       {},
 	"response-content-disposition": {},
 	"response-content-encoding":    {},
+}
+
+// presignV2 presigne URL with escaped key(Object name).
+func v2Presign(AccessKey, SecretKey string, expireTime time.Duration, req *http.Request) {
+	exp := strconv.FormatInt(time.Now().Unix()+int64(expireTime.Seconds()), 10)
+
+	q := req.URL.Query()
+	q.Set("AWSAccessKeyId", AccessKey)
+	q.Set("Expires", exp)
+	contentType := req.Header.Get("Content-Type")
+
+	contentMd5 := req.Header.Get("Content-MD5")
+	strToSign := fmt.Sprintf("%s\n%s\n%s\n%v\n%s", req.Method, contentMd5, contentType, exp, req.URL.EscapedPath())
+
+	mac := hmac.New(sha1.New, []byte(SecretKey))
+	mac.Write([]byte(strToSign))
+
+	q.Set("Signature", base64.StdEncoding.EncodeToString(mac.Sum(nil)))
+	req.URL.RawQuery = q.Encode()
 }
 
 // sign signs requests using v2 auth

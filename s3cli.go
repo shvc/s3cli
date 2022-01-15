@@ -42,41 +42,7 @@ type S3Cli struct {
 	Client     *s3.S3 // manual init this field
 }
 
-// presignV2 presigne URL with escaped key(Object name).
-func (sc *S3Cli) presignV2(method, bucketKey, contentType string) (string, error) {
-	if bucketKey == "" || bucketKey[0] == '/' {
-		return "", fmt.Errorf("invalid bucket/key: %s", bucketKey)
-	}
-
-	secret, err := sc.Client.Config.Credentials.Get()
-	if err != nil {
-		return "", fmt.Errorf("access/secret key, %w", err)
-	}
-
-	u, err := url.Parse(sc.endpoint)
-	if err != nil {
-		return "", err
-	}
-	exp := strconv.FormatInt(time.Now().Unix()+int64(sc.presignExp.Seconds()), 10)
-
-	q := u.Query()
-	q.Set("AWSAccessKeyId", secret.AccessKeyID)
-	q.Set("Expires", exp)
-	u.Path = fmt.Sprintf("/%s", bucketKey)
-
-	contentMd5 := "" // header Content-MD5
-	strToSign := fmt.Sprintf("%s\n%s\n%s\n%v\n%s", method, contentMd5, contentType, exp, u.EscapedPath())
-
-	mac := hmac.New(sha1.New, []byte(secret.SecretAccessKey))
-	mac.Write([]byte(strToSign))
-
-	q.Set("Signature", base64.StdEncoding.EncodeToString(mac.Sum(nil)))
-	u.RawQuery = q.Encode()
-
-	return u.String(), nil
-}
-
-// presignV2Raw presigne URL with raw key(Object name).
+// presignV2Raw presigne URL with raw(not escape) key(Object name).
 func (sc *S3Cli) presignV2Raw(method, bucketKey, contentType string) (string, error) {
 	if bucketKey == "" || bucketKey[0] == '/' {
 		return "", fmt.Errorf("invalid bucket/key: %s", bucketKey)

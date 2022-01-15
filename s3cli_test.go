@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	mrand "math/rand"
-	"net/http"
 	"testing"
 	"time"
 
@@ -28,13 +27,6 @@ func randomString() string {
 		}
 	}
 	return hex.EncodeToString(buf)
-}
-
-func Test_presignV2(t *testing.T) {
-	_, err := s3cliTest.presignV2(http.MethodGet, "bucket/key", "")
-	if err != nil {
-		t.Errorf("presignV2 failed: %s", err)
-	}
 }
 
 func Test_bucketCreate(t *testing.T) {

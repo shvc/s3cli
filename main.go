@@ -36,7 +36,7 @@ var (
 	dialTimeout           = 5
 	responseHeaderTimeout = 5
 	httpKeepAlive         = true
-	v2Signer              = false
+	v2Sign                = false
 )
 
 func splitBucketObject(bucketObject string) (bucket, object string) {
@@ -111,17 +111,19 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 		sess.Config.LogLevel = aws.LogLevel(aws.LogDebug)
 	}
 	svc := s3.New(sess)
-	if v2Signer {
-		signer := func(req *request.Request) {
-			// Ignore AnonymousCredentials object
+	if v2Sign {
+		svc.Handlers.Sign.Clear()
+		svc.Handlers.Sign.PushBackNamed(corehandlers.BuildContentLengthHandler)
+		svc.Handlers.Sign.PushBack(func(req *request.Request) {
 			if req.Config.Credentials == credentials.AnonymousCredentials {
 				return
 			}
-			sign(sc.accessKey, sc.secretKey, req.HTTPRequest)
-		}
-		svc.Handlers.Sign.Clear()
-		svc.Handlers.Sign.PushBackNamed(corehandlers.BuildContentLengthHandler)
-		svc.Handlers.Sign.PushBack(signer)
+			if req.ExpireTime > 0 {
+				v2Presign(sc.accessKey, sc.secretKey, req.ExpireTime, req.HTTPRequest)
+			} else {
+				sign(sc.accessKey, sc.secretKey, req.HTTPRequest)
+			}
+		})
 	}
 
 	return svc, nil
@@ -153,8 +155,8 @@ Credential EnvVar:
 	}
 	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "show SDK debug log")
 	rootCmd.PersistentFlags().StringVarP(&sc.output, "output", "o", outputSimple, "output format(verbose,simple,json,line)")
-	rootCmd.PersistentFlags().BoolVarP(&sc.presign, "presign", "", false, "presign URL and exit")
-	rootCmd.PersistentFlags().DurationVarP(&sc.presignExp, "expire", "", 24*time.Hour, "presign URL expiration")
+	rootCmd.PersistentFlags().BoolVarP(&sc.presign, "presign", "", false, "presign Request and exit")
+	rootCmd.PersistentFlags().DurationVarP(&sc.presignExp, "presign-exp", "", 24*time.Hour, "presign Request expiration duration")
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", "S3 endpoint(http://host:port)")
 	//rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credentials file")
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", s3.BucketLocationConstraintCnNorth1, "S3 region")
@@ -162,22 +164,21 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "sk", "s", "", "S3 secret key")
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http Keep-Alive")
-	rootCmd.PersistentFlags().BoolVarP(&v2Signer, "v2sign", "", false, "S3 signature v2")
+	rootCmd.PersistentFlags().BoolVarP(&v2Sign, "v2sign", "", false, "S3 signature v2")
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", 5, "http dial timeout in seconds")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", 5, "http response header timeout in seconds")
 
 	// presign(V2) command
 	presignCmd := &cobra.Command{
-		Use:     "presign <bucket/key>",
-		Aliases: []string{"ps"},
-		Short:   "presign(V2) URL",
-		Long: `presign(V2) URL usage:
-* presign(ps) a GET Object URL
-	s3cli ps bucket-name/key01
-* presign(ps) a DELETE Object URL
-	s3cli ps -X delete bucket-name/key01
-* presign(ps) a PUT Object URL and specify content-type
-	s3cli ps -X PUT -T text/plain bucket-name/key02
+		Use:   "presign <bucket/key>",
+		Short: "presign(V2 and not escape URL path) a request",
+		Long: `presign(V2 and not escape URL path) usage:
+* presign a GET Object URL
+	s3cli presign bucket-name/key(01)
+* presign a DELETE Object URL
+	s3cli presign -X delete bucket-name/key(01)
+* presign a PUT Object URL and specify content-type
+	s3cli presign -X PUT -T text/plain bucket-name/key(01)
 	curl -X PUT -H content-type:text/plain -d test-str 'presign-url'`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -191,12 +192,8 @@ Credential EnvVar:
 			var s string
 			var err error
 			contentType := cmd.Flag("content-type").Value.String()
-			raw := cmd.Flag("raw").Changed
-			if raw {
-				s, err = sc.presignV2Raw(method, args[0], contentType)
-			} else {
-				s, err = sc.presignV2(method, args[0], contentType)
-			}
+
+			s, err = sc.presignV2Raw(method, args[0], contentType)
 			if err != nil {
 				return sc.errorHandler(err)
 			}
@@ -206,7 +203,6 @@ Credential EnvVar:
 	}
 	presignCmd.Flags().StringP("method", "X", http.MethodGet, "http request method")
 	presignCmd.Flags().StringP("content-type", "T", "", "http request content-type")
-	presignCmd.Flags().BoolP("raw", "", false, "raw(not escape) object name")
 	rootCmd.AddCommand(presignCmd)
 
 	bucketCreateCmd := &cobra.Command{

@@ -1,5 +1,5 @@
 ## s3cli
-s3cli is a command-line tool for uploading, retrieving and managing data in AWS S3 and other S3 compatible storage service.
+s3cli is a command-line tool for uploading, retrieving and managing data in AWS S3 compatible storage service.
 
 #### Download prebuild binary
 https://github.com/vager/s3cli/releases  
@@ -10,7 +10,7 @@ unzip s3cli-*.zip -d /usr/local/bin/
 
 #### Usage
 ```shell
-./s3cli -h        
+./s3cli -h
 s3cli usage:
 Endpoint EnvVar:
 	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
@@ -43,7 +43,7 @@ Available Commands:
   mpu-list       list MPU
   mpu-upload     mpu-upload MPU part(s)
   policy         get/set Bucket Policy
-  presign        presign(V2) URL
+  presign        presign(V2 and not escape URL path) a request
   rename         rename Object
   restore        restore Object
   upload         upload Object(s)
@@ -52,16 +52,16 @@ Available Commands:
 Flags:
   -a, --ak string                     S3 access key
       --debug                         show SDK debug log
-      --dial-timeout int              http dial timeout (default 5)
+      --dial-timeout int              http dial timeout in seconds (default 5)
   -e, --endpoint string               S3 endpoint(http://host:port)
-      --expire duration               presign URL expiration (default 24h0m0s)
   -h, --help                          help for s3cli
-      --http-keep-alive               http keep alive (default true)
+      --http-keep-alive               http Keep-Alive (default true)
   -o, --output string                 output format(verbose,simple,json,line) (default "simple")
       --path-style                    use path style (default true)
-      --presign                       presign URL and exit
+      --presign                       presign Request and exit
+      --presign-exp duration          presign Request expiration duration (default 24h0m0s)
   -R, --region string                 S3 region (default "cn-north-1")
-      --response-header-timeout int   http response header timeout (default 5)
+      --response-header-timeout int   http response header timeout in seconds (default 5)
   -s, --sk string                     S3 secret key
       --v2sign                        S3 signature v2
   -v, --version                       version for s3cli
@@ -100,18 +100,21 @@ s3cli delete bucket-name
 - upload(put) Objcet(s)  
 ```sh
 # upload file(s)
-s3cli upload bucket-name/key2 /etc/hosts  # upload a file and specify Key(key2)
-s3cli upload bucket-name /etc/hosts       # upload a file and use filename as Key
-s3cli upload bucket-name *.txt            # upload files and use filename as Key
-s3cli upload bucket-name/dir/ *.txt       # upload files and set Prefix(dir/) to all uploaded Object
-s3cli put bucket-name/key3 --presign      # presign(V4) a PUT Object URL
+s3cli upload bucket-name/k2 /etc/hosts           # upload a file and specify Key(k2)
+s3cli upload --v2sign bucket-name/k2 /etc/hosts  # upload(V2 sign) a file and specify Key(k2)
+s3cli upload bucket-name /etc/hosts              # upload a file and use filename(hosts) as Key
+s3cli upload bucket-name *.txt                   # upload files and use filename as Key
+s3cli upload bucket-name/dir/ *.txt              # upload files and set Prefix(dir/) to all uploaded Object
+s3cli put bucket-name/key3 --presign             # presign(V4) a PUT Object URL
+s3cli put --v2sign bucket-name/key3 --presign    # presign(V2) a PUT Object URL
 ```
 - download(get) Object(s)  
 ```sh
 # download Object(s)
-s3cli download bucket-name/key            # download one Object to current dir
-s3cli download bucket-name/key key1 key2  # download Object(s) to current dir 
-s3cli download bucket-name/key --presign  # presign(V4) a GET Object URL
+s3cli download bucket-name/k1                     # download Object(k1) to current dir
+s3cli download --v2sign bucket-name/k1            # download(V2 sign) Object(k1) to current dir
+s3cli download bucket-name/k1 k2 k3               # download Objects(key, key1 and key2) to current dir 
+s3cli download --v2sign bucket-name/k1 --presign  # presign(V2) a GET Object URL
 ```
 
 - list(ls) Objects  
@@ -131,13 +134,9 @@ s3cli delete bucket-name --force        # delete Bucket and all Objects
 s3cli delete bucket-name/key2 --presign # presign(V4) an DELETE Object URL
 ```
 
-- presign(V2) URL  
+- presign(V2) URL with raw(not escape) URL path  
 ```shell
-# presign URL and escape key
-s3cli presign 'bucket/key(0*1).txt'
-http://192.168.55.2:9000/bucket/key%280%2A1%29.txt?AWSAccessKeyId=object_user1&Expires=1588503069&Signature=dVy1V1E%2FurLvzvpiF3dYhJrNMRY%3D
-
 # presign URL and not escape key
-s3cli presign --raw 'bucket/key(0*1).txt'
+s3cli presign 'bucket/key(0*1).txt'
 http://192.168.55.2:9000/bucket/key(0*1).txt?AWSAccessKeyId=object_user1&Expires=1588503108&Signature=93gNcprC%2BQTvlvaBxr0EizIpehM%3D
 ```
