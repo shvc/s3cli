@@ -11,14 +11,13 @@ unzip s3cli-*.zip -d /usr/local/bin/
 #### Usage
 ```shell
 ./s3cli -h
-s3cli usage:
-Endpoint EnvVar:
-	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
-Credential EnvVar:
-	AWS_ACCESS_KEY_ID=AK      (only read if flag --ak is not set)
-	AWS_ACCESS_KEY=AK         (only read if AWS_ACCESS_KEY_ID is not set)
-	AWS_SECRET_ACCESS_KEY=SK  (only read if flag --sk is not set)
-	AWS_SECRET_KEY=SK         (only read if AWS_SECRET_ACCESS_KEY is not set)
+EnvVar:
+	S3_ENDPOINT=http://host:port (only read if flag --endpoint is not set)
+	AWS_PROFILE=profile          (only read if flag --profile is not set)
+	AWS_ACCESS_KEY_ID=ak         (only read if flag --ak and --profile not set)
+	AWS_ACCESS_KEY=ak            (only read if AWS_ACCESS_KEY_ID is not set)
+	AWS_SECRET_ACCESS_KEY=sk     (only read if flag --sk and --profile not set)
+	AWS_SECRET_KEY=sk            (only read if AWS_SECRET_ACCESS_KEY is not set)
 
 Usage:
   s3cli [command]
@@ -50,7 +49,7 @@ Available Commands:
   version        bucket versioning
 
 Flags:
-  -a, --ak string                     S3 access key
+  -a, --ak string                     S3 access key(only read if profile not set)
       --debug                         show SDK debug log
       --dial-timeout int              http dial timeout in seconds (default 5)
   -e, --endpoint string               S3 endpoint(http://host:port)
@@ -60,9 +59,10 @@ Flags:
       --path-style                    use path style (default true)
       --presign                       presign Request and exit
       --presign-exp duration          presign Request expiration duration (default 24h0m0s)
+  -p, --profile string                profile in credentials file
   -R, --region string                 S3 region (default "cn-north-1")
       --response-header-timeout int   http response header timeout in seconds (default 5)
-  -s, --sk string                     S3 secret key
+  -s, --sk string                     S3 secret key(only read if profile not set)
       --v2sign                        S3 signature v2
   -v, --version                       version for s3cli
 

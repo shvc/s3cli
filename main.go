@@ -136,15 +136,14 @@ func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "s3cli",
 		Short: "s3cli",
-		Long: `s3cli usage:
-Endpoint EnvVar:
+		Long: `
+EnvVar:
 	S3_ENDPOINT=http://host:port (only read if flag --endpoint is not set)
-Credential EnvVar:
-	AWS_PROFILE=profile       (only read if flag --profile is not set)
-	AWS_ACCESS_KEY_ID=ak      (only read if flag --ak and --profile not set)
-	AWS_ACCESS_KEY=ak         (only read if AWS_ACCESS_KEY_ID is not set)
-	AWS_SECRET_ACCESS_KEY=sk  (only read if flag --sk and --profile not set)
-	AWS_SECRET_KEY=sk         (only read if AWS_SECRET_ACCESS_KEY is not set)`,
+	AWS_PROFILE=profile          (only read if flag --profile is not set)
+	AWS_ACCESS_KEY_ID=ak         (only read if flag --ak and --profile not set)
+	AWS_ACCESS_KEY=ak            (only read if AWS_ACCESS_KEY_ID is not set)
+	AWS_SECRET_ACCESS_KEY=sk     (only read if flag --sk and --profile not set)
+	AWS_SECRET_KEY=sk            (only read if AWS_SECRET_ACCESS_KEY is not set)`,
 		Version: version,
 		Hidden:  true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
