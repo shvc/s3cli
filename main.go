@@ -100,7 +100,9 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 
 			}),
 	}
-	if sc.accessKey == "" && sc.secretKey == "" {
+	if sc.profile != "" {
+		cfg.Credentials = credentials.NewSharedCredentials("", sc.profile)
+	} else if sc.accessKey == "" && sc.secretKey == "" {
 		cfg.Credentials = credentials.AnonymousCredentials
 	} else {
 		cfg.Credentials = credentials.NewStaticCredentials(sc.accessKey, sc.secretKey, "")
@@ -136,12 +138,13 @@ func main() {
 		Short: "s3cli",
 		Long: `s3cli usage:
 Endpoint EnvVar:
-	S3_ENDPOINT=http://host:port (only read if flag -e is not set)
+	S3_ENDPOINT=http://host:port (only read if flag --endpoint is not set)
 Credential EnvVar:
-	AWS_ACCESS_KEY_ID=AK      (only read if flag --ak is not set)
-	AWS_ACCESS_KEY=AK         (only read if AWS_ACCESS_KEY_ID is not set)
-	AWS_SECRET_ACCESS_KEY=SK  (only read if flag --sk is not set)
-	AWS_SECRET_KEY=SK         (only read if AWS_SECRET_ACCESS_KEY is not set)`,
+	AWS_PROFILE=profile       (only read if flag --profile is not set)
+	AWS_ACCESS_KEY_ID=ak      (only read if flag --ak and --profile not set)
+	AWS_ACCESS_KEY=ak         (only read if AWS_ACCESS_KEY_ID is not set)
+	AWS_SECRET_ACCESS_KEY=sk  (only read if flag --sk and --profile not set)
+	AWS_SECRET_KEY=sk         (only read if AWS_SECRET_ACCESS_KEY is not set)`,
 		Version: version,
 		Hidden:  true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -158,10 +161,10 @@ Credential EnvVar:
 	rootCmd.PersistentFlags().BoolVarP(&sc.presign, "presign", "", false, "presign Request and exit")
 	rootCmd.PersistentFlags().DurationVarP(&sc.presignExp, "presign-exp", "", 24*time.Hour, "presign Request expiration duration")
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", "S3 endpoint(http://host:port)")
-	//rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credentials file")
+	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credentials file")
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", s3.BucketLocationConstraintCnNorth1, "S3 region")
-	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "ak", "a", "", "S3 access key")
-	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "sk", "s", "", "S3 secret key")
+	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "ak", "a", "", "S3 access key(only read if profile not set)")
+	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "sk", "s", "", "S3 secret key(only read if profile not set)")
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http Keep-Alive")
 	rootCmd.PersistentFlags().BoolVarP(&v2Sign, "v2sign", "", false, "S3 signature v2")
