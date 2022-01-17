@@ -793,11 +793,11 @@ func (sc *S3Cli) renameObject(source, bucket, key string) error {
 }
 
 // copyObjects copy Object to destBucket/key
-func (sc *S3Cli) copyObject(source, bucket, key string) error {
+func (sc *S3Cli) copyObject(source, dstBucket, dstKey string) error {
 	req, resp := sc.Client.CopyObjectRequest(&s3.CopyObjectInput{
 		CopySource: aws.String(source),
-		Bucket:     aws.String(bucket),
-		Key:        aws.String(key),
+		Bucket:     aws.String(dstBucket), // The name of the destination bucket.
+		Key:        aws.String(dstKey),    // The key of the destination object.
 	})
 
 	if sc.presign {

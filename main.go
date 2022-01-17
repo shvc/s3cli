@@ -681,17 +681,28 @@ EnvVar:
 		Aliases: []string{"cp"},
 		Short:   "copy Object",
 		Long: `copy Bucket/key to Bucket/key usage:
-* spedify destination key
-	s3cli copy bucket-name/key1 bucket-name2/key2
-* default destionation key
-	s3cli copy bucket-name/key1 bucket-name2`,
+* spedify destination Bucket and Key
+	s3cli copy bucket-src/key-src bucket-dst/key-dst
+* spedify destination Bucket
+	s3cli copy bucket-src/key-src bucket-dst/
+* spedify destionation Key
+	s3cli copy bucket-src/key-src key-dst`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, key := splitBucketObject(args[1])
-			if key == "" {
-				_, key = splitBucketObject(args[0])
+			srcBucket, srcKey := splitBucketObject(args[0])
+			dstBucket := ""
+			dstKey := ""
+			if !strings.Contains(args[1], "/") {
+				dstBucket = srcBucket
+				dstKey = args[1]
+			} else {
+				dstBucket, dstKey = splitBucketObject(args[1])
+				if dstKey == "" {
+					dstKey = srcKey
+				}
 			}
-			return sc.errorHandler(sc.copyObject(args[0], bucket, key))
+
+			return sc.errorHandler(sc.copyObject(args[0], dstBucket, dstKey))
 		},
 	}
 	rootCmd.AddCommand(copyObjectCmd)
