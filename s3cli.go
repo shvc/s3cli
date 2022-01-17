@@ -337,7 +337,7 @@ func (sc *S3Cli) bucketDelete(bucket string) error {
 }
 
 // putObject upload a Object
-func (sc *S3Cli) putObject(bucket, key, contentType, metadata string, r io.ReadSeeker) error {
+func (sc *S3Cli) putObject(bucket, key, contentType, metadata string, chunked bool, r io.ReadSeeker) error {
 	var objContentType *string
 	if contentType != "" {
 		objContentType = aws.String(contentType)
@@ -353,6 +353,9 @@ func (sc *S3Cli) putObject(bucket, key, contentType, metadata string, r io.ReadS
 		Key:         aws.String(key),
 		ContentType: objContentType,
 		Metadata:    meta,
+	}
+	if chunked {
+		putObjectInput.ContentLength = aws.Int64(0)
 	}
 	if !reflect.ValueOf(r).IsNil() {
 		putObjectInput.Body = r
