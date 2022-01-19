@@ -5,45 +5,42 @@ set -e
 BINARY='./s3cli'
 BUCKET='bucket4s3cli'
 KEY='key001'
+REGION='us-east-1'
 
-if ${BINARY} head $BUCKET > /dev/null 2>&1
-then
-	${BINARY} delete $BUCKET --force
-fi
+export S3_ENDPOINT='https://play.min.io:9000'
+export AWS_ACCESS_KEY='Q3AM3UQ867SPQQA43P2F'
+export AWS_SECRET_KEY='zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG'
 
-# bucket command test
-${BINARY} bucket create $BUCKET
-${BINARY} bucket head $BUCKET
-${BINARY} bucket list
-${BINARY} bucket acl $BUCKET
-${BINARY} bucket version $BUCKET
-#${BINARY} bucket acl $BUCKET public-read
-#${BINARY} bucket policy $BUCKET
+echo "s3cli-`date`" > file
 
+${BINARY} --region ${REGION} create-bucket $BUCKET
+${BINARY} --region ${REGION} head $BUCKET
+${BINARY} --region ${REGION} list
+${BINARY} --region ${REGION} acl $BUCKET
+${BINARY} --region ${REGION} version $BUCKET
 
-#
-${BINARY} head $BUCKET
-${BINARY} put  $BUCKET /etc/hosts
-${BINARY} head $BUCKET/hosts
-${BINARY} get  $BUCKET/hosts /tmp/hosts
+${BINARY} --region ${REGION} head $BUCKET
+${BINARY} --region ${REGION} put  $BUCKET file
+${BINARY} --region ${REGION} head $BUCKET/file
+${BINARY} --region ${REGION} get  $BUCKET/file
 
-${BINARY} put  $BUCKET/dir0/hosts /etc/hosts
-${BINARY} copy $BUCKET/dir0/hosts $BUCKET/copy/hosts
-${BINARY} head $BUCKET/copy/hosts
+${BINARY} --region ${REGION} put  $BUCKET/dir0/file file
+${BINARY} --region ${REGION} copy $BUCKET/dir0/file $BUCKET/copy/file
+${BINARY} --region ${REGION} head $BUCKET/copy/file
 
-${BINARY} put  $BUCKET/dir1/host2 /etc/hosts
-${BINARY} head $BUCKET/dir1/host2
-${BINARY} get  $BUCKET/dir1/host2 /tmp/hosts
+${BINARY} --region ${REGION} put  $BUCKET/dir1/file file
+${BINARY} --region ${REGION} head $BUCKET/dir1/file
+${BINARY} --region ${REGION} get  $BUCKET/dir1/file 
 
-${BINARY} put  $BUCKET *.go
-${BINARY} head $BUCKET/main.go
-${BINARY} put  $BUCKET/dir2/go/ *.go
-${BINARY} head $BUCKET/dir2/go/main.go
+${BINARY} --region ${REGION} put  $BUCKET/s3cli-test file
+${BINARY} --region ${REGION} head $BUCKET/s3cli-test
+${BINARY} --region ${REGION} put  $BUCKET/dir2/ file
+${BINARY} --region ${REGION} head $BUCKET/dir2/file
 
-${BINARY} get  $BUCKET/host --presign
-${BINARY} put  $BUCKET/presign-put --presign
-${BINARY} ps   $BUCKET/host
-${BINARY} ps   $BUCKET/host -X PUT
+${BINARY} --region ${REGION} get       $BUCKET/file --presign
+${BINARY} --region ${REGION} put       $BUCKET/fileput --presign
+${BINARY} --region ${REGION} presign   $BUCKET/file
+${BINARY} --region ${REGION} presign   $BUCKET/file -X PUT
 
 
-${BINARY} mpu  create $BUCKET/mpu008
+${BINARY} --region ${REGION} mpu-create $BUCKET/mpu008

@@ -35,6 +35,11 @@ pkg:
 test:
 	go test ./...
 
+## testcli: runs cli
+.PHONY: testcli
+testcli: default
+	sh test.sh
+
 ## vet: runs go vet
 .PHONY: vet
 vet:

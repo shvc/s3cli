@@ -19,8 +19,11 @@ jobs:
     - name: vet
       run: go vet ./...
 
-    - name: build
-      run: go build
-      
     - name: test
       run: go test ./...
+
+    - name: build
+      run: make
+
+    - name: testcli
+      run: make testcli
