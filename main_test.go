@@ -64,7 +64,7 @@ func Test_splitBucketObject(t *testing.T) {
 	}
 
 	for k, v := range cases {
-		bucket, object := splitBucketObject(k)
+		bucket, object := splitKeyValue(k, "/")
 		if bucket != v[0] || object != v[1] {
 			t.Errorf("expect: %s, got: %s, %s", v, bucket, object)
 		}

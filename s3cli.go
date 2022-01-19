@@ -4,7 +4,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -337,15 +336,16 @@ func (sc *S3Cli) bucketDelete(bucket string) error {
 }
 
 // putObject upload a Object
-func (sc *S3Cli) putObject(bucket, key, contentType, metadata string, chunked bool, r io.ReadSeeker) error {
+func (sc *S3Cli) putObject(bucket, key, contentType string, metadata map[string]string, stream bool, r io.ReadSeeker) error {
 	var objContentType *string
 	if contentType != "" {
 		objContentType = aws.String(contentType)
 	}
-	meta := map[string]*string{}
-	if metadata != "" {
-		if err := json.Unmarshal([]byte(metadata), &meta); err != nil {
-			return fmt.Errorf("decode metadata: %w", err)
+	var meta map[string]*string
+	if metadata != nil {
+		meta = map[string]*string{}
+		for k, v := range metadata {
+			meta[k] = aws.String(v)
 		}
 	}
 	putObjectInput := &s3.PutObjectInput{
@@ -354,7 +354,7 @@ func (sc *S3Cli) putObject(bucket, key, contentType, metadata string, chunked bo
 		ContentType: objContentType,
 		Metadata:    meta,
 	}
-	if chunked {
+	if stream {
 		putObjectInput.ContentLength = aws.Int64(0)
 	}
 	if !reflect.ValueOf(r).IsNil() {
