@@ -1045,7 +1045,7 @@ func (sc *S3Cli) mpuUpload(bucket, key, uid string, file map[int64]string) error
 			defer wg.Done()
 			fd, err := os.Open(filename)
 			if err != nil {
-				fmt.Printf("%2d   error: %s\n", num, err)
+				fmt.Printf("%2d   error %s\n", num, err)
 				return
 			}
 			defer fd.Close()
@@ -1058,10 +1058,15 @@ func (sc *S3Cli) mpuUpload(bucket, key, uid string, file map[int64]string) error
 			})
 			err = req.Send()
 			if err != nil {
-				fmt.Printf("%2d   error: %s\n", num, err)
+				fmt.Printf("%2d   error %s\n", num, err)
 				return
 			}
-			fmt.Printf("%2d success: %s\n", num, *resp.ETag)
+
+			if sc.output == outputVerbose {
+				fmt.Println(resp)
+			} else {
+				fmt.Printf("%2d success %s\n", num, aws.StringValue(resp.ETag))
+			}
 		}(i, localfile)
 	}
 	wg.Wait()

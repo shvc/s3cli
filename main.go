@@ -768,21 +768,21 @@ EnvVar:
 	s3cli mpu-upload bucket-name/key UploadId 1:localfile1
 * upload MPU part2
 	s3cli mpu-upload bucket-name/key UploadId 2:localfile2
-* upload MPU part1 and part2
-	s3cli mpu-upload bucket-name/key UploadId 1:localfile1 2:localfile2`,
+* upload MPU part3 and part4
+	s3cli mpu-upload bucket-name/key UploadId 3:localfile3 4:localfile4`,
 		Args: cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			files := map[int64]string{}
 			for _, v := range args[2:] {
-				i := strings.Index(v, ":")
-				if i < 1 {
-					return sc.errorHandler(fmt.Errorf("invalid part-num:file %s", v))
+				i, filename := splitKeyValue(v, ":")
+				if filename == "" {
+					return sc.errorHandler(fmt.Errorf("unknown filename: %s", filename))
 				}
-				part, err := strconv.ParseInt(v[:i], 10, 64)
+				index, err := strconv.ParseInt(i, 10, 64)
 				if err != nil {
-					return sc.errorHandler(fmt.Errorf("invalid part-num: %s, error: %s", v[:i], err))
+					return sc.errorHandler(fmt.Errorf("invalid part-num: %v, error: %s", i, err))
 				}
-				files[part] = v[i+1:]
+				files[index] = filename
 			}
 
 			bucket, key := splitKeyValue(args[0], "/")
@@ -801,6 +801,12 @@ EnvVar:
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := splitKeyValue(args[0], "/")
+			if bucket == "" {
+				return sc.errorHandler(fmt.Errorf("unknown bucket <bucket/key>(%v)", args[0]))
+			}
+			if key == "" {
+				return sc.errorHandler(fmt.Errorf("unknown key <bucket/key>(%v)", args[0]))
+			}
 			return sc.errorHandler(sc.mpuAbort(bucket, key, args[1]))
 		},
 	}
@@ -815,8 +821,11 @@ EnvVar:
 	s3cli mpu-list bucket-name/prefix`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, key := splitKeyValue(args[0], "/")
-			return sc.errorHandler(sc.mpuList(bucket, key))
+			bucket, prefix := splitKeyValue(args[0], "/")
+			if bucket == "" {
+				return sc.errorHandler(fmt.Errorf("unknown bucket <bucket/key>(%v)", args[0]))
+			}
+			return sc.errorHandler(sc.mpuList(bucket, prefix))
 		},
 	}
 	rootCmd.AddCommand(mpuListCmd)
@@ -824,13 +833,19 @@ EnvVar:
 	mpuCompleteCmd := &cobra.Command{
 		Use:     "mpu-complete <bucket/key> <UploadId> <part-etag> [<part-etag> ...]",
 		Short:   "complete a MPU request",
-		Aliases: []string{"mco"},
+		Aliases: []string{"mo"},
 		Long: `complete a mutiPartUpload request usage:
 * complete a MPU request
 	s3cli mpu-complete bucket-name/key UploadId etag01 etag02 etag03`,
 		Args: cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := splitKeyValue(args[0], "/")
+			if bucket == "" {
+				return sc.errorHandler(fmt.Errorf("unknown bucket <bucket/key>(%v)", args[0]))
+			}
+			if key == "" {
+				return sc.errorHandler(fmt.Errorf("unknown key <bucket/key>(%v)", args[0]))
+			}
 			etags := make([]string, len(args)-2)
 			for i := range etags {
 				etags[i] = args[i+2]

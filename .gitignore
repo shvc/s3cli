@@ -13,6 +13,7 @@
 
 # tmp file
 /tmp
+/testkey
 
 # binary file
 /s3cli
