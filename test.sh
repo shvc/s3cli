@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-set -x
+set -x -e
 
 APP='./s3cli'
 BUCKET='s3cli'
