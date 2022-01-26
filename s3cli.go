@@ -23,9 +23,13 @@ import (
 
 const (
 	outputVerbose = "verbose"
+	outputV       = "v"
 	outputSimple  = "simple"
+	outputS       = "s"
 	outputLine    = "line"
+	outputL       = "l"
 	outputJson    = "json"
+	outputJ       = "j"
 )
 
 // S3Cli represent a S3Cli Client
@@ -76,13 +80,34 @@ func (sc *S3Cli) presignV2Raw(method, bucketKey, contentType string) (string, er
 
 // errorHandler
 func (sc *S3Cli) errorHandler(err error) error {
-	if sc.output == outputVerbose {
+	if sc.verboseOutput() {
 		return err
 	}
 	if err != nil {
 		fmt.Println(err)
 	}
 	return nil
+}
+
+func (sc *S3Cli) verboseOutput() (v bool) {
+	if sc.output == outputVerbose || sc.output == outputV {
+		v = true
+	}
+	return
+}
+
+func (sc *S3Cli) lineOutput() (v bool) {
+	if sc.output == outputLine || sc.output == outputL {
+		v = true
+	}
+	return
+}
+
+func (sc *S3Cli) simpleOutput() (v bool) {
+	if sc.output == outputSimple || sc.output == outputS {
+		v = true
+	}
+	return
 }
 
 // bucketCreate create a Bucket
@@ -108,7 +133,7 @@ func (sc *S3Cli) bucketCreate(buckets []string) error {
 		if err != nil {
 			return err
 		}
-		if sc.output == outputVerbose {
+		if sc.verboseOutput() {
 			fmt.Println(resp)
 		}
 	}
@@ -131,12 +156,12 @@ func (sc *S3Cli) bucketList() error {
 	if err != nil {
 		return err
 	}
-	if sc.output == outputVerbose {
+	if sc.verboseOutput() {
 		fmt.Println(resp)
 		return nil
 	}
 	for _, b := range resp.Buckets {
-		if sc.output == outputLine {
+		if sc.lineOutput() {
 			fmt.Println(
 				aws.TimeValue(b.CreationDate).Format(time.RFC3339),
 				aws.StringValue(resp.Owner.DisplayName),
@@ -391,9 +416,9 @@ func (sc *S3Cli) putObject(bucket, key, contentType string, metadata map[string]
 		return err
 	}
 
-	if sc.output == outputVerbose {
+	if sc.verboseOutput() {
 		fmt.Println(resp.String())
-	} else if sc.output == outputLine {
+	} else if sc.lineOutput() {
 		fmt.Println(
 			time.Now().Format(time.RFC3339),
 			"upload",
@@ -428,7 +453,7 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 	if resp == nil {
 		return nil
 	}
-	if sc.output == outputVerbose {
+	if sc.verboseOutput() {
 		fmt.Println(resp)
 	} else if mtime {
 		fmt.Println(resp.LastModified)
@@ -500,12 +525,12 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool, st
 		Delimiter: aws.String(delimiter),
 	}, func(p *s3.ListObjectsOutput, last bool) (shouldContinue bool) {
 		i++
-		if sc.output == outputVerbose {
+		if sc.verboseOutput() {
 			fmt.Println(p)
 			return true
 		}
 		for _, p := range p.CommonPrefixes {
-			if sc.output != outputLine {
+			if !sc.lineOutput() {
 				fmt.Println(aws.StringValue(p.Prefix))
 			}
 		}
@@ -516,7 +541,7 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool, st
 			if obj.LastModified.After(endTime) {
 				continue
 			}
-			if sc.output == outputSimple {
+			if sc.simpleOutput() {
 				fmt.Println(
 					aws.StringValue(obj.StorageClass),
 					aws.TimeValue(obj.LastModified).Format(time.RFC3339),
@@ -551,12 +576,12 @@ func (sc *S3Cli) listAllObjectsV2(bucket, prefix, delimiter string, index, owner
 		FetchOwner: aws.Bool(owner),
 	}, func(p *s3.ListObjectsV2Output, last bool) (shouldContinue bool) {
 		i++
-		if sc.output == outputVerbose {
+		if sc.verboseOutput() {
 			fmt.Println(p)
 			return true
 		}
 		for _, p := range p.CommonPrefixes {
-			if sc.output != outputLine {
+			if !sc.lineOutput() {
 				fmt.Println(aws.StringValue(p.Prefix))
 			}
 		}
@@ -605,12 +630,12 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 	if err != nil {
 		return fmt.Errorf("list objects failed: %w", err)
 	}
-	if sc.output == outputVerbose {
+	if sc.verboseOutput() {
 		fmt.Println(resp)
 		return nil
 	}
 	for _, p := range resp.CommonPrefixes {
-		if sc.output != outputLine {
+		if !sc.lineOutput() {
 			fmt.Println(aws.StringValue(p.Prefix))
 		}
 	}
@@ -621,7 +646,7 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 		if obj.LastModified.After(endTime) {
 			continue
 		}
-		if sc.output == outputLine {
+		if sc.lineOutput() {
 			fmt.Println(
 				aws.StringValue(obj.StorageClass),
 				aws.TimeValue(obj.LastModified).Format(time.RFC3339),
@@ -662,12 +687,12 @@ func (sc *S3Cli) listObjectsV2(bucket, prefix, delimiter, marker string, maxkeys
 	if err != nil {
 		return fmt.Errorf("list objects failed: %w", err)
 	}
-	if sc.output == outputVerbose {
+	if sc.verboseOutput() {
 		fmt.Println(resp)
 		return nil
 	}
 	for _, p := range resp.CommonPrefixes {
-		if sc.output != outputLine {
+		if !sc.lineOutput() {
 			fmt.Println(aws.StringValue(p.Prefix))
 		}
 	}
@@ -678,7 +703,7 @@ func (sc *S3Cli) listObjectsV2(bucket, prefix, delimiter, marker string, maxkeys
 		if obj.LastModified.After(endTime) {
 			continue
 		}
-		if sc.output == outputLine {
+		if sc.lineOutput() {
 			fmt.Println(
 				aws.StringValue(obj.StorageClass),
 				aws.TimeValue(obj.LastModified).Format(time.RFC3339),
@@ -764,9 +789,9 @@ func (sc *S3Cli) getObject(bucket, key, oRange, version string) error {
 	}
 	defer fd.Close()
 	_, err = io.Copy(fd, resp.Body)
-	if sc.output == outputVerbose {
+	if sc.verboseOutput() {
 		fmt.Println(resp)
-	} else if sc.output == outputLine {
+	} else if sc.lineOutput() {
 		fmt.Println(time.Now().Format(time.RFC3339), "download", filename)
 	}
 	return err
@@ -812,14 +837,17 @@ func (sc *S3Cli) renameObject(source, bucket, key string) error {
 }
 
 // copyObjects copy Object to destBucket/key
-func (sc *S3Cli) copyObject(source, dstBucket, dstKey string, metadata map[string]*string) error {
+func (sc *S3Cli) copyObject(source, dstBucket, dstKey, contentType string, metadata map[string]*string) error {
 	ci := &s3.CopyObjectInput{
 		CopySource: aws.String(source),
 		Bucket:     aws.String(dstBucket), // The name of the destination bucket.
 		Key:        aws.String(dstKey),    // The key of the destination object.
 		Metadata:   metadata,
 	}
-	if ci.Metadata != nil {
+	if contentType != "" {
+		ci.ContentType = aws.String(contentType)
+	}
+	if ci.Metadata != nil || ci.ContentType != nil {
 		ci.MetadataDirective = aws.String(s3.MetadataDirectiveReplace)
 	}
 	req, resp := sc.Client.CopyObjectRequest(ci)
@@ -836,7 +864,7 @@ func (sc *S3Cli) copyObject(source, dstBucket, dstKey string, metadata map[strin
 	if err != nil {
 		return fmt.Errorf("copy object failed: %w", err)
 	}
-	if sc.output == outputVerbose {
+	if sc.verboseOutput() {
 		fmt.Println(resp)
 		return nil
 	}
@@ -860,7 +888,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 		if objectNum == 0 {
 			break
 		}
-		if sc.output == outputVerbose {
+		if sc.verboseOutput() {
 			fmt.Printf("Got %d Objects, ", objectNum)
 		}
 		objects := make([]*s3.ObjectIdentifier, 0, 1000)
@@ -880,7 +908,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 		} else {
 			objNum = objNum + int64(objectNum)
 		}
-		if sc.output == outputVerbose {
+		if sc.verboseOutput() {
 			fmt.Printf("%d Objects deleted\n", objNum)
 		}
 
@@ -926,7 +954,7 @@ func (sc *S3Cli) deleteObjectVersion(bucket, key, versionID string) error {
 		if err != nil {
 			return err
 		}
-		if sc.output == outputVerbose {
+		if sc.verboseOutput() {
 			fmt.Println(resp)
 		}
 	} else {
@@ -953,7 +981,7 @@ func (sc *S3Cli) deleteObjectVersion(bucket, key, versionID string) error {
 			if err != nil {
 				return err
 			}
-			if sc.output == outputVerbose {
+			if sc.verboseOutput() {
 				fmt.Printf("deleteMarker %s deleted\n", aws.StringValue(v.VersionId))
 			}
 		}
@@ -968,7 +996,7 @@ func (sc *S3Cli) deleteObjectVersion(bucket, key, versionID string) error {
 			if err != nil {
 				return err
 			}
-			if sc.output == outputVerbose {
+			if sc.verboseOutput() {
 				fmt.Printf("version %s deleted\n", aws.StringValue(v.VersionId))
 			}
 		}
@@ -994,7 +1022,7 @@ func (sc *S3Cli) deleteObject(bucket, key string) error {
 	if err != nil {
 		return err
 	}
-	if sc.output == outputVerbose {
+	if sc.verboseOutput() {
 		fmt.Println(resp)
 	}
 	return nil
@@ -1027,7 +1055,7 @@ func (sc *S3Cli) restoreObject(bucket, key, version string) error {
 	if err != nil {
 		return err
 	}
-	if sc.output == outputVerbose {
+	if sc.verboseOutput() {
 		fmt.Println(resp)
 	}
 	return nil
@@ -1082,7 +1110,7 @@ func (sc *S3Cli) mpuUpload(bucket, key, uid string, file map[int64]string) error
 				return
 			}
 
-			if sc.output == outputVerbose {
+			if sc.verboseOutput() {
 				fmt.Println(resp)
 			} else {
 				fmt.Printf("%2d success %s\n", num, aws.StringValue(resp.ETag))
@@ -1197,7 +1225,7 @@ func (sc *S3Cli) mpu(bucket, key, contentType string, partSize int64, r io.Reade
 		return err
 	}
 	if out != nil {
-		if sc.output == outputVerbose {
+		if sc.verboseOutput() {
 			fmt.Println("location :", out.Location)
 			fmt.Println("uploadID :", out.UploadID)
 			fmt.Println("ETag     :", aws.StringValue(out.ETag))

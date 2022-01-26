@@ -140,6 +140,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 func main() {
 	sc := S3Cli{}
 	objectMetadata := []string{}
+	objectContentType := ""
 	var rootCmd = &cobra.Command{
 		Use:   "s3cli",
 		Short: "s3cli",
@@ -187,7 +188,7 @@ EnvVar:
 * presign a DELETE Object URL
 	s3cli presign -X delete bucket-name/key(01)
 * presign a PUT Object URL and specify content-type
-	s3cli presign -X PUT -T text/plain bucket-name/key(01)
+	s3cli presign -X PUT --content-type text/plain bucket-name/key(01)
 	curl -X PUT -H content-type:text/plain -d test-str 'presign-url'`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -200,9 +201,7 @@ EnvVar:
 			}
 			var s string
 			var err error
-			contentType := cmd.Flag("content-type").Value.String()
-
-			s, err = sc.presignV2Raw(method, args[0], contentType)
+			s, err = sc.presignV2Raw(method, args[0], objectContentType)
 			if err != nil {
 				return sc.errorHandler(err)
 			}
@@ -211,7 +210,7 @@ EnvVar:
 		},
 	}
 	presignCmd.Flags().StringP("method", "X", http.MethodGet, "http request method")
-	presignCmd.Flags().StringP("content-type", "T", "", "http request content-type")
+	presignCmd.Flags().StringVar(&objectContentType, "content-type", "", "http request content-type")
 	rootCmd.AddCommand(presignCmd)
 
 	bucketCreateCmd := &cobra.Command{
@@ -327,7 +326,6 @@ EnvVar:
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			var fd *os.File
-			contentType := cmd.Flag("content-type").Value.String()
 			stream := cmd.Flag("stream").Changed
 			bucket, key := splitKeyValue(args[0], "/")
 			var metadata map[string]*string
@@ -341,7 +339,7 @@ EnvVar:
 				}
 			}
 			if len(args) < 2 { // upload a zero-size file
-				err = sc.putObject(bucket, key, contentType, metadata, stream, fd)
+				err = sc.putObject(bucket, key, objectContentType, metadata, stream, fd)
 			} else if len(args) == 2 { // upload one file
 				if key == "" {
 					key = filepath.Base(args[1])
@@ -351,21 +349,21 @@ EnvVar:
 					return sc.errorHandler(err)
 				}
 				defer fd.Close()
-				if contentType == "" {
-					contentType = mime.TypeByExtension(filepath.Ext(args[1]))
+				if objectContentType == "" {
+					objectContentType = mime.TypeByExtension(filepath.Ext(args[1]))
 				}
-				err = sc.putObject(bucket, key, contentType, metadata, stream, fd)
+				err = sc.putObject(bucket, key, objectContentType, metadata, stream, fd)
 			} else { // upload multi files
 				for _, v := range args[1:] {
 					fd, err = os.Open(v)
 					if err != nil {
 						return sc.errorHandler(err)
 					}
-					if contentType == "" {
-						contentType = mime.TypeByExtension(filepath.Ext(args[1]))
+					if objectContentType == "" {
+						objectContentType = mime.TypeByExtension(filepath.Ext(args[1]))
 					}
 					newKey := key + filepath.Base(v)
-					err = sc.putObject(bucket, newKey, contentType, metadata, stream, fd)
+					err = sc.putObject(bucket, newKey, objectContentType, metadata, stream, fd)
 					if err != nil {
 						fd.Close()
 						return sc.errorHandler(err)
@@ -376,7 +374,7 @@ EnvVar:
 			return sc.errorHandler(err)
 		},
 	}
-	uploadObjectCmd.Flags().StringP("content-type", "", "", "Object content-type(auto detect if not specified)")
+	uploadObjectCmd.Flags().StringVar(&objectContentType, "content-type", "", "Object content-type(auto detect if not specified)")
 	uploadObjectCmd.Flags().BoolP("stream", "", false, "stream mode(header Transfer-Encoding: chunked)")
 	uploadObjectCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "Object user metadata(format Key:Value)")
 	rootCmd.AddCommand(uploadObjectCmd)
@@ -750,10 +748,11 @@ EnvVar:
 				}
 			}
 
-			return sc.errorHandler(sc.copyObject(args[0], dstBucket, dstKey, metadata))
+			return sc.errorHandler(sc.copyObject(args[0], dstBucket, dstKey, objectContentType, metadata))
 		},
 	}
-	copyObjectCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "Object user metadata(format Key:Value)")
+	copyObjectCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "new Object user metadata(format Key:Value)")
+	copyObjectCmd.Flags().StringVar(&objectContentType, "content-type", "", "new Object content-type")
 	rootCmd.AddCommand(copyObjectCmd)
 
 	deleteObjectCmd := &cobra.Command{
@@ -907,7 +906,6 @@ EnvVar:
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			var fd *os.File
-			contentType := cmd.Flag("content-type").Value.String()
 			bucket, key := splitKeyValue(args[0], "/")
 			var metadata map[string]*string
 			for _, v := range objectMetadata {
@@ -929,19 +927,19 @@ EnvVar:
 				return sc.errorHandler(err)
 			}
 			defer fd.Close()
-			if contentType == "" {
-				contentType = mime.TypeByExtension(filepath.Ext(args[1]))
+			if objectContentType == "" {
+				objectContentType = mime.TypeByExtension(filepath.Ext(args[1]))
 			}
 			if key == "" {
 				key = filepath.Base(args[1])
 			}
 
-			err = sc.mpu(bucket, key, contentType, partSize<<20, fd, metadata)
+			err = sc.mpu(bucket, key, objectContentType, partSize<<20, fd, metadata)
 
 			return sc.errorHandler(err)
 		},
 	}
-	mpuCmd.Flags().String("content-type", "", "Object content-type(auto detect if not specified)")
+	mpuCmd.Flags().StringVar(&objectContentType, "content-type", "", "Object content-type(auto detect if not specified)")
 	mpuCmd.Flags().Int64("part-size", s3manager.MinUploadPartSize>>20, "MPU part-size in MB")
 	mpuCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "Object user metadata(format Key:Value)")
 	rootCmd.AddCommand(mpuCmd)
