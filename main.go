@@ -20,7 +20,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/spf13/cobra"
+)
+
+const (
+	defaultDialTimeout           = 10
+	defaultResponseHeaderTimeout = 10
 )
 
 var (
@@ -33,8 +39,8 @@ var (
 	// Without ForcePathStyle(pathStyle=false):
 	// 	https://BUCKET.s3.us-west-2.amazonaws.com/KEY
 	pathStyle             = true
-	dialTimeout           = 5
-	responseHeaderTimeout = 5
+	dialTimeout           int
+	responseHeaderTimeout int
 	httpKeepAlive         = true
 	v2Sign                = false
 )
@@ -167,8 +173,8 @@ EnvVar:
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http Keep-Alive")
 	rootCmd.PersistentFlags().BoolVarP(&v2Sign, "v2sign", "", false, "S3 signature v2")
-	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", 5, "http dial timeout in seconds")
-	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", 5, "http response header timeout in seconds")
+	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", defaultDialTimeout, "http dial timeout in seconds")
+	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", defaultResponseHeaderTimeout, "http response header timeout in seconds")
 
 	// presign(V2) command
 	presignCmd := &cobra.Command{
@@ -304,11 +310,14 @@ EnvVar:
 			contentType := cmd.Flag("content-type").Value.String()
 			stream := cmd.Flag("stream").Changed
 			bucket, key := splitKeyValue(args[0], "/")
-			metadata := map[string]string{}
+			var metadata map[string]*string
 			for _, v := range uploadMetadata {
 				k, v := splitKeyValue(v, ":")
 				if k != "" && v != "" {
-					metadata[k] = v
+					if metadata == nil {
+						metadata = make(map[string]*string)
+					}
+					metadata[k] = &v
 				}
 			}
 			if len(args) < 2 { // upload a zero-size file
@@ -854,6 +863,58 @@ EnvVar:
 		},
 	}
 	rootCmd.AddCommand(mpuCompleteCmd)
+
+	mpuMetadata := []string{}
+	mpuCmd := &cobra.Command{
+		Use:   "mpu <bucket[/key]> [file]",
+		Short: "mpu Object(mpu-create, mpu-upload and mpu-complete)",
+		Long: `mpu Object usage:
+* mpu a file
+	s3cli mpu bucket /path/to/file
+* mpu a file to Bucket/Key
+	s3cli mpu bucket-name/key /path/to/file
+`,
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			var fd *os.File
+			contentType := cmd.Flag("content-type").Value.String()
+			bucket, key := splitKeyValue(args[0], "/")
+			var metadata map[string]*string
+			for _, v := range mpuMetadata {
+				k, v := splitKeyValue(v, ":")
+				if k != "" && v != "" {
+					if metadata == nil {
+						metadata = make(map[string]*string)
+					}
+					metadata[k] = &v
+				}
+			}
+			partSize, err := strconv.ParseInt(cmd.Flag("part-size").Value.String(), 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid part-size %s", cmd.Flag("part-size").Value.String())
+			}
+
+			fd, err = os.Open(args[1])
+			if err != nil {
+				return sc.errorHandler(err)
+			}
+			defer fd.Close()
+			if contentType == "" {
+				contentType = mime.TypeByExtension(filepath.Ext(args[1]))
+			}
+			if key == "" {
+				key = filepath.Base(args[1])
+			}
+
+			err = sc.mpu(bucket, key, contentType, partSize<<20, fd, metadata)
+
+			return sc.errorHandler(err)
+		},
+	}
+	mpuCmd.Flags().String("content-type", "", "Object content-type(auto detect if not specified)")
+	mpuCmd.Flags().Int64("part-size", s3manager.MinUploadPartSize>>20, "MPU part-size in MB")
+	mpuCmd.Flags().StringArrayVar(&mpuMetadata, "md", nil, "Object user metadata(format Key:Value)")
+	rootCmd.AddCommand(mpuCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

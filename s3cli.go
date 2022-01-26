@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 const (
@@ -336,23 +337,17 @@ func (sc *S3Cli) bucketDelete(bucket string) error {
 }
 
 // putObject upload a Object
-func (sc *S3Cli) putObject(bucket, key, contentType string, metadata map[string]string, stream bool, r io.ReadSeeker) error {
+func (sc *S3Cli) putObject(bucket, key, contentType string, metadata map[string]*string, stream bool, r io.ReadSeeker) error {
 	var objContentType *string
 	if contentType != "" {
 		objContentType = aws.String(contentType)
 	}
-	var meta map[string]*string
-	if metadata != nil {
-		meta = map[string]*string{}
-		for k, v := range metadata {
-			meta[k] = aws.String(v)
-		}
-	}
+
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:      aws.String(bucket),
 		Key:         aws.String(key),
 		ContentType: objContentType,
-		Metadata:    meta,
+		Metadata:    metadata,
 	}
 	if stream {
 		putObjectInput.ContentLength = aws.Int64(0)
@@ -1156,4 +1151,35 @@ func (sc *S3Cli) mpuComplete(bucket, key, uid string, etags []string) error {
 	}
 	fmt.Println(resp)
 	return err
+}
+
+func (sc *S3Cli) mpu(bucket, key, contentType string, partSize int64, r io.Reader, metadata map[string]*string) error {
+	uploader := s3manager.NewUploaderWithClient(sc.Client, func(u *s3manager.Uploader) {
+		u.PartSize = partSize
+	})
+
+	mi := &s3manager.UploadInput{
+		Bucket:   aws.String(bucket),
+		Key:      aws.String(key),
+		Metadata: metadata,
+		Body:     r,
+	}
+	if contentType != "" {
+		mi.ContentType = aws.String(contentType)
+	}
+	out, err := uploader.Upload(mi)
+	if err != nil {
+		return err
+	}
+	if out != nil {
+		if sc.output == outputVerbose {
+			fmt.Println("location :", out.Location)
+			fmt.Println("uploadID :", out.UploadID)
+			fmt.Println("ETag     :", aws.StringValue(out.ETag))
+			fmt.Println("versionID:", aws.StringValue(out.VersionID))
+		} else {
+			fmt.Printf("%s %s %s %s\n", out.Location, out.UploadID, aws.StringValue(out.ETag), aws.StringValue(out.VersionID))
+		}
+	}
+	return nil
 }

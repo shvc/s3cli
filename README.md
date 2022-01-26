@@ -2,7 +2,7 @@
 s3cli is a command-line tool for uploading, retrieving and managing data in AWS S3 compatible storage service.
 
 #### Download prebuild binary
-https://github.com/vager/s3cli/releases  
+https://github.com/shvc/s3cli/releases  
 - Install s3cli to `/usr/local/bin/`  
 ```
 unzip s3cli-*.zip -d /usr/local/bin/
@@ -36,6 +36,7 @@ Available Commands:
   list           list Buckets or Objects
   list-v2        list Buckets or Objects(API V2)
   list-version   list Object versions
+  mpu            mpu Object(mpu-create, mpu-upload and mpu-complete)
   mpu-abort      abort a MPU request
   mpu-complete   complete a MPU request
   mpu-create     create a MPU request
@@ -51,7 +52,7 @@ Available Commands:
 Flags:
   -a, --ak string                     S3 access key(only read if profile not set)
       --debug                         show SDK debug log
-      --dial-timeout int              http dial timeout in seconds (default 5)
+      --dial-timeout int              http dial timeout in seconds (default 10)
   -e, --endpoint string               S3 endpoint(http://host:port)
   -h, --help                          help for s3cli
       --http-keep-alive               http Keep-Alive (default true)
@@ -61,7 +62,7 @@ Flags:
       --presign-exp duration          presign Request expiration duration (default 24h0m0s)
   -p, --profile string                profile in credentials file
   -R, --region string                 S3 region (default "cn-north-1")
-      --response-header-timeout int   http response header timeout in seconds (default 5)
+      --response-header-timeout int   http response header timeout in seconds (default 10)
   -s, --sk string                     S3 secret key(only read if profile not set)
       --v2sign                        S3 signature v2
   -v, --version                       version for s3cli

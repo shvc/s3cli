@@ -27,11 +27,11 @@ ${APP} --region ${REGION} policy  $BUCKET '{"Version":"2012-10-17","Statement":[
 ${APP} --region ${REGION} policy  $BUCKET
 ${APP} --region ${REGION} version $BUCKET
 
-${APP} --region ${REGION} put  $BUCKET ${KEY}
+${APP} --region ${REGION} put  $BUCKET ${KEY} --content-type applicaiton/json --md k1:v1 --md k2:v2
 ${APP} --region ${REGION} head $BUCKET/${KEY}
 ${APP} --region ${REGION} get  $BUCKET/${KEY}
 
-${APP} --region ${REGION} put  $BUCKET/dir0/${KEY} ${KEY}
+${APP} --region ${REGION} put  $BUCKET/dir0/${KEY} ${KEY} --content-type applicaiton/json --md k1:v1 --md k2:v2
 ${APP} --region ${REGION} get  $BUCKET/dir0/${KEY} 
 ${APP} --region ${REGION} copy $BUCKET/dir0/${KEY} $BUCKET/copy/${KEY}
 ${APP} --region ${REGION} head $BUCKET/copy/${KEY}
