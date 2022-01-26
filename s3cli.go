@@ -336,6 +336,27 @@ func (sc *S3Cli) bucketDelete(bucket string) error {
 	return err
 }
 
+func (sc *S3Cli) bucketCors(bucket string) error {
+	req, out := sc.Client.GetBucketCorsRequest(&s3.GetBucketCorsInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	err := req.Send()
+	if err != nil {
+		return err
+	}
+	fmt.Println(out.String())
+	return err
+}
+
 // putObject upload a Object
 func (sc *S3Cli) putObject(bucket, key, contentType string, metadata map[string]*string, stream bool, r io.ReadSeeker) error {
 	var objContentType *string

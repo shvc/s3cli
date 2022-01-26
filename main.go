@@ -285,6 +285,26 @@ EnvVar:
 	}
 	rootCmd.AddCommand(bucketVersionCmd)
 
+	bucketCorsCmd := &cobra.Command{
+		Use:   "cors <bucket> [arg]",
+		Short: "cors versioning",
+		Long: `get/set bucket cors usage:
+* get Bucket cors
+	s3cli cors bucket-name
+`,
+		Args: cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 1 {
+				bucket, _ := splitKeyValue(args[0], "/")
+				return sc.errorHandler(sc.bucketCors(bucket))
+			}
+
+			fmt.Println("not impl")
+			return nil
+		},
+	}
+	rootCmd.AddCommand(bucketCorsCmd)
+
 	// object upload(put)
 	uploadMetadata := []string{}
 	uploadObjectCmd := &cobra.Command{
