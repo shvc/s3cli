@@ -139,6 +139,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 
 func main() {
 	sc := S3Cli{}
+	objectMetadata := []string{}
 	var rootCmd = &cobra.Command{
 		Use:   "s3cli",
 		Short: "s3cli",
@@ -306,7 +307,6 @@ EnvVar:
 	rootCmd.AddCommand(bucketCorsCmd)
 
 	// object upload(put)
-	uploadMetadata := []string{}
 	uploadObjectCmd := &cobra.Command{
 		Use:     "upload <bucket[/key]> [file ...]",
 		Aliases: []string{"put"},
@@ -331,7 +331,7 @@ EnvVar:
 			stream := cmd.Flag("stream").Changed
 			bucket, key := splitKeyValue(args[0], "/")
 			var metadata map[string]*string
-			for _, v := range uploadMetadata {
+			for _, v := range objectMetadata {
 				k, v := splitKeyValue(v, ":")
 				if k != "" && v != "" {
 					if metadata == nil {
@@ -378,7 +378,7 @@ EnvVar:
 	}
 	uploadObjectCmd.Flags().StringP("content-type", "", "", "Object content-type(auto detect if not specified)")
 	uploadObjectCmd.Flags().BoolP("stream", "", false, "stream mode(header Transfer-Encoding: chunked)")
-	uploadObjectCmd.Flags().StringArrayVar(&uploadMetadata, "md", nil, "Object user metadata(format Key:Value)")
+	uploadObjectCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "Object user metadata(format Key:Value)")
 	rootCmd.AddCommand(uploadObjectCmd)
 
 	headCmd := &cobra.Command{
@@ -727,6 +727,16 @@ EnvVar:
 	s3cli copy bucket-src/key-src key-dst`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var metadata map[string]*string
+			for _, v := range objectMetadata {
+				k, v := splitKeyValue(v, ":")
+				if k != "" && v != "" {
+					if metadata == nil {
+						metadata = make(map[string]*string)
+					}
+					metadata[k] = &v
+				}
+			}
 			srcBucket, srcKey := splitKeyValue(args[0], "/")
 			dstBucket := ""
 			dstKey := ""
@@ -740,9 +750,10 @@ EnvVar:
 				}
 			}
 
-			return sc.errorHandler(sc.copyObject(args[0], dstBucket, dstKey))
+			return sc.errorHandler(sc.copyObject(args[0], dstBucket, dstKey, metadata))
 		},
 	}
+	copyObjectCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "Object user metadata(format Key:Value)")
 	rootCmd.AddCommand(copyObjectCmd)
 
 	deleteObjectCmd := &cobra.Command{
@@ -884,7 +895,6 @@ EnvVar:
 	}
 	rootCmd.AddCommand(mpuCompleteCmd)
 
-	mpuMetadata := []string{}
 	mpuCmd := &cobra.Command{
 		Use:   "mpu <bucket[/key]> [file]",
 		Short: "mpu Object(mpu-create, mpu-upload and mpu-complete)",
@@ -900,7 +910,7 @@ EnvVar:
 			contentType := cmd.Flag("content-type").Value.String()
 			bucket, key := splitKeyValue(args[0], "/")
 			var metadata map[string]*string
-			for _, v := range mpuMetadata {
+			for _, v := range objectMetadata {
 				k, v := splitKeyValue(v, ":")
 				if k != "" && v != "" {
 					if metadata == nil {
@@ -933,7 +943,7 @@ EnvVar:
 	}
 	mpuCmd.Flags().String("content-type", "", "Object content-type(auto detect if not specified)")
 	mpuCmd.Flags().Int64("part-size", s3manager.MinUploadPartSize>>20, "MPU part-size in MB")
-	mpuCmd.Flags().StringArrayVar(&mpuMetadata, "md", nil, "Object user metadata(format Key:Value)")
+	mpuCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "Object user metadata(format Key:Value)")
 	rootCmd.AddCommand(mpuCmd)
 
 	if err := rootCmd.Execute(); err != nil {

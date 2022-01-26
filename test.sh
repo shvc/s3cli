@@ -30,6 +30,7 @@ ${APP} --region ${REGION} version $BUCKET
 ${APP} --region ${REGION} put  $BUCKET ${KEY} --content-type applicaiton/json --md k1:v1 --md k2:v2
 ${APP} --region ${REGION} head $BUCKET/${KEY}
 ${APP} --region ${REGION} get  $BUCKET/${KEY}
+${APP} --region ${REGION} copy $BUCKET ${KEY} ${KEY}2 --md k1:v11 --md k2:v21
 
 ${APP} --region ${REGION} put  $BUCKET/dir0/${KEY} ${KEY} --content-type applicaiton/json --md k1:v1 --md k2:v2
 ${APP} --region ${REGION} get  $BUCKET/dir0/${KEY} 
