@@ -813,12 +813,16 @@ func (sc *S3Cli) renameObject(source, bucket, key string) error {
 
 // copyObjects copy Object to destBucket/key
 func (sc *S3Cli) copyObject(source, dstBucket, dstKey string, metadata map[string]*string) error {
-	req, resp := sc.Client.CopyObjectRequest(&s3.CopyObjectInput{
+	ci := &s3.CopyObjectInput{
 		CopySource: aws.String(source),
 		Bucket:     aws.String(dstBucket), // The name of the destination bucket.
 		Key:        aws.String(dstKey),    // The key of the destination object.
 		Metadata:   metadata,
-	})
+	}
+	if ci.Metadata != nil {
+		ci.MetadataDirective = aws.String(s3.MetadataDirectiveReplace)
+	}
+	req, resp := sc.Client.CopyObjectRequest(ci)
 
 	if sc.presign {
 		s, err := req.Presign(sc.presignExp)
