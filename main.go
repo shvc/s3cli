@@ -26,7 +26,7 @@ import (
 
 const (
 	defaultDialTimeout           = 10
-	defaultResponseHeaderTimeout = 10
+	defaultResponseHeaderTimeout = 20
 )
 
 var (

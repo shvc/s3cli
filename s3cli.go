@@ -192,10 +192,14 @@ func (sc *S3Cli) bucketHead(bucket string) error {
 	if err != nil {
 		return err
 	}
-	if resp != nil {
+
+	if sc.lineOutput() {
+		fmt.Println("ok")
+	} else {
 		fmt.Println(resp)
 	}
-	return err
+
+	return nil
 }
 
 // bucketACLGet get a Bucket's ACL
@@ -453,15 +457,17 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 	if resp == nil {
 		return nil
 	}
-	if sc.verboseOutput() {
-		fmt.Println(resp)
-	} else if mtime {
+
+	if mtime {
 		fmt.Println(resp.LastModified)
 	} else if mtimestamp {
 		fmt.Println(resp.LastModified.Unix())
-	} else {
+	} else if sc.lineOutput() {
 		fmt.Printf("%d\t%s\n", aws.Int64Value(resp.ContentLength), resp.LastModified)
+	} else {
+		fmt.Println(resp)
 	}
+
 	return nil
 }
 
