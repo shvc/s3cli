@@ -90,6 +90,13 @@ func (sc *S3Cli) errorHandler(err error) error {
 	return nil
 }
 
+func (sc *S3Cli) jsonOutput() (v bool) {
+	if sc.output == outputJson || sc.output == outputJ {
+		v = true
+	}
+	return
+}
+
 func (sc *S3Cli) verboseOutput() (v bool) {
 	if sc.output == outputVerbose || sc.output == outputV {
 		v = true
@@ -383,7 +390,17 @@ func (sc *S3Cli) getBucketCors(bucket string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(out.String())
+	if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(out, "", "  ")
+		if err != nil {
+			fmt.Println(out.String())
+			return nil
+		}
+		fmt.Printf("%s", jo)
+	} else {
+		fmt.Println(out.String())
+	}
+
 	return err
 }
 
