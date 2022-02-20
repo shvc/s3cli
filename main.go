@@ -285,24 +285,34 @@ EnvVar:
 	}
 	rootCmd.AddCommand(bucketVersionCmd)
 
+	var corsDelete bool
 	bucketCorsCmd := &cobra.Command{
 		Use:   "cors <bucket> [arg]",
-		Short: "cors versioning",
-		Long: `get/set bucket cors usage:
+		Short: "bucket cors",
+		Long: `get/delete/set bucket cors usage:
 * get Bucket cors
 	s3cli cors bucket-name
+* delete Bucket cors
+	s3cli cors bucket-name --delete
+* set Bucket cors
+	s3cli cors bucket-name cors.json
 `,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			bucket, _ := splitKeyValue(args[0], "/")
 			if len(args) == 1 {
-				bucket, _ := splitKeyValue(args[0], "/")
-				return sc.errorHandler(sc.bucketCors(bucket))
+				if corsDelete {
+					return sc.errorHandler(sc.deleteBucketCors(bucket))
+				} else {
+					return sc.errorHandler(sc.getBucketCors(bucket))
+				}
+			} else {
+				return sc.errorHandler(sc.putBucketCors(bucket, args[1]))
 			}
 
-			fmt.Println("not impl")
-			return nil
 		},
 	}
+	bucketCorsCmd.Flags().BoolVar(&corsDelete, "delete", false, "delete bucket cors")
 	rootCmd.AddCommand(bucketCorsCmd)
 
 	// object upload(put)

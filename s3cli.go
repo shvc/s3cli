@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -365,7 +366,7 @@ func (sc *S3Cli) bucketDelete(bucket string) error {
 	return err
 }
 
-func (sc *S3Cli) bucketCors(bucket string) error {
+func (sc *S3Cli) getBucketCors(bucket string) error {
 	req, out := sc.Client.GetBucketCorsRequest(&s3.GetBucketCorsInput{
 		Bucket: aws.String(bucket),
 	})
@@ -379,6 +380,60 @@ func (sc *S3Cli) bucketCors(bucket string) error {
 	}
 
 	err := req.Send()
+	if err != nil {
+		return err
+	}
+	fmt.Println(out.String())
+	return err
+}
+
+func (sc *S3Cli) deleteBucketCors(bucket string) error {
+	req, out := sc.Client.DeleteBucketCorsRequest(&s3.DeleteBucketCorsInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	err := req.Send()
+	if err != nil {
+		return err
+	}
+	fmt.Println(out.String())
+	return err
+}
+
+func (sc *S3Cli) putBucketCors(bucket, cfgFile string) error {
+	fd, err := os.Open(cfgFile)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+	corsCfg := s3.CORSConfiguration{}
+	err = json.NewDecoder(fd).Decode(&corsCfg)
+	if err != nil {
+		return err
+	}
+
+	req, out := sc.Client.PutBucketCorsRequest(&s3.PutBucketCorsInput{
+		Bucket:            aws.String(bucket),
+		CORSConfiguration: &corsCfg,
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	err = req.Send()
 	if err != nil {
 		return err
 	}
