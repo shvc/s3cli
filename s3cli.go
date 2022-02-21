@@ -167,6 +167,14 @@ func (sc *S3Cli) bucketList() error {
 	if sc.verboseOutput() {
 		fmt.Println(resp)
 		return nil
+	} else if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			fmt.Println(resp.String())
+			return nil
+		}
+		fmt.Printf("%s", jo)
+		return nil
 	}
 	for _, b := range resp.Buckets {
 		if sc.lineOutput() {
@@ -536,6 +544,14 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 		fmt.Println(resp.LastModified.Unix())
 	} else if sc.lineOutput() {
 		fmt.Printf("%d\t%s\n", aws.Int64Value(resp.ContentLength), resp.LastModified)
+	} else if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			fmt.Println(resp.String())
+			return nil
+		}
+		fmt.Printf("%s", jo)
+		return nil
 	} else {
 		fmt.Println(resp)
 	}
@@ -606,6 +622,14 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool, st
 		if sc.verboseOutput() {
 			fmt.Println(p)
 			return true
+		} else if sc.jsonOutput() {
+			jo, err := json.MarshalIndent(p, "", "  ")
+			if err != nil {
+				fmt.Println(p)
+				return true
+			}
+			fmt.Printf("%s", jo)
+			return true
 		}
 		for _, p := range p.CommonPrefixes {
 			if !sc.lineOutput() {
@@ -657,7 +681,16 @@ func (sc *S3Cli) listAllObjectsV2(bucket, prefix, delimiter string, index, owner
 		if sc.verboseOutput() {
 			fmt.Println(p)
 			return true
+		} else if sc.jsonOutput() {
+			jo, err := json.MarshalIndent(p, "", "  ")
+			if err != nil {
+				fmt.Println(p)
+				return true
+			}
+			fmt.Printf("%s", jo)
+			return true
 		}
+
 		for _, p := range p.CommonPrefixes {
 			if !sc.lineOutput() {
 				fmt.Println(aws.StringValue(p.Prefix))
@@ -710,6 +743,14 @@ func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys i
 	}
 	if sc.verboseOutput() {
 		fmt.Println(resp)
+		return nil
+	} else if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			fmt.Println(resp)
+			return nil
+		}
+		fmt.Printf("%s", jo)
 		return nil
 	}
 	for _, p := range resp.CommonPrefixes {
@@ -768,6 +809,14 @@ func (sc *S3Cli) listObjectsV2(bucket, prefix, delimiter, marker string, maxkeys
 	if sc.verboseOutput() {
 		fmt.Println(resp)
 		return nil
+	} else if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			fmt.Println(resp)
+			return nil
+		}
+		fmt.Printf("%s", jo)
+		return nil
 	}
 	for _, p := range resp.CommonPrefixes {
 		if !sc.lineOutput() {
@@ -823,8 +872,16 @@ func (sc *S3Cli) listObjectVersions(bucket, prefix string) error {
 	if resp == nil {
 		return nil
 	}
-
-	fmt.Println(resp)
+	if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			fmt.Println(resp)
+			return nil
+		}
+		fmt.Printf("%s", jo)
+	} else {
+		fmt.Println(resp)
+	}
 	return nil
 }
 
@@ -1245,8 +1302,17 @@ func (sc *S3Cli) mpuList(bucket, prefix string) error {
 		}
 		return err
 	}
+	if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			fmt.Println(resp)
+			return nil
+		}
+		fmt.Printf("%s", jo)
+	} else {
+		fmt.Println(resp)
+	}
 
-	fmt.Println(resp)
 	return err
 }
 
@@ -1308,6 +1374,13 @@ func (sc *S3Cli) mpu(bucket, key, contentType string, partSize int64, r io.Reade
 			fmt.Println("uploadID :", out.UploadID)
 			fmt.Println("ETag     :", aws.StringValue(out.ETag))
 			fmt.Println("versionID:", aws.StringValue(out.VersionID))
+		} else if sc.jsonOutput() {
+			jo, err := json.MarshalIndent(out, "", "  ")
+			if err != nil {
+				fmt.Println(out)
+				return nil
+			}
+			fmt.Printf("%s", jo)
 		} else {
 			fmt.Printf("%s %s %s %s\n", out.Location, out.UploadID, aws.StringValue(out.ETag), aws.StringValue(out.VersionID))
 		}
