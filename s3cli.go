@@ -1006,8 +1006,8 @@ func (sc *S3Cli) copyObject(source, dstBucket, dstKey, contentType string, metad
 	return nil
 }
 
-// deleteObjects list and delete Objects
-func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
+// deletePrefix delete Objects with prefix
+func (sc *S3Cli) deletePrefix(bucket, prefix string) error {
 	var objNum int64
 	loi := &s3.ListObjectsInput{
 		Bucket: aws.String(bucket),
@@ -1038,7 +1038,7 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 			},
 		}
 		deleteReq, _ := sc.Client.DeleteObjectsRequest(doi)
-		if e := deleteReq.Send(); err != nil {
+		if e := deleteReq.Send(); e != nil {
 			fmt.Printf("delete Objects failed: %s", e)
 		} else {
 			objNum = objNum + int64(objectNum)
@@ -1058,10 +1058,45 @@ func (sc *S3Cli) deleteObjects(bucket, prefix string) error {
 	return nil
 }
 
+// deleteObjects delete Objects
+func (sc *S3Cli) deleteObjects(bucket string, keys []string) error {
+	objects := make([]*s3.ObjectIdentifier, 0, len(keys))
+	for _, v := range keys {
+		if v == "" {
+			continue
+		}
+		objects = append(objects, &s3.ObjectIdentifier{Key: aws.String(v)})
+	}
+	doi := &s3.DeleteObjectsInput{
+		Bucket: aws.String(bucket),
+		Delete: &s3.Delete{
+			Quiet:   aws.Bool(true),
+			Objects: objects,
+		},
+	}
+	deleteReq, out := sc.Client.DeleteObjectsRequest(doi)
+	err := deleteReq.Send()
+	if err != nil {
+		return err
+	}
+	if sc.verboseOutput() {
+		fmt.Println(out)
+	} else if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(out, "", "  ")
+		if err != nil {
+			fmt.Println(out)
+			return nil
+		}
+		fmt.Printf("%s", jo)
+	}
+
+	return nil
+}
+
 // deleteBucketAndObjects force delete a Bucket
 func (sc *S3Cli) deleteBucketAndObjects(bucket string, force bool) error {
 	if force {
-		if err := sc.deleteObjects(bucket, ""); err != nil {
+		if err := sc.deletePrefix(bucket, ""); err != nil {
 			return err
 		}
 	}

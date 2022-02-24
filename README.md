@@ -3,10 +3,6 @@ s3cli is a command-line tool for uploading, retrieving and managing data in AWS 
 
 #### Download prebuild binary
 https://github.com/shvc/s3cli/releases  
-- Install s3cli to `/usr/local/bin/`  
-```
-unzip s3cli-*.zip -d /usr/local/bin/
-```
 
 #### Usage
 ```shell
@@ -27,8 +23,9 @@ Available Commands:
   cat            cat Object
   completion     Generate the autocompletion script for the specified shell
   copy           copy Object
+  cors           bucket cors
   create-bucket  create Bucket(s)
-  delete         delete Object or Bucket
+  delete         delete Bucket or Object(s)
   delete-version delete-version of Object
   download       download Object
   head           head Bucket or Object
@@ -62,7 +59,7 @@ Flags:
       --presign-exp duration          presign Request expiration duration (default 24h0m0s)
   -p, --profile string                profile in credentials file
   -R, --region string                 S3 region (default "cn-north-1")
-      --response-header-timeout int   http response header timeout in seconds (default 10)
+      --response-header-timeout int   http response header timeout in seconds (default 20)
   -s, --sk string                     S3 secret key(only read if profile not set)
       --v2sign                        S3 signature v2
   -v, --version                       version for s3cli
@@ -131,6 +128,7 @@ s3cli list bucket-name/prefix    # list Objects with specified prefix
 ```shell
 # delete Object(s)
 s3cli delete bucket-name/key                   # delete an Object
+s3cli delete bucket-name/key1 key2 key3        # delete Objects
 s3cli delete bucket-name/dir/ --prefix         # delete all Objects with specified prefix(dir/)
 s3cli delete bucket-name --force               # delete Bucket and all Objects
 s3cli delete bucket-name/k1 --presign          # presign(V4) an DELETE Object URL

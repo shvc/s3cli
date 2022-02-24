@@ -192,7 +192,7 @@ func Test_copyObject(t *testing.T) {
 
 func Test_deleteObjects(t *testing.T) {
 	prefix := "testPrefix"
-	if err := s3cliTest.deleteObjects(testBucketName, prefix); err != nil {
+	if err := s3cliTest.deletePrefix(testBucketName, prefix); err != nil {
 		t.Errorf("deleteObjects failed: %s", err)
 	}
 }

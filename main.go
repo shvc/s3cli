@@ -766,27 +766,38 @@ EnvVar:
 	rootCmd.AddCommand(copyObjectCmd)
 
 	deleteObjectCmd := &cobra.Command{
-		Use:     "delete <bucket/key>",
+		Use:     "delete <bucket/key> [key...]",
 		Aliases: []string{"rm"},
-		Short:   "delete Object or Bucket",
+		Short:   "delete Bucket or Object(s)",
 		Long: `delete Bucket or Object(s) usage:
-* delete Bucket and all Objects
+* delete Bucket 
 	s3cli delete bucket-name
-* delete a Object
+* delete Bucket and all Objects
+	s3cli delete bucket-name --force
+* delete an Object
 	s3cli delete bucket-name/key
+* delete Objects
+	s3cli delete bucket-name/key1 key2 key3 key4
 * delete all Objects with same Prefix
 	s3cli delete bucket-name/prefix --prefix`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prefixMode := cmd.Flag("prefix").Changed
 			force := cmd.Flag("force").Changed
 			bucket, key := splitKeyValue(args[0], "/")
-			if prefixMode {
-				return sc.errorHandler(sc.deleteObjects(bucket, key))
-			} else if key != "" {
-				return sc.errorHandler(sc.deleteObject(bucket, key))
+			if len(args) > 1 {
+				args[0] = key
+				return sc.errorHandler(sc.deleteObjects(bucket, args))
 			}
-			return sc.errorHandler(sc.deleteBucketAndObjects(bucket, force))
+			if prefixMode {
+				return sc.errorHandler(sc.deletePrefix(bucket, key))
+			}
+			if key == "" {
+				return sc.errorHandler(sc.deleteBucketAndObjects(bucket, force))
+			}
+
+			return sc.errorHandler(sc.deleteObject(bucket, key))
+
 		},
 	}
 	deleteObjectCmd.Flags().BoolP("force", "", false, "delete Bucket and all Objects")
