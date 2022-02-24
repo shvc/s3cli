@@ -1,3 +1,4 @@
+[![Go](https://github.com/shvc/s3cli/actions/workflows/go.yml/badge.svg)](https://github.com/shvc/s3cli/actions/workflows/go.yml)
 ## s3cli
 s3cli is a command-line tool for uploading, retrieving and managing data in AWS S3 compatible storage service.
 
