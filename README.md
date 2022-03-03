@@ -52,6 +52,7 @@ Flags:
       --debug                         show SDK debug log
       --dial-timeout int              http dial timeout in seconds (default 10)
   -e, --endpoint string               S3 endpoint(http://host:port)
+  -H, --header stringArray            Pass custom header(s) to server(format Key:Value)
   -h, --help                          help for s3cli
       --http-keep-alive               http Keep-Alive (default true)
   -o, --output string                 output format(verbose,simple,json,line) (default "simple")
