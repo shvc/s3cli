@@ -271,6 +271,24 @@ func Test_mpuComplete(t *testing.T) {
 	}
 }
 
+func Test_splitBucketObject(t *testing.T) {
+	cases := map[string][2]string{
+		"":                       {"", ""},
+		"/":                      {"", ""},
+		"b/":                     {"b", ""},
+		"bucket/object":          {"bucket", "object"},
+		"b/c.ef/fff/":            {"b", "c.ef/fff/"},
+		"bucket/dir/subdir/file": {"bucket", "dir/subdir/file"},
+	}
+
+	for k, v := range cases {
+		bucket, object := s3cliTest.splitKeyValue(k, "/")
+		if bucket != v[0] || object != v[1] {
+			t.Errorf("expect: %s, got: %s, %s", v, bucket, object)
+		}
+	}
+}
+
 /*
 aws help
 

@@ -45,14 +45,6 @@ var (
 	v2Sign                = false
 )
 
-func splitKeyValue(data, sep string) (string, string) {
-	bo := strings.SplitN(data, sep, 2)
-	if len(bo) == 2 {
-		return bo[0], bo[1]
-	}
-	return data, ""
-}
-
 func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	if sc.endpoint == "" {
 		sc.endpoint = os.Getenv(endpointEnvVar)
@@ -177,7 +169,7 @@ EnvVar:
 	rootCmd.PersistentFlags().BoolVarP(&v2Sign, "v2sign", "", false, "S3 signature v2")
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", defaultDialTimeout, "http dial timeout in seconds")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", defaultResponseHeaderTimeout, "http response header timeout in seconds")
-
+	rootCmd.PersistentFlags().StringArrayVarP(&sc.header, "header", "H", nil, "Pass custom header(s) to server(format Key:Value)")
 	// presign(V2) command
 	presignCmd := &cobra.Command{
 		Use:   "presign <bucket/key>",
@@ -264,7 +256,7 @@ EnvVar:
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 {
-				bucket, prefix := splitKeyValue(args[0], "/")
+				bucket, prefix := sc.splitKeyValue(args[0], "/")
 				if prefix == "" {
 					return sc.errorHandler(sc.bucketVersioningGet(bucket))
 				}
@@ -299,7 +291,7 @@ EnvVar:
 `,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, _ := splitKeyValue(args[0], "/")
+			bucket, _ := sc.splitKeyValue(args[0], "/")
 			if len(args) == 1 {
 				if corsDelete {
 					return sc.errorHandler(sc.deleteBucketCors(bucket))
@@ -337,10 +329,10 @@ EnvVar:
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			var fd *os.File
 			stream := cmd.Flag("stream").Changed
-			bucket, key := splitKeyValue(args[0], "/")
+			bucket, key := sc.splitKeyValue(args[0], "/")
 			var metadata map[string]*string
 			for _, v := range objectMetadata {
-				k, v := splitKeyValue(v, ":")
+				k, v := sc.splitKeyValue(v, ":")
 				if k != "" && v != "" {
 					if metadata == nil {
 						metadata = make(map[string]*string)
@@ -399,7 +391,7 @@ EnvVar:
 	s3cli head bucket-name/key`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, key := splitKeyValue(args[0], "/")
+			bucket, key := sc.splitKeyValue(args[0], "/")
 			if key != "" {
 				mt := cmd.Flag("mtime").Changed
 				mts := cmd.Flag("mtimestamp").Changed
@@ -429,7 +421,7 @@ EnvVar:
 `,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, key := splitKeyValue(args[0], "/")
+			bucket, key := sc.splitKeyValue(args[0], "/")
 			if key != "" { // Object ACL
 				if len(args) == 1 {
 					return sc.errorHandler(sc.getObjectACL(bucket, key))
@@ -507,7 +499,7 @@ EnvVar:
 					return sc.errorHandler(fmt.Errorf("invalid end-time %s, error %s", cmd.Flag("end-time").Value.String(), err))
 				}
 
-				bucket, prefix := splitKeyValue(args[0], "/")
+				bucket, prefix := sc.splitKeyValue(args[0], "/")
 				if cmd.Flag("all").Changed {
 					return sc.errorHandler(sc.listAllObjects(bucket, prefix, delimiter, index, stime, etime))
 				}
@@ -563,7 +555,7 @@ EnvVar:
 					return sc.errorHandler(fmt.Errorf("invalid enf-time %s, error %s", cmd.Flag("end-time").Value.String(), err))
 				}
 
-				bucket, prefix := splitKeyValue(args[0], "/")
+				bucket, prefix := sc.splitKeyValue(args[0], "/")
 				if cmd.Flag("all").Changed {
 					return sc.errorHandler(sc.listAllObjectsV2(bucket, prefix, delimiter, index, fetchOwner, stime, etime))
 				}
@@ -600,7 +592,7 @@ EnvVar:
 	s3cli lv bucket-name/prefix`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, prefix := splitKeyValue(args[0], "/")
+			bucket, prefix := sc.splitKeyValue(args[0], "/")
 			return sc.errorHandler(sc.listObjectVersions(bucket, prefix))
 		},
 	}
@@ -617,7 +609,7 @@ EnvVar:
 	s3cli delete-version bucket-name/prefix`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, prefix := splitKeyValue(args[0], "/")
+			bucket, prefix := sc.splitKeyValue(args[0], "/")
 			version := cmd.Flag("id").Value.String()
 			return sc.errorHandler(sc.deleteObjectVersion(bucket, prefix, version))
 		},
@@ -637,7 +629,7 @@ EnvVar:
 `,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, key := splitKeyValue(args[0], "/")
+			bucket, key := sc.splitKeyValue(args[0], "/")
 			version := ""
 			if len(args) > 1 {
 				version = args[1]
@@ -661,7 +653,7 @@ EnvVar:
 	s3cli download bucket-name/key --presign`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, key := splitKeyValue(args[0], "/")
+			bucket, key := sc.splitKeyValue(args[0], "/")
 			objRange := cmd.Flag("range").Value.String()
 			version := cmd.Flag("version").Value.String()
 			err := sc.getObject(bucket, key, objRange, version)
@@ -694,7 +686,7 @@ EnvVar:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			objRange := cmd.Flag("range").Value.String()
 			version := cmd.Flag("version").Value.String()
-			bucket, key := splitKeyValue(args[0], "/")
+			bucket, key := sc.splitKeyValue(args[0], "/")
 			return sc.errorHandler(sc.catObject(bucket, key, objRange, version))
 		},
 	}
@@ -713,9 +705,9 @@ EnvVar:
 	s3cli mv bucket-name/key1 bucket-name2`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, key := splitKeyValue(args[1], "/")
+			bucket, key := sc.splitKeyValue(args[1], "/")
 			if key == "" {
-				_, key = splitKeyValue(args[0], "/")
+				_, key = sc.splitKeyValue(args[0], "/")
 			}
 			return sc.errorHandler(sc.renameObject(args[0], bucket, key))
 		},
@@ -737,7 +729,7 @@ EnvVar:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var metadata map[string]*string
 			for _, v := range objectMetadata {
-				k, v := splitKeyValue(v, ":")
+				k, v := sc.splitKeyValue(v, ":")
 				if k != "" && v != "" {
 					if metadata == nil {
 						metadata = make(map[string]*string)
@@ -745,14 +737,14 @@ EnvVar:
 					metadata[k] = &v
 				}
 			}
-			srcBucket, srcKey := splitKeyValue(args[0], "/")
+			srcBucket, srcKey := sc.splitKeyValue(args[0], "/")
 			dstBucket := ""
 			dstKey := ""
 			if !strings.Contains(args[1], "/") {
 				dstBucket = srcBucket
 				dstKey = args[1]
 			} else {
-				dstBucket, dstKey = splitKeyValue(args[1], "/")
+				dstBucket, dstKey = sc.splitKeyValue(args[1], "/")
 				if dstKey == "" {
 					dstKey = srcKey
 				}
@@ -784,7 +776,7 @@ EnvVar:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prefixMode := cmd.Flag("prefix").Changed
 			force := cmd.Flag("force").Changed
-			bucket, key := splitKeyValue(args[0], "/")
+			bucket, key := sc.splitKeyValue(args[0], "/")
 			if len(args) > 1 {
 				args[0] = key
 				return sc.errorHandler(sc.deleteObjects(bucket, args))
@@ -813,7 +805,7 @@ EnvVar:
 	s3cli mpu-create bucket-name/key`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, key := splitKeyValue(args[0], "/")
+			bucket, key := sc.splitKeyValue(args[0], "/")
 			return sc.errorHandler(sc.mpuCreate(bucket, key))
 		},
 	}
@@ -834,7 +826,7 @@ EnvVar:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			files := map[int64]string{}
 			for _, v := range args[2:] {
-				i, filename := splitKeyValue(v, ":")
+				i, filename := sc.splitKeyValue(v, ":")
 				if filename == "" {
 					return sc.errorHandler(fmt.Errorf("unknown filename: %s", filename))
 				}
@@ -845,7 +837,7 @@ EnvVar:
 				files[index] = filename
 			}
 
-			bucket, key := splitKeyValue(args[0], "/")
+			bucket, key := sc.splitKeyValue(args[0], "/")
 			return sc.errorHandler(sc.mpuUpload(bucket, key, args[1], files))
 		},
 	}
@@ -860,7 +852,7 @@ EnvVar:
 	s3cli mpu-abort bucket-name/key UploadId`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, key := splitKeyValue(args[0], "/")
+			bucket, key := sc.splitKeyValue(args[0], "/")
 			if bucket == "" {
 				return sc.errorHandler(fmt.Errorf("unknown bucket <bucket/key>(%v)", args[0]))
 			}
@@ -881,7 +873,7 @@ EnvVar:
 	s3cli mpu-list bucket-name/prefix`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, prefix := splitKeyValue(args[0], "/")
+			bucket, prefix := sc.splitKeyValue(args[0], "/")
 			if bucket == "" {
 				return sc.errorHandler(fmt.Errorf("unknown bucket <bucket/key>(%v)", args[0]))
 			}
@@ -899,7 +891,7 @@ EnvVar:
 	s3cli mpu-complete bucket-name/key UploadId etag01 etag02 etag03`,
 		Args: cobra.MinimumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bucket, key := splitKeyValue(args[0], "/")
+			bucket, key := sc.splitKeyValue(args[0], "/")
 			if bucket == "" {
 				return sc.errorHandler(fmt.Errorf("unknown bucket <bucket/key>(%v)", args[0]))
 			}
@@ -927,10 +919,10 @@ EnvVar:
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			var fd *os.File
-			bucket, key := splitKeyValue(args[0], "/")
+			bucket, key := sc.splitKeyValue(args[0], "/")
 			var metadata map[string]*string
 			for _, v := range objectMetadata {
-				k, v := splitKeyValue(v, ":")
+				k, v := sc.splitKeyValue(v, ":")
 				if k != "" && v != "" {
 					if metadata == nil {
 						metadata = make(map[string]*string)

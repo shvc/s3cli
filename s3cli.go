@@ -8,11 +8,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,8 +45,24 @@ type S3Cli struct {
 	presign    bool // just presign
 	presignExp time.Duration
 	output     string
+	header     []string // custom header(s)
 	debug      bool
 	Client     *s3.S3 // manual init this field
+}
+
+func (sc *S3Cli) splitKeyValue(data, sep string) (string, string) {
+	bo := strings.SplitN(data, sep, 2)
+	if len(bo) == 2 {
+		return bo[0], bo[1]
+	}
+	return data, ""
+}
+
+func (sc *S3Cli) addCustomHeader(req *http.Request) {
+	for _, h := range sc.header {
+		hk, hv := sc.splitKeyValue(h, ":")
+		req.Header.Add(hk, hv)
+	}
 }
 
 // presignV2Raw presigne URL with raw(not escape) key(Object name).
@@ -137,6 +155,7 @@ func (sc *S3Cli) bucketCreate(buckets []string) error {
 			return err
 		}
 
+		sc.addCustomHeader(req.HTTPRequest)
 		err := req.Send()
 		if err != nil {
 			return err
@@ -160,6 +179,7 @@ func (sc *S3Cli) bucketList() error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -204,6 +224,7 @@ func (sc *S3Cli) bucketHead(bucket string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -232,6 +253,7 @@ func (sc *S3Cli) bucketACLGet(bucket string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -257,6 +279,7 @@ func (sc *S3Cli) bucketACLSet(bucket string, acl string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -281,6 +304,7 @@ func (sc *S3Cli) bucketPolicyGet(bucket string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -308,6 +332,7 @@ func (sc *S3Cli) bucketPolicySet(bucket, policy string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -330,6 +355,7 @@ func (sc *S3Cli) bucketVersioningGet(bucket string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -355,6 +381,7 @@ func (sc *S3Cli) bucketVersioningSet(bucket string, status string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -377,6 +404,7 @@ func (sc *S3Cli) bucketDelete(bucket string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	return err
 }
@@ -394,6 +422,7 @@ func (sc *S3Cli) getBucketCors(bucket string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -425,6 +454,7 @@ func (sc *S3Cli) deleteBucketCors(bucket string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -458,6 +488,7 @@ func (sc *S3Cli) putBucketCors(bucket, cfgFile string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err = req.Send()
 	if err != nil {
 		return err
@@ -495,6 +526,7 @@ func (sc *S3Cli) putObject(bucket, key, contentType string, metadata map[string]
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -529,6 +561,7 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -574,6 +607,7 @@ func (sc *S3Cli) getObjectACL(bucket, key string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -600,6 +634,7 @@ func (sc *S3Cli) setObjectACL(bucket, key string, acl string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -910,6 +945,7 @@ func (sc *S3Cli) getObject(bucket, key, oRange, version string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return fmt.Errorf("get object %s failed: %w", key, err)
@@ -957,6 +993,7 @@ func (sc *S3Cli) catObject(bucket, key, oRange, version string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return fmt.Errorf("get object failed: %w", err)
@@ -995,6 +1032,7 @@ func (sc *S3Cli) copyObject(source, dstBucket, dstKey, contentType string, metad
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return fmt.Errorf("copy object failed: %w", err)
@@ -1188,6 +1226,7 @@ func (sc *S3Cli) deleteObject(bucket, key string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err
@@ -1221,6 +1260,7 @@ func (sc *S3Cli) restoreObject(bucket, key, version string) error {
 		return err
 	}
 
+	sc.addCustomHeader(req.HTTPRequest)
 	err := req.Send()
 	if err != nil {
 		return err

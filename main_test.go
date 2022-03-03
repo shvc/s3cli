@@ -52,21 +52,3 @@ func TestMain(m *testing.M) {
 
 	os.Exit(m.Run())
 }
-
-func Test_splitBucketObject(t *testing.T) {
-	cases := map[string][2]string{
-		"":                       {"", ""},
-		"/":                      {"", ""},
-		"b/":                     {"b", ""},
-		"bucket/object":          {"bucket", "object"},
-		"b/c.ef/fff/":            {"b", "c.ef/fff/"},
-		"bucket/dir/subdir/file": {"bucket", "dir/subdir/file"},
-	}
-
-	for k, v := range cases {
-		bucket, object := splitKeyValue(k, "/")
-		if bucket != v[0] || object != v[1] {
-			t.Errorf("expect: %s, got: %s, %s", v, bucket, object)
-		}
-	}
-}
