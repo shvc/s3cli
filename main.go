@@ -797,12 +797,12 @@ EnvVar:
 	rootCmd.AddCommand(deleteObjectCmd)
 
 	mpuCreateCmd := &cobra.Command{
-		Use:     "mpu-create <bucket/key>",
-		Short:   "create a MPU request",
-		Aliases: []string{"mc"},
+		Use:     "mpu-init <bucket/key>",
+		Short:   "init(create) a MPU request",
+		Aliases: []string{"mi"},
 		Long: `create a mutiPartUpload request usage:
-* create a MPU request
-	s3cli mpu-create bucket-name/key`,
+* init(create) a MPU request
+	s3cli mpu-init bucket-name/key`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := sc.splitKeyValue(args[0], "/")
@@ -885,7 +885,7 @@ EnvVar:
 	mpuCompleteCmd := &cobra.Command{
 		Use:     "mpu-complete <bucket/key> <UploadId> <part-etag> [<part-etag> ...]",
 		Short:   "complete a MPU request",
-		Aliases: []string{"mo"},
+		Aliases: []string{"mc"},
 		Long: `complete a mutiPartUpload request usage:
 * complete a MPU request
 	s3cli mpu-complete bucket-name/key UploadId etag01 etag02 etag03`,

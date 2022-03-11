@@ -37,7 +37,7 @@ Available Commands:
   mpu            mpu Object(mpu-create, mpu-upload and mpu-complete)
   mpu-abort      abort a MPU request
   mpu-complete   complete a MPU request
-  mpu-create     create a MPU request
+  mpu-init       init(create) a MPU request
   mpu-list       list MPU
   mpu-upload     mpu-upload MPU part(s)
   policy         get/set Bucket Policy
