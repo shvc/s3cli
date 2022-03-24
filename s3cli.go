@@ -592,6 +592,84 @@ func (sc *S3Cli) headObject(bucket, key string, mtime, mtimestamp bool) error {
 	return nil
 }
 
+// getObjectLockConfig
+func (sc *S3Cli) getObjectLockConfig(bucket string) error {
+	req, resp := sc.Client.GetObjectLockConfigurationRequest(&s3.GetObjectLockConfigurationInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	sc.addCustomHeader(req.HTTPRequest)
+	err := req.Send()
+	if err != nil {
+		return err
+	}
+
+	if resp == nil {
+		return nil
+	}
+
+	if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			fmt.Println(resp.String())
+			return nil
+		}
+		fmt.Printf("%s", jo)
+		return nil
+	} else {
+		fmt.Println(resp)
+	}
+
+	return nil
+}
+
+// getObjectLockConfig
+func (sc *S3Cli) putObjectLockConfig(bucket string) error {
+	req, resp := sc.Client.PutObjectLockConfigurationRequest(&s3.PutObjectLockConfigurationInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	sc.addCustomHeader(req.HTTPRequest)
+	err := req.Send()
+	if err != nil {
+		return err
+	}
+
+	if resp == nil {
+		return nil
+	}
+
+	if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			fmt.Println(resp.String())
+			return nil
+		}
+		fmt.Printf("%s", jo)
+		return nil
+	} else {
+		fmt.Println(resp)
+	}
+
+	return nil
+}
+
 // getObjectACL get A Object's ACL
 func (sc *S3Cli) getObjectACL(bucket, key string) error {
 	req, resp := sc.Client.GetObjectAclRequest(&s3.GetObjectAclInput{

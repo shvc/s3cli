@@ -957,6 +957,40 @@ EnvVar:
 	mpuCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "Object user metadata(format Key:Value)")
 	rootCmd.AddCommand(mpuCmd)
 
+	getObjectLockConfigCmd := &cobra.Command{
+		Use:     "get-object-lock-configuration <bucket>",
+		Aliases: []string{"golc"},
+		Short:   "get-object-lock-configuration Bucket",
+		Long: `get-object-lock-configuration Object usage:
+* get-object-lock-configuration of a Bucket
+	s3cli get-object-lock-configuration bucket
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			err = sc.getObjectLockConfig(args[0])
+			return sc.errorHandler(err)
+		},
+	}
+	rootCmd.AddCommand(getObjectLockConfigCmd)
+
+	putObjectLockConfigCmd := &cobra.Command{
+		Use:     "put-object-lock-configuration <bucket>",
+		Aliases: []string{"polc"},
+		Short:   "put-object-lock-configuration Bucket",
+		Long: `put-object-lock-configuration Object usage:
+* mpu a file
+	s3cli mpu bucket /path/to/file
+* mpu a file to Bucket/Key
+	s3cli mpu bucket-name/key /path/to/file
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			err = sc.putObjectLockConfig(args[0])
+			return sc.errorHandler(err)
+		},
+	}
+	rootCmd.AddCommand(putObjectLockConfigCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
