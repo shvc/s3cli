@@ -981,12 +981,14 @@ EnvVar:
 		Aliases: []string{"polc"},
 		Short:   "put-object-lock-configuration Bucket",
 		Long: `put-object-lock-configuration Object usage:
-* put-object-lock-configuration of a Bucket
-	s3cli put-object-lock-configuration bucket
+* Enable a Bucket lock configuration
+	s3cli put-object-lock-configuration bucket Enabled
+* Disable a Bucket lock configuration
+	s3cli put-object-lock-configuration bucket Disable
 `,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			err = sc.putObjectLockConfig(args[0])
+			err = sc.putObjectLockConfig(args[0], args[1])
 			return sc.errorHandler(err)
 		},
 	}

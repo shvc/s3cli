@@ -632,15 +632,15 @@ func (sc *S3Cli) getObjectLockConfig(bucket string) error {
 }
 
 // getObjectLockConfig
-func (sc *S3Cli) putObjectLockConfig(bucket string) error {
+func (sc *S3Cli) putObjectLockConfig(bucket, enabled string) error {
 	req, resp := sc.Client.PutObjectLockConfigurationRequest(&s3.PutObjectLockConfigurationInput{
 		Bucket: aws.String(bucket),
 		ObjectLockConfiguration: &s3.ObjectLockConfiguration{
-			ObjectLockEnabled: aws.String("True"),
+			ObjectLockEnabled: aws.String(enabled),
 			Rule: &s3.ObjectLockRule{
 				DefaultRetention: &s3.DefaultRetention{
 					Days: aws.Int64(2),
-					Mode: aws.String("Compliance"),
+					Mode: aws.String("COMPLIANCE"),
 				},
 			},
 		},
