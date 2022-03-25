@@ -469,6 +469,8 @@ EnvVar:
 	}
 	rootCmd.AddCommand(aclCmd)
 
+	//aws --endpoint-url http://172.16.3.98:9020 --profile ak1 s3api list-buckets
+	//aws --endpoint-url http://172.16.3.98:9020 --profile ak1 s3api list-objects --bucket mybucket
 	listObjectCmd := &cobra.Command{
 		Use:     "list [bucket[/prefix]]",
 		Aliases: []string{"ls"},
@@ -957,6 +959,7 @@ EnvVar:
 	mpuCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "Object user metadata(format Key:Value)")
 	rootCmd.AddCommand(mpuCmd)
 
+	//aws s3api --endpoint-url http://172.16.3.98:9020 --profile ak1 get-object-lock-configuration --bucket mybucket
 	getObjectLockConfigCmd := &cobra.Command{
 		Use:     "get-object-lock-configuration <bucket>",
 		Aliases: []string{"golc"},
@@ -978,10 +981,8 @@ EnvVar:
 		Aliases: []string{"polc"},
 		Short:   "put-object-lock-configuration Bucket",
 		Long: `put-object-lock-configuration Object usage:
-* mpu a file
-	s3cli mpu bucket /path/to/file
-* mpu a file to Bucket/Key
-	s3cli mpu bucket-name/key /path/to/file
+* put-object-lock-configuration of a Bucket
+	s3cli put-object-lock-configuration bucket
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
