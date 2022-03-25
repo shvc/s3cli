@@ -20,32 +20,34 @@ Usage:
   s3cli [command]
 
 Available Commands:
-  acl            get/set Bucket/Object ACL
-  cat            cat Object
-  completion     Generate the autocompletion script for the specified shell
-  copy           copy Object
-  cors           bucket cors
-  create-bucket  create Bucket(s)
-  delete         delete Bucket or Object(s)
-  delete-version delete-version of Object
-  download       download Object
-  head           head Bucket or Object
-  help           Help about any command
-  list           list Buckets or Objects
-  list-v2        list Buckets or Objects(API V2)
-  list-version   list Object versions
-  mpu            mpu Object(mpu-create, mpu-upload and mpu-complete)
-  mpu-abort      abort a MPU request
-  mpu-complete   complete a MPU request
-  mpu-init       init(create) a MPU request
-  mpu-list       list MPU
-  mpu-upload     mpu-upload MPU part(s)
-  policy         get/set Bucket Policy
-  presign        presign(V2 and not escape URL path) a request
-  rename         rename Object
-  restore        restore Object
-  upload         upload Object(s)
-  version        bucket versioning
+  acl                           get/set Bucket/Object ACL
+  cat                           cat Object
+  completion                    Generate the autocompletion script for the specified shell
+  copy                          copy Object
+  cors                          bucket cors
+  create-bucket                 create Bucket(s)
+  delete                        delete Bucket or Object(s)
+  delete-version                delete-version of Object
+  download                      download Object
+  get-object-lock-configuration get-object-lock-configuration Bucket
+  head                          head Bucket or Object
+  help                          Help about any command
+  list                          list Buckets or Objects
+  list-v2                       list Buckets or Objects(API V2)
+  list-version                  list Object versions
+  mpu                           mpu Object(mpu-create, mpu-upload and mpu-complete)
+  mpu-abort                     abort a MPU request
+  mpu-complete                  complete a MPU request
+  mpu-init                      init(create) a MPU request
+  mpu-list                      list MPU
+  mpu-upload                    mpu-upload MPU part(s)
+  policy                        get/set Bucket Policy
+  presign                       presign(V2 and not escape URL path) a request
+  put-object-lock-configuration put-object-lock-configuration Bucket
+  rename                        rename Object
+  restore                       restore Object
+  upload                        upload Object(s)
+  version                       bucket versioning
 
 Flags:
   -a, --ak string                     S3 access key(only read if profile not set)
