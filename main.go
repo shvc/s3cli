@@ -469,6 +469,8 @@ EnvVar:
 	}
 	rootCmd.AddCommand(aclCmd)
 
+	//aws --endpoint-url http://172.16.3.98:9020 --profile ak1 s3api list-buckets
+	//aws --endpoint-url http://172.16.3.98:9020 --profile ak1 s3api list-objects --bucket mybucket
 	listObjectCmd := &cobra.Command{
 		Use:     "list [bucket[/prefix]]",
 		Aliases: []string{"ls"},
@@ -956,6 +958,41 @@ EnvVar:
 	mpuCmd.Flags().Int64("part-size", s3manager.MinUploadPartSize>>20, "MPU part-size in MB")
 	mpuCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "Object user metadata(format Key:Value)")
 	rootCmd.AddCommand(mpuCmd)
+
+	//aws s3api --endpoint-url http://172.16.3.98:9020 --profile ak1 get-object-lock-configuration --bucket mybucket
+	getObjectLockConfigCmd := &cobra.Command{
+		Use:     "get-object-lock-configuration <bucket>",
+		Aliases: []string{"golc"},
+		Short:   "get-object-lock-configuration Bucket",
+		Long: `get-object-lock-configuration Object usage:
+* get-object-lock-configuration of a Bucket
+	s3cli get-object-lock-configuration bucket
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			err = sc.getObjectLockConfig(args[0])
+			return sc.errorHandler(err)
+		},
+	}
+	rootCmd.AddCommand(getObjectLockConfigCmd)
+
+	putObjectLockConfigCmd := &cobra.Command{
+		Use:     "put-object-lock-configuration <bucket>",
+		Aliases: []string{"polc"},
+		Short:   "put-object-lock-configuration Bucket",
+		Long: `put-object-lock-configuration Object usage:
+* Enable a Bucket lock configuration
+	s3cli put-object-lock-configuration bucket Enabled
+* Disable a Bucket lock configuration
+	s3cli put-object-lock-configuration bucket Disable
+`,
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			err = sc.putObjectLockConfig(args[0], args[1])
+			return sc.errorHandler(err)
+		},
+	}
+	rootCmd.AddCommand(putObjectLockConfigCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
