@@ -170,6 +170,7 @@ EnvVar:
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", defaultDialTimeout, "http dial timeout in seconds")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", defaultResponseHeaderTimeout, "http response header timeout in seconds")
 	rootCmd.PersistentFlags().StringArrayVarP(&sc.header, "header", "H", nil, "Pass custom header(s) to server(format Key:Value)")
+	rootCmd.PersistentFlags().StringArrayVarP(&sc.query, "query", "Q", nil, "Pass custom query to server(format Key=Value)")
 	// presign(V2) command
 	presignCmd := &cobra.Command{
 		Use:   "presign <bucket/key>",

@@ -5,80 +5,16 @@ s3cli is a command-line tool for uploading, retrieving and managing data in AWS 
 #### Download prebuild binary
 https://github.com/shvc/s3cli/releases  
 
-#### Usage
-```shell
-./s3cli -h
-EnvVar:
-	S3_ENDPOINT=http://host:port (only read if flag --endpoint is not set)
-	AWS_PROFILE=profile          (only read if flag --profile is not set)
-	AWS_ACCESS_KEY_ID=ak         (only read if flag --ak and --profile not set)
-	AWS_ACCESS_KEY=ak            (only read if AWS_ACCESS_KEY_ID is not set)
-	AWS_SECRET_ACCESS_KEY=sk     (only read if flag --sk and --profile not set)
-	AWS_SECRET_KEY=sk            (only read if AWS_SECRET_ACCESS_KEY is not set)
-
-Usage:
-  s3cli [command]
-
-Available Commands:
-  acl                           get/set Bucket/Object ACL
-  cat                           cat Object
-  completion                    Generate the autocompletion script for the specified shell
-  copy                          copy Object
-  cors                          bucket cors
-  create-bucket                 create Bucket(s)
-  delete                        delete Bucket or Object(s)
-  delete-version                delete-version of Object
-  download                      download Object
-  get-object-lock-configuration get-object-lock-configuration Bucket
-  head                          head Bucket or Object
-  help                          Help about any command
-  list                          list Buckets or Objects
-  list-v2                       list Buckets or Objects(API V2)
-  list-version                  list Object versions
-  mpu                           mpu Object(mpu-create, mpu-upload and mpu-complete)
-  mpu-abort                     abort a MPU request
-  mpu-complete                  complete a MPU request
-  mpu-init                      init(create) a MPU request
-  mpu-list                      list MPU
-  mpu-upload                    mpu-upload MPU part(s)
-  policy                        get/set Bucket Policy
-  presign                       presign(V2 and not escape URL path) a request
-  put-object-lock-configuration put-object-lock-configuration Bucket
-  rename                        rename Object
-  restore                       restore Object
-  upload                        upload Object(s)
-  version                       bucket versioning
-
-Flags:
-  -a, --ak string                     S3 access key(only read if profile not set)
-      --debug                         show SDK debug log
-      --dial-timeout int              http dial timeout in seconds (default 10)
-  -e, --endpoint string               S3 endpoint(http://host:port)
-  -H, --header stringArray            Pass custom header(s) to server(format Key:Value)
-  -h, --help                          help for s3cli
-      --http-keep-alive               http Keep-Alive (default true)
-  -o, --output string                 output format(verbose,simple,json,line) (default "simple")
-      --path-style                    use path style (default true)
-      --presign                       presign Request and exit
-      --presign-exp duration          presign Request expiration duration (default 24h0m0s)
-  -p, --profile string                profile in credentials file
-  -R, --region string                 S3 region (default "cn-north-1")
-      --response-header-timeout int   http response header timeout in seconds (default 20)
-  -s, --sk string                     S3 secret key(only read if profile not set)
-      --v2sign                        S3 signature v2
-  -v, --version                       version for s3cli
-
-Use "s3cli [command] --help" for more information about a command.
+#### Build
+```
+make
 ```
 
 ## Example
-#### Bucket ( s3cli bucket -h )
+#### Bucket 
 ```shell
 # create bucket
 s3cli -e http://192.168.55.2:9020 create-bucket bucket-name
-# or pass endpoint from ENV
-export S3_ENDPOINT=http://192.168.55.2:9020
-s3cli create-bucket bucket-name
 
 # list(ls) all Buckets
 s3cli ls

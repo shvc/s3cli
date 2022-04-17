@@ -46,6 +46,7 @@ type S3Cli struct {
 	presignExp time.Duration
 	output     string
 	header     []string // custom header(s)
+	query      []string // custom query
 	debug      bool
 	Client     *s3.S3 // manual init this field
 }
@@ -63,6 +64,13 @@ func (sc *S3Cli) addCustomHeader(req *http.Request) {
 		hk, hv := sc.splitKeyValue(h, ":")
 		req.Header.Add(hk, hv)
 	}
+
+	q := req.URL.Query()
+	for _, h := range sc.query {
+		hk, hv := sc.splitKeyValue(h, "=")
+		q.Add(hk, hv)
+	}
+	req.URL.RawQuery = q.Encode()
 }
 
 // presignV2Raw presigne URL with raw(not escape) key(Object name).

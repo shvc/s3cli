@@ -1,4 +1,4 @@
-APP?=s3cli
+APP?=$(shell basename ${CURDIR})
 BUILDDATE=$(shell date +'%Y-%m-%dT%H:%M:%SZ')
 VERSION=2.2.11
 LONGVER=${VERSION}@${BUILDDATE}@$(shell git rev-parse --short HEAD)
