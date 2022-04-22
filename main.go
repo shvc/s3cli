@@ -136,7 +136,8 @@ func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "s3cli",
 		Short: "s3cli",
-		Long: `
+		Long: `Home:
+	github.com/shvc/s3cli
 EnvVar:
 	S3_ENDPOINT=http://host:port (only read if flag --endpoint is not set)
 	AWS_PROFILE=profile          (only read if flag --profile is not set)
@@ -162,15 +163,15 @@ EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.endpoint, "endpoint", "e", "", "S3 endpoint(http://host:port)")
 	rootCmd.PersistentFlags().StringVarP(&sc.profile, "profile", "p", "", "profile in credentials file")
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", s3.BucketLocationConstraintCnNorth1, "S3 region")
-	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "ak", "a", "", "S3 access key(only read if profile not set)")
-	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "sk", "s", "", "S3 secret key(only read if profile not set)")
+	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "ak", "a", "", "S3 Access Key(only read if profile not set)")
+	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "sk", "s", "", "S3 Secret Key(only read if profile not set)")
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http Keep-Alive")
 	rootCmd.PersistentFlags().BoolVarP(&v2Sign, "v2sign", "", false, "S3 signature v2")
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", defaultDialTimeout, "http dial timeout in seconds")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", defaultResponseHeaderTimeout, "http response header timeout in seconds")
 	rootCmd.PersistentFlags().StringArrayVarP(&sc.header, "header", "H", nil, "Pass custom header(s) to server(format Key:Value)")
-	rootCmd.PersistentFlags().StringArrayVarP(&sc.query, "query", "Q", nil, "Pass custom query to server(format Key=Value)")
+	rootCmd.PersistentFlags().StringArrayVarP(&sc.query, "query", "Q", nil, "Pass custom query parameter(s) to server(format Key=Value)")
 	// presign(V2) command
 	presignCmd := &cobra.Command{
 		Use:   "presign <bucket/key>",
@@ -228,7 +229,7 @@ EnvVar:
 		Long: `get/set Bucket Policy usage:
 * get Bucket policy
 	s3cli policy bucket-name
-* set Bucket policy(a json string)
+* set Bucket policy(json http://awspolicygen.s3.amazonaws.com/policygen.html)
 	s3cli policy bucket-name '{json}'`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
