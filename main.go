@@ -133,6 +133,7 @@ func main() {
 	sc := S3Cli{}
 	objectMetadata := []string{}
 	objectContentType := ""
+	objectContentData := ""
 	var rootCmd = &cobra.Command{
 		Use:   "s3cli",
 		Short: "s3cli",
@@ -325,6 +326,8 @@ EnvVar:
 * upload files to Bucket with specified common prefix(dir/)
 	s3cli upload bucket-name/dir/ file1 file2 file3
 	s3cli upload bucket-name/dir2/ *.txt
+* upload a Object with given contents
+	s3cli upload bucket-name/key --data text-content
 * presign(V4) a PUT Object URL
 	s3cli upload bucket-name/key --presign`,
 		Args: cobra.MinimumNArgs(1),
@@ -342,8 +345,12 @@ EnvVar:
 					metadata[k] = &v
 				}
 			}
-			if len(args) < 2 { // upload a zero-size file
-				err = sc.putObject(bucket, key, objectContentType, metadata, stream, fd)
+			if len(args) < 2 { // upload one Object
+				if objectContentData != "" { // upload a Object with given content
+					err = sc.putObject(bucket, key, objectContentType, metadata, stream, strings.NewReader(objectContentData))
+				} else { // upload a zero-size Object
+					err = sc.putObject(bucket, key, objectContentType, metadata, stream, fd)
+				}
 			} else if len(args) == 2 { // upload one file
 				if key == "" {
 					key = filepath.Base(args[1])
@@ -357,7 +364,7 @@ EnvVar:
 					objectContentType = mime.TypeByExtension(filepath.Ext(args[1]))
 				}
 				err = sc.putObject(bucket, key, objectContentType, metadata, stream, fd)
-			} else { // upload multi files
+			} else { // upload files
 				for _, v := range args[1:] {
 					fd, err = os.Open(v)
 					if err != nil {
@@ -379,6 +386,7 @@ EnvVar:
 		},
 	}
 	uploadObjectCmd.Flags().StringVar(&objectContentType, "content-type", "", "Object content-type(auto detect if not specified)")
+	uploadObjectCmd.Flags().StringVar(&objectContentData, "data", "", "Object content")
 	uploadObjectCmd.Flags().BoolP("stream", "", false, "stream mode(header Transfer-Encoding: chunked)")
 	uploadObjectCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "Object user metadata(format Key:Value)")
 	rootCmd.AddCommand(uploadObjectCmd)
