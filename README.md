@@ -38,6 +38,7 @@ s3cli delete bucket-name
 - upload(put) Objcet(s)  
 ```shell
 # upload file(s)
+s3cli upload bucket-name/k0 --data KKKK          # upload a Object(k0) with content KKKK
 s3cli upload bucket-name/k1 /etc/hosts           # upload a file and specify Key(k1)
 s3cli upload bucket-name/k2 /etc/hosts --v2sign  # upload(V2 sign) a file and specify Key(k2)
 s3cli upload bucket-name /etc/hosts              # upload a file and use filename(hosts) as Key
@@ -50,7 +51,7 @@ s3cli put bucket-name/k4 --presign --v2sign      # presign(V2) a PUT Object URL
 ```shell
 # download Object(s)
 s3cli download bucket-name/k1                    # download Object(k1) to current dir
-s3cli download bucket-name/k2                    # download(V2 sign) Object(k2) to current dir
+s3cli download bucket-name/k2 --v2sign           # download(V2 sign) Object(k2) to current dir
 s3cli download bucket-name/k1 k2 k3              # download Objects(k1, k2 and k3) to current dir
 s3cli download bucket-name/k1 --presign          # presign(V4) a GET Object URL
 s3cli download bucket-name/k2 --presign --v2sign # presign(V2) a GET Object URL
@@ -67,8 +68,8 @@ s3cli list bucket-name/prefix    # list Objects with specified prefix
 - delete(rm) Object(s)  
 ```shell
 # delete Object(s)
-s3cli delete bucket-name/k1                    # delete an Object
-s3cli delete bucket-name/k1 k2 k3              # delete Objects
+s3cli delete bucket-name/k0                    # delete an Object(k0)
+s3cli delete bucket-name/k1 k2 k3              # delete Objects(k1,k2,k3)
 s3cli delete bucket-name/dir/ --prefix         # delete all Objects with specified prefix(dir/)
 s3cli delete bucket-name --force               # delete Bucket and all Objects
 s3cli delete bucket-name/k4 --presign          # presign(V4) an DELETE Object URL
