@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/corehandlers"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -42,6 +43,7 @@ var (
 	responseHeaderTimeout int
 	httpKeepAlive         = true
 	v2Sign                = false
+	contentMd5Validate    = false
 )
 
 func newS3Client(sc *S3Cli) (*s3.S3, error) {
@@ -75,9 +77,10 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	}
 
 	cfg := &aws.Config{
-		Region:           aws.String(sc.region),
-		MaxRetries:       aws.Int(0),
-		S3ForcePathStyle: aws.Bool(pathStyle),
+		Region:                        aws.String(sc.region),
+		MaxRetries:                    aws.Int(0),
+		S3ForcePathStyle:              aws.Bool(pathStyle),
+		S3DisableContentMD5Validation: aws.Bool(!contentMd5Validate),
 		HTTPClient: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
@@ -114,7 +117,8 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	if v2Sign {
 		cred, _ := cfg.Credentials.Get()
 		svc.Handlers.Sign.Clear()
-		//svc.Handlers.Sign.PushBackNamed(corehandlers.BuildContentLengthHandler)
+		// auto fill content-length header
+		svc.Handlers.Sign.PushBackNamed(corehandlers.BuildContentLengthHandler)
 		svc.Handlers.Sign.PushBack(func(req *request.Request) {
 			if req.Config.Credentials == credentials.AnonymousCredentials {
 				return
@@ -170,6 +174,7 @@ EnvVar:
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http Keep-Alive")
 	rootCmd.PersistentFlags().BoolVarP(&v2Sign, "v2sign", "", false, "S3 signature v2")
+	rootCmd.PersistentFlags().BoolVarP(&contentMd5Validate, "md5-validate", "", false, "S3 content md5 validate(header Content-Md5:***)")
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", defaultDialTimeout, "http dial timeout in seconds")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", defaultResponseHeaderTimeout, "http response header timeout in seconds")
 	rootCmd.PersistentFlags().StringArrayVarP(&sc.header, "header", "H", nil, "Pass custom header(s) to server(format Key:Value)")
