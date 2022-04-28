@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/corehandlers"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -100,6 +99,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	}
 	if sc.profile != "" {
 		cfg.Credentials = credentials.NewSharedCredentials("", sc.profile)
+		cfg.Credentials.Get()
 	} else if sc.accessKey == "" && sc.secretKey == "" {
 		cfg.Credentials = credentials.AnonymousCredentials
 	} else {
@@ -112,16 +112,17 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	}
 	svc := s3.New(sess)
 	if v2Sign {
+		cred, _ := cfg.Credentials.Get()
 		svc.Handlers.Sign.Clear()
-		svc.Handlers.Sign.PushBackNamed(corehandlers.BuildContentLengthHandler)
+		//svc.Handlers.Sign.PushBackNamed(corehandlers.BuildContentLengthHandler)
 		svc.Handlers.Sign.PushBack(func(req *request.Request) {
 			if req.Config.Credentials == credentials.AnonymousCredentials {
 				return
 			}
 			if req.ExpireTime > 0 {
-				v2Presign(sc.accessKey, sc.secretKey, req.ExpireTime, req.HTTPRequest)
+				v2Presign(cred.AccessKeyID, cred.SecretAccessKey, req.ExpireTime, req.HTTPRequest)
 			} else {
-				sign(sc.accessKey, sc.secretKey, req.HTTPRequest)
+				sign(cred.AccessKeyID, cred.SecretAccessKey, req.HTTPRequest)
 			}
 		})
 	}

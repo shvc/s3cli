@@ -1,5 +1,3 @@
-// v2 signing
-
 package main
 
 import (
