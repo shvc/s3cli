@@ -487,6 +487,7 @@ EnvVar:
 
 	//aws --endpoint-url http://172.16.3.98:9020 --profile ak1 s3api list-buckets
 	//aws --endpoint-url http://172.16.3.98:9020 --profile ak1 s3api list-objects --bucket mybucket
+	var listMaxKeys int64
 	listObjectCmd := &cobra.Command{
 		Use:     "list [bucket[/prefix]]",
 		Aliases: []string{"ls"},
@@ -518,15 +519,14 @@ EnvVar:
 				}
 
 				bucket, prefix := sc.splitKeyValue(args[0], "/")
+				if args[0] == bucket+"/" {
+					bucket = args[0]
+				}
 				if cmd.Flag("all").Changed {
 					return sc.errorHandler(sc.listAllObjects(bucket, prefix, delimiter, index, stime, etime))
 				}
-				maxKeys, err := cmd.Flags().GetInt64("maxkeys")
-				if err != nil {
-					maxKeys = 1000
-				}
 				marker := cmd.Flag("marker").Value.String()
-				return sc.errorHandler(sc.listObjects(bucket, prefix, delimiter, marker, maxKeys, index, stime, etime))
+				return sc.errorHandler(sc.listObjects(bucket, prefix, delimiter, marker, listMaxKeys, index, stime, etime))
 			}
 
 			// list all my Buckets
@@ -534,7 +534,7 @@ EnvVar:
 		},
 	}
 	listObjectCmd.Flags().StringP("marker", "m", "", "marker")
-	listObjectCmd.Flags().Int64P("maxkeys", "M", 1000, "max keys")
+	listObjectCmd.Flags().Int64Var(&listMaxKeys, "maxkeys", 0, "max keys per list")
 	listObjectCmd.Flags().StringP("delimiter", "d", "", "Object delimiter")
 	listObjectCmd.Flags().BoolP("index", "i", false, "show Object index ")
 	listObjectCmd.Flags().BoolP("all", "", false, "list all Objects")
@@ -544,7 +544,7 @@ EnvVar:
 
 	listObjectV2Cmd := &cobra.Command{
 		Use:     "list-v2 [bucket[/prefix]]",
-		Aliases: []string{"lsv2"},
+		Aliases: []string{"lsv2", "ls-v2"},
 		Short:   "list Buckets or Objects(API V2)",
 		Long: `list-v2 Buckets or Objects(API V2) usage:
 * list all my Buckets
@@ -574,15 +574,15 @@ EnvVar:
 				}
 
 				bucket, prefix := sc.splitKeyValue(args[0], "/")
+				if args[0] == bucket+"/" {
+					bucket = args[0]
+				}
 				if cmd.Flag("all").Changed {
 					return sc.errorHandler(sc.listAllObjectsV2(bucket, prefix, delimiter, index, fetchOwner, stime, etime))
 				}
-				maxKeys, err := cmd.Flags().GetInt64("maxkeys")
-				if err != nil {
-					maxKeys = 1000
-				}
+
 				marker := cmd.Flag("marker").Value.String()
-				return sc.errorHandler(sc.listObjectsV2(bucket, prefix, delimiter, marker, maxKeys, index, fetchOwner, stime, etime))
+				return sc.errorHandler(sc.listObjectsV2(bucket, prefix, delimiter, marker, listMaxKeys, index, fetchOwner, stime, etime))
 			}
 
 			// list all my Buckets
@@ -590,7 +590,7 @@ EnvVar:
 		},
 	}
 	listObjectV2Cmd.Flags().StringP("marker", "m", "", "marker")
-	listObjectV2Cmd.Flags().Int64P("maxkeys", "M", 1000, "max keys")
+	listObjectV2Cmd.Flags().Int64Var(&listMaxKeys, "maxkeys", 0, "max keys")
 	listObjectV2Cmd.Flags().StringP("delimiter", "d", "", "Object delimiter")
 	listObjectV2Cmd.Flags().BoolP("index", "i", false, "show Object index")
 	listObjectV2Cmd.Flags().BoolP("owner", "", false, "fetch owner")

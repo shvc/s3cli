@@ -801,12 +801,17 @@ func (sc *S3Cli) listAllObjects(bucket, prefix, delimiter string, index bool, st
 // listAllObjectsV2 list all Objects in specified bucket
 func (sc *S3Cli) listAllObjectsV2(bucket, prefix, delimiter string, index, owner bool, startTime, endTime time.Time) error {
 	var i int64
-	err := sc.Client.ListObjectsV2Pages(&s3.ListObjectsV2Input{
+	listInput := &s3.ListObjectsV2Input{
 		Bucket:     aws.String(bucket),
-		Prefix:     aws.String(prefix),
-		Delimiter:  aws.String(delimiter),
 		FetchOwner: aws.Bool(owner),
-	}, func(p *s3.ListObjectsV2Output, last bool) (shouldContinue bool) {
+	}
+	if prefix != "" {
+		listInput.SetPrefix(prefix)
+	}
+	if delimiter != "" {
+		listInput.SetDelimiter(delimiter)
+	}
+	err := sc.Client.ListObjectsV2Pages(listInput, func(p *s3.ListObjectsV2Output, last bool) (shouldContinue bool) {
 		i++
 		if sc.verboseOutput() {
 			fmt.Println(p)
@@ -851,13 +856,22 @@ func (sc *S3Cli) listAllObjectsV2(bucket, prefix, delimiter string, index, owner
 
 // listObjects (S3 listBucket)list Objects in specified bucket
 func (sc *S3Cli) listObjects(bucket, prefix, delimiter, marker string, maxkeys int64, index bool, startTime, endTime time.Time) error {
-	req, resp := sc.Client.ListObjectsRequest(&s3.ListObjectsInput{
-		Bucket:    aws.String(bucket),
-		Prefix:    aws.String(prefix),
-		Marker:    aws.String(marker),
-		Delimiter: aws.String(delimiter),
-		MaxKeys:   aws.Int64(maxkeys),
-	})
+	listInput := &s3.ListObjectsInput{
+		Bucket: aws.String(bucket),
+	}
+	if prefix != "" {
+		listInput.SetPrefix(prefix)
+	}
+	if delimiter != "" {
+		listInput.SetDelimiter(delimiter)
+	}
+	if marker != "" {
+		listInput.SetMarker(marker)
+	}
+	if maxkeys > 0 {
+		listInput.SetMaxKeys(maxkeys)
+	}
+	req, resp := sc.Client.ListObjectsRequest(listInput)
 
 	if sc.presign {
 		s, err := req.Presign(sc.presignExp)
