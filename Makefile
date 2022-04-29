@@ -51,6 +51,12 @@ default:
 	@echo "Building ${APP}-${VERSION}"
 	go build ${LDFLAGS}
 
+## install: install the app to /usr/local/bin/
+.PHONY: install
+install: default
+	@echo "Install to /usr/local/bin/"
+	mv ${APP} /usr/local/bin/
+
 ## clean: cleans the build results
 .PHONY: clean
 clean:
