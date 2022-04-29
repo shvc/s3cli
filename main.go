@@ -465,7 +465,7 @@ EnvVar:
 			}
 			// Bucket ACL
 			if len(args) == 1 {
-				return sc.errorHandler(sc.bucketACLGet(bucket))
+				return sc.errorHandler(sc.bucketACLGet(args[0]))
 			}
 			var acl string
 			switch args[1] {
@@ -803,7 +803,7 @@ EnvVar:
 				return sc.errorHandler(sc.deletePrefix(bucket, key))
 			}
 			if key == "" {
-				return sc.errorHandler(sc.deleteBucketAndObjects(bucket, force))
+				return sc.errorHandler(sc.deleteBucketAndObjects(args[0], force))
 			}
 
 			return sc.errorHandler(sc.deleteObject(bucket, key))
