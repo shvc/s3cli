@@ -1,6 +1,6 @@
 [![Go](https://github.com/shvc/s3cli/actions/workflows/go.yml/badge.svg)](https://github.com/shvc/s3cli/actions/workflows/go.yml)
 ## s3cli
-s3cli is a command-line tool for AWS S3 compatible storage service.
+s3cli is a command-line tool for AWS S3 compatible storage service.  
 It is based on [aws-sdk-go](https://github.com/aws/aws-sdk-go)
 
 #### Download prebuild [binary here](https://github.com/shvc/s3cli/releases)  
