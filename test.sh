@@ -42,6 +42,9 @@ ${APP} --region ${REGION} put       $BUCKET/${KEY}.upload --presign
 ${APP} --region ${REGION} presign   $BUCKET/${KEY}
 ${APP} --region ${REGION} presign   $BUCKET/${KEY} -X PUT
 
+${APP} --region ${REGION} put       $BUCKET/${KEY}.data --data put-with-data
+${APP} --region ${REGION} cat       $BUCKET/${KEY}.data
+
 ${APP} --region ${REGION} mpu-init $BUCKET/mpu-${KEY}
 ${APP} --region ${REGION} mpu-list   $BUCKET/
 ${APP} --region ${REGION} mpu-list   $BUCKET/mpu-${KEY}
