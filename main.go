@@ -255,7 +255,7 @@ EnvVar:
 		Short:   "put-bucket-encryption",
 		Long: `put-bucket-encryption usage:
 * put-bucket-encryption
-	s3cli put-bucket-encryption bucket-name aes256
+	s3cli put-bucket-encryption bucket-name AES256
 `,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
