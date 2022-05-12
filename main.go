@@ -234,6 +234,36 @@ EnvVar:
 	}
 	rootCmd.AddCommand(bucketCreateCmd)
 
+	bucketEncryptionGetCmd := &cobra.Command{
+		Use:     "get-bucket-encryption <bucket>",
+		Aliases: []string{"gbe"},
+		Short:   "get-bucket-encryption",
+		Long: `get-bucket-encryption usage:
+* get-bucket-encryption
+	s3cli get-bucket-encryption bucket-name
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return sc.errorHandler(sc.bucketEncryptionGet(ctx, args[0]))
+		},
+	}
+	rootCmd.AddCommand(bucketEncryptionGetCmd)
+
+	bucketEncryptionPutCmd := &cobra.Command{
+		Use:     "put-bucket-encryption <bucket>",
+		Aliases: []string{"pbe"},
+		Short:   "get-bucket-encryption",
+		Long: `get-bucket-encryption usage:
+* get-bucket-encryption
+	s3cli get-bucket-encryption bucket-name
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return sc.errorHandler(sc.bucketEncryptionPut(ctx, args[0]))
+		},
+	}
+	rootCmd.AddCommand(bucketEncryptionPutCmd)
+
 	bucketPolicyCmd := &cobra.Command{
 		Use:   "policy <bucket> [policy]",
 		Short: "get/set Bucket Policy",

@@ -250,6 +250,66 @@ func (sc *S3Cli) bucketHead(ctx context.Context, bucket string) error {
 	return nil
 }
 
+// bucketEncryptionGet get a Bucket bucketEncryptionGet
+func (sc *S3Cli) bucketEncryptionGet(ctx context.Context, bucket string) error {
+	req, resp := sc.Client.GetBucketEncryptionRequest(&s3.GetBucketEncryptionInput{
+		Bucket: aws.String(bucket),
+	})
+	req.SetContext(ctx)
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	sc.addCustomHeader(req.HTTPRequest)
+	err := req.Send()
+	if err != nil {
+		return err
+	}
+
+	if sc.lineOutput() {
+		fmt.Println("ok")
+	} else {
+		fmt.Println(resp)
+	}
+
+	return nil
+}
+
+// bucketEncryptionPut put a Bucket bucketEncryptionGet
+func (sc *S3Cli) bucketEncryptionPut(ctx context.Context, bucket string) error {
+	req, resp := sc.Client.PutBucketEncryptionRequest(&s3.PutBucketEncryptionInput{
+		Bucket: aws.String(bucket),
+	})
+	req.SetContext(ctx)
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	sc.addCustomHeader(req.HTTPRequest)
+	err := req.Send()
+	if err != nil {
+		return err
+	}
+
+	if sc.lineOutput() {
+		fmt.Println("ok")
+	} else {
+		fmt.Println(resp)
+	}
+
+	return nil
+}
+
 // bucketACLGet get a Bucket's ACL
 func (sc *S3Cli) bucketACLGet(ctx context.Context, bucket string) error {
 	req, resp := sc.Client.GetBucketAclRequest(&s3.GetBucketAclInput{
@@ -525,6 +585,7 @@ func (sc *S3Cli) putObject(ctx context.Context, bucket, key, contentType string,
 		ContentType: objContentType,
 		Metadata:    metadata,
 	}
+
 	if stream {
 		putObjectInput.ContentLength = aws.Int64(0)
 	}
