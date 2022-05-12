@@ -271,18 +271,67 @@ func (sc *S3Cli) bucketEncryptionGet(ctx context.Context, bucket string) error {
 		return err
 	}
 
-	if sc.lineOutput() {
-		fmt.Println("ok")
+	if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			fmt.Println(resp.String())
+			return nil
+		}
+		fmt.Printf("%s", jo)
 	} else {
-		fmt.Println(resp)
+		fmt.Println(resp.String())
 	}
 
 	return nil
 }
 
 // bucketEncryptionPut put a Bucket bucketEncryptionGet
-func (sc *S3Cli) bucketEncryptionPut(ctx context.Context, bucket string) error {
+func (sc *S3Cli) bucketEncryptionPut(ctx context.Context, bucket, algorithm string) error {
 	req, resp := sc.Client.PutBucketEncryptionRequest(&s3.PutBucketEncryptionInput{
+		Bucket: aws.String(bucket),
+		ServerSideEncryptionConfiguration: &s3.ServerSideEncryptionConfiguration{
+			Rules: []*s3.ServerSideEncryptionRule{
+				{
+					ApplyServerSideEncryptionByDefault: &s3.ServerSideEncryptionByDefault{
+						SSEAlgorithm: aws.String(algorithm),
+					},
+				},
+			},
+		},
+	})
+	req.SetContext(ctx)
+
+	if sc.presign {
+		s, err := req.Presign(sc.presignExp)
+		if err == nil {
+			fmt.Println(s)
+		}
+		return err
+	}
+
+	sc.addCustomHeader(req.HTTPRequest)
+	err := req.Send()
+	if err != nil {
+		return err
+	}
+
+	if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			fmt.Println(resp.String())
+			return nil
+		}
+		fmt.Printf("%s", jo)
+	} else {
+		fmt.Println(resp.String())
+	}
+
+	return nil
+}
+
+// bucketEncryptionDelete delete a Bucket bucketEncryption
+func (sc *S3Cli) bucketEncryptionDelete(ctx context.Context, bucket string) error {
+	req, resp := sc.Client.DeleteBucketEncryptionRequest(&s3.DeleteBucketEncryptionInput{
 		Bucket: aws.String(bucket),
 	})
 	req.SetContext(ctx)
@@ -301,10 +350,15 @@ func (sc *S3Cli) bucketEncryptionPut(ctx context.Context, bucket string) error {
 		return err
 	}
 
-	if sc.lineOutput() {
-		fmt.Println("ok")
+	if sc.jsonOutput() {
+		jo, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			fmt.Println(resp.String())
+			return nil
+		}
+		fmt.Printf("%s", jo)
 	} else {
-		fmt.Println(resp)
+		fmt.Println(resp.String())
 	}
 
 	return nil

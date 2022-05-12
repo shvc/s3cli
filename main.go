@@ -250,19 +250,34 @@ EnvVar:
 	rootCmd.AddCommand(bucketEncryptionGetCmd)
 
 	bucketEncryptionPutCmd := &cobra.Command{
-		Use:     "put-bucket-encryption <bucket>",
+		Use:     "put-bucket-encryption <bucket> <algorithm>",
 		Aliases: []string{"pbe"},
-		Short:   "get-bucket-encryption",
-		Long: `get-bucket-encryption usage:
-* get-bucket-encryption
-	s3cli get-bucket-encryption bucket-name
+		Short:   "put-bucket-encryption",
+		Long: `put-bucket-encryption usage:
+* put-bucket-encryption
+	s3cli put-bucket-encryption bucket-name aes256
 `,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return sc.errorHandler(sc.bucketEncryptionPut(ctx, args[0]))
+			return sc.errorHandler(sc.bucketEncryptionPut(ctx, args[0], args[1]))
 		},
 	}
 	rootCmd.AddCommand(bucketEncryptionPutCmd)
+
+	bucketEncryptionDeleteCmd := &cobra.Command{
+		Use:     "delete-bucket-encryption <bucket>",
+		Aliases: []string{"dbe"},
+		Short:   "delete-bucket-encryption",
+		Long: `delete-bucket-encryption usage:
+* delete-bucket-encryption
+	s3cli delete-bucket-encryption bucket-name
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return sc.errorHandler(sc.bucketEncryptionDelete(ctx, args[0]))
+		},
+	}
+	rootCmd.AddCommand(bucketEncryptionDeleteCmd)
 
 	bucketPolicyCmd := &cobra.Command{
 		Use:   "policy <bucket> [policy]",
