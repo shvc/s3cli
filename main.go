@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -38,12 +40,12 @@ var (
 	// 	https://s3.us-west-2.amazonaws.com/BUCKET/KEY
 	// Without ForcePathStyle(pathStyle=false):
 	// 	https://BUCKET.s3.us-west-2.amazonaws.com/KEY
-	pathStyle             = true
-	dialTimeout           int
-	responseHeaderTimeout int
-	httpKeepAlive         = true
-	v2Sign                = false
-	contentMd5Validate    = false
+	pathStyle                 = true
+	dialTimeout               int
+	responseHeaderTimeout     int
+	httpKeepAlive             = true
+	v2Sign                    = false
+	disableContentMd5Validate = false
 )
 
 func newS3Client(sc *S3Cli) (*s3.S3, error) {
@@ -80,7 +82,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 		Region:                        aws.String(sc.region),
 		MaxRetries:                    aws.Int(0),
 		S3ForcePathStyle:              aws.Bool(pathStyle),
-		S3DisableContentMD5Validation: aws.Bool(!contentMd5Validate),
+		S3DisableContentMD5Validation: aws.Bool(disableContentMd5Validate),
 		HTTPClient: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
@@ -139,6 +141,8 @@ func main() {
 	objectMetadata := []string{}
 	objectContentType := ""
 	objectContentData := ""
+	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer cancelCtx()
 	var rootCmd = &cobra.Command{
 		Use:   "s3cli",
 		Short: "s3cli",
@@ -174,7 +178,7 @@ EnvVar:
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http Keep-Alive")
 	rootCmd.PersistentFlags().BoolVarP(&v2Sign, "v2sign", "", false, "S3 signature v2")
-	rootCmd.PersistentFlags().BoolVarP(&contentMd5Validate, "md5-validate", "", false, "S3 content md5 validate(header Content-Md5:***)")
+	rootCmd.PersistentFlags().BoolVarP(&disableContentMd5Validate, "no-md5-validate", "", false, "disable content md5 validate(header Content-Md5)")
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", defaultDialTimeout, "http dial timeout in seconds")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", defaultResponseHeaderTimeout, "http response header timeout in seconds")
 	rootCmd.PersistentFlags().StringArrayVarP(&sc.header, "header", "H", nil, "Pass custom header(s) to server(format Key:Value)")
@@ -225,7 +229,7 @@ EnvVar:
 	s3cli create-bucket bkt1 bkt2 bkt3`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return sc.errorHandler(sc.bucketCreate(args))
+			return sc.errorHandler(sc.bucketCreate(ctx, args))
 		},
 	}
 	rootCmd.AddCommand(bucketCreateCmd)
@@ -241,9 +245,9 @@ EnvVar:
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 {
-				return sc.errorHandler(sc.bucketPolicyGet(args[0]))
+				return sc.errorHandler(sc.bucketPolicyGet(ctx, args[0]))
 			}
-			return sc.errorHandler(sc.bucketPolicySet(args[0], args[1]))
+			return sc.errorHandler(sc.bucketPolicySet(ctx, args[0], args[1]))
 		},
 	}
 	rootCmd.AddCommand(bucketPolicyCmd)
@@ -267,9 +271,9 @@ EnvVar:
 			if len(args) == 1 {
 				bucket, prefix := sc.splitKeyValue(args[0], "/")
 				if prefix == "" {
-					return sc.errorHandler(sc.bucketVersioningGet(bucket))
+					return sc.errorHandler(sc.bucketVersioningGet(ctx, bucket))
 				}
-				return sc.errorHandler(sc.listObjectVersions(bucket, prefix))
+				return sc.errorHandler(sc.listObjectVersions(ctx, bucket, prefix))
 			}
 
 			var status string
@@ -281,7 +285,7 @@ EnvVar:
 			default:
 				return sc.errorHandler(fmt.Errorf("invalid versioning: %v", args[1]))
 			}
-			return sc.errorHandler(sc.bucketVersioningSet(args[0], status))
+			return sc.errorHandler(sc.bucketVersioningSet(ctx, args[0], status))
 		},
 	}
 	rootCmd.AddCommand(bucketVersionCmd)
@@ -303,12 +307,12 @@ EnvVar:
 			bucket, _ := sc.splitKeyValue(args[0], "/")
 			if len(args) == 1 {
 				if corsDelete {
-					return sc.errorHandler(sc.deleteBucketCors(bucket))
+					return sc.errorHandler(sc.deleteBucketCors(ctx, bucket))
 				} else {
-					return sc.errorHandler(sc.getBucketCors(bucket))
+					return sc.errorHandler(sc.getBucketCors(ctx, bucket))
 				}
 			} else {
-				return sc.errorHandler(sc.putBucketCors(bucket, args[1]))
+				return sc.errorHandler(sc.putBucketCors(ctx, bucket, args[1]))
 			}
 
 		},
@@ -353,9 +357,9 @@ EnvVar:
 			}
 			if len(args) < 2 { // upload one Object
 				if objectContentData != "" { // upload a Object with given content
-					err = sc.putObject(bucket, key, objectContentType, metadata, stream, strings.NewReader(objectContentData))
+					err = sc.putObject(ctx, bucket, key, objectContentType, metadata, stream, strings.NewReader(objectContentData))
 				} else { // upload a zero-size Object
-					err = sc.putObject(bucket, key, objectContentType, metadata, stream, fd)
+					err = sc.putObject(ctx, bucket, key, objectContentType, metadata, stream, fd)
 				}
 			} else if len(args) == 2 { // upload one file
 				if key == "" {
@@ -369,7 +373,7 @@ EnvVar:
 				if objectContentType == "" {
 					objectContentType = mime.TypeByExtension(filepath.Ext(args[1]))
 				}
-				err = sc.putObject(bucket, key, objectContentType, metadata, stream, fd)
+				err = sc.putObject(ctx, bucket, key, objectContentType, metadata, stream, fd)
 			} else { // upload files
 				for _, v := range args[1:] {
 					fd, err = os.Open(v)
@@ -380,7 +384,7 @@ EnvVar:
 						objectContentType = mime.TypeByExtension(filepath.Ext(args[1]))
 					}
 					newKey := key + filepath.Base(v)
-					err = sc.putObject(bucket, newKey, objectContentType, metadata, stream, fd)
+					err = sc.putObject(ctx, bucket, newKey, objectContentType, metadata, stream, fd)
 					if err != nil {
 						fd.Close()
 						return sc.errorHandler(err)
@@ -411,9 +415,9 @@ EnvVar:
 			if key != "" {
 				mt := cmd.Flag("mtime").Changed
 				mts := cmd.Flag("mtimestamp").Changed
-				return sc.errorHandler(sc.headObject(bucket, key, mt, mts))
+				return sc.errorHandler(sc.headObject(ctx, bucket, key, mt, mts))
 			}
-			return sc.errorHandler(sc.bucketHead(bucket))
+			return sc.errorHandler(sc.bucketHead(ctx, bucket))
 		},
 	}
 	headCmd.Flags().BoolP("mtimestamp", "", false, "show Object mtimestamp")
@@ -440,7 +444,7 @@ EnvVar:
 			bucket, key := sc.splitKeyValue(args[0], "/")
 			if key != "" { // Object ACL
 				if len(args) == 1 {
-					return sc.errorHandler(sc.getObjectACL(bucket, key))
+					return sc.errorHandler(sc.getObjectACL(ctx, bucket, key))
 				}
 				var acl string
 				switch args[1] {
@@ -461,11 +465,11 @@ EnvVar:
 				default:
 					return sc.errorHandler(fmt.Errorf("invalid ACL: %s", args[1]))
 				}
-				return sc.errorHandler(sc.setObjectACL(bucket, key, acl))
+				return sc.errorHandler(sc.setObjectACL(ctx, bucket, key, acl))
 			}
 			// Bucket ACL
 			if len(args) == 1 {
-				return sc.errorHandler(sc.bucketACLGet(args[0]))
+				return sc.errorHandler(sc.bucketACLGet(ctx, args[0]))
 			}
 			var acl string
 			switch args[1] {
@@ -480,7 +484,7 @@ EnvVar:
 			default:
 				return sc.errorHandler(fmt.Errorf("invalid ACL: %s", args[1]))
 			}
-			return sc.errorHandler(sc.bucketACLSet(args[0], acl))
+			return sc.errorHandler(sc.bucketACLSet(ctx, args[0], acl))
 		},
 	}
 	rootCmd.AddCommand(aclCmd)
@@ -523,14 +527,14 @@ EnvVar:
 					bucket = args[0]
 				}
 				if cmd.Flag("all").Changed {
-					return sc.errorHandler(sc.listAllObjects(bucket, prefix, delimiter, index, stime, etime))
+					return sc.errorHandler(sc.listAllObjects(ctx, bucket, prefix, delimiter, index, stime, etime))
 				}
 				marker := cmd.Flag("marker").Value.String()
-				return sc.errorHandler(sc.listObjects(bucket, prefix, delimiter, marker, listMaxKeys, index, stime, etime))
+				return sc.errorHandler(sc.listObjects(ctx, bucket, prefix, delimiter, marker, listMaxKeys, index, stime, etime))
 			}
 
 			// list all my Buckets
-			return sc.errorHandler(sc.bucketList())
+			return sc.errorHandler(sc.bucketList(ctx))
 		},
 	}
 	listObjectCmd.Flags().StringP("marker", "m", "", "marker")
@@ -578,15 +582,15 @@ EnvVar:
 					bucket = args[0]
 				}
 				if cmd.Flag("all").Changed {
-					return sc.errorHandler(sc.listAllObjectsV2(bucket, prefix, delimiter, index, fetchOwner, stime, etime))
+					return sc.errorHandler(sc.listAllObjectsV2(ctx, bucket, prefix, delimiter, index, fetchOwner, stime, etime))
 				}
 
 				marker := cmd.Flag("marker").Value.String()
-				return sc.errorHandler(sc.listObjectsV2(bucket, prefix, delimiter, marker, listMaxKeys, index, fetchOwner, stime, etime))
+				return sc.errorHandler(sc.listObjectsV2(ctx, bucket, prefix, delimiter, marker, listMaxKeys, index, fetchOwner, stime, etime))
 			}
 
 			// list all my Buckets
-			return sc.errorHandler(sc.bucketList())
+			return sc.errorHandler(sc.bucketList(ctx))
 		},
 	}
 	listObjectV2Cmd.Flags().StringP("marker", "m", "", "marker")
@@ -611,7 +615,7 @@ EnvVar:
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, prefix := sc.splitKeyValue(args[0], "/")
-			return sc.errorHandler(sc.listObjectVersions(bucket, prefix))
+			return sc.errorHandler(sc.listObjectVersions(ctx, bucket, prefix))
 		},
 	}
 	rootCmd.AddCommand(listVersionCmd)
@@ -629,7 +633,7 @@ EnvVar:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, prefix := sc.splitKeyValue(args[0], "/")
 			version := cmd.Flag("id").Value.String()
-			return sc.errorHandler(sc.deleteObjectVersion(bucket, prefix, version))
+			return sc.errorHandler(sc.deleteObjectVersion(ctx, bucket, prefix, version))
 		},
 	}
 	deleteVersionCmd.Flags().StringP("id", "", "", "Object versionID to delete")
@@ -652,7 +656,7 @@ EnvVar:
 			if len(args) > 1 {
 				version = args[1]
 			}
-			err := sc.restoreObject(bucket, key, version)
+			err := sc.restoreObject(ctx, bucket, key, version)
 			return sc.errorHandler(err)
 		},
 	}
@@ -674,13 +678,13 @@ EnvVar:
 			bucket, key := sc.splitKeyValue(args[0], "/")
 			objRange := cmd.Flag("range").Value.String()
 			version := cmd.Flag("version").Value.String()
-			err := sc.getObject(bucket, key, objRange, version)
+			err := sc.getObject(ctx, bucket, key, objRange, version)
 			if err != nil {
 				return sc.errorHandler(err)
 			}
 			if len(args) > 1 {
 				for _, k := range args[1:] {
-					err := sc.getObject(bucket, k, "", "")
+					err := sc.getObject(ctx, bucket, k, "", "")
 					if err != nil {
 						return sc.errorHandler(err)
 					}
@@ -705,7 +709,7 @@ EnvVar:
 			objRange := cmd.Flag("range").Value.String()
 			version := cmd.Flag("version").Value.String()
 			bucket, key := sc.splitKeyValue(args[0], "/")
-			return sc.errorHandler(sc.catObject(bucket, key, objRange, version))
+			return sc.errorHandler(sc.catObject(ctx, bucket, key, objRange, version))
 		},
 	}
 	catObjectCmd.Flags().StringP("range", "r", "", "Object range to cat, 0-64 means [0, 64]")
@@ -727,7 +731,7 @@ EnvVar:
 			if key == "" {
 				_, key = sc.splitKeyValue(args[0], "/")
 			}
-			return sc.errorHandler(sc.renameObject(args[0], bucket, key))
+			return sc.errorHandler(sc.renameObject(ctx, args[0], bucket, key))
 		},
 	}
 	rootCmd.AddCommand(renameObjectCmd)
@@ -768,7 +772,7 @@ EnvVar:
 				}
 			}
 
-			return sc.errorHandler(sc.copyObject(args[0], dstBucket, dstKey, objectContentType, metadata))
+			return sc.errorHandler(sc.copyObject(ctx, args[0], dstBucket, dstKey, objectContentType, metadata))
 		},
 	}
 	copyObjectCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "new Object user metadata(format Key:Value)")
@@ -797,16 +801,16 @@ EnvVar:
 			bucket, key := sc.splitKeyValue(args[0], "/")
 			if len(args) > 1 {
 				args[0] = key
-				return sc.errorHandler(sc.deleteObjects(bucket, args))
+				return sc.errorHandler(sc.deleteObjects(ctx, bucket, args))
 			}
 			if prefixMode {
-				return sc.errorHandler(sc.deletePrefix(bucket, key))
+				return sc.errorHandler(sc.deletePrefix(ctx, bucket, key))
 			}
 			if key == "" {
-				return sc.errorHandler(sc.deleteBucketAndObjects(args[0], force))
+				return sc.errorHandler(sc.deleteBucketAndObjects(ctx, args[0], force))
 			}
 
-			return sc.errorHandler(sc.deleteObject(bucket, key))
+			return sc.errorHandler(sc.deleteObject(ctx, bucket, key))
 
 		},
 	}
@@ -824,7 +828,7 @@ EnvVar:
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bucket, key := sc.splitKeyValue(args[0], "/")
-			return sc.errorHandler(sc.mpuCreate(bucket, key))
+			return sc.errorHandler(sc.mpuCreate(ctx, bucket, key))
 		},
 	}
 	rootCmd.AddCommand(mpuCreateCmd)
@@ -856,7 +860,7 @@ EnvVar:
 			}
 
 			bucket, key := sc.splitKeyValue(args[0], "/")
-			return sc.errorHandler(sc.mpuUpload(bucket, key, args[1], files))
+			return sc.errorHandler(sc.mpuUpload(ctx, bucket, key, args[1], files))
 		},
 	}
 	rootCmd.AddCommand(mpuUploadCmd)
@@ -877,7 +881,7 @@ EnvVar:
 			if key == "" {
 				return sc.errorHandler(fmt.Errorf("unknown key <bucket/key>(%v)", args[0]))
 			}
-			return sc.errorHandler(sc.mpuAbort(bucket, key, args[1]))
+			return sc.errorHandler(sc.mpuAbort(ctx, bucket, key, args[1]))
 		},
 	}
 	rootCmd.AddCommand(mpuAbortCmd)
@@ -895,7 +899,7 @@ EnvVar:
 			if bucket == "" {
 				return sc.errorHandler(fmt.Errorf("unknown bucket <bucket/key>(%v)", args[0]))
 			}
-			return sc.errorHandler(sc.mpuList(bucket, prefix))
+			return sc.errorHandler(sc.mpuList(ctx, bucket, prefix))
 		},
 	}
 	rootCmd.AddCommand(mpuListCmd)
@@ -920,7 +924,7 @@ EnvVar:
 			for i := range etags {
 				etags[i] = args[i+2]
 			}
-			return sc.errorHandler(sc.mpuComplete(bucket, key, args[1], etags))
+			return sc.errorHandler(sc.mpuComplete(ctx, bucket, key, args[1], etags))
 		},
 	}
 	rootCmd.AddCommand(mpuCompleteCmd)
@@ -965,7 +969,7 @@ EnvVar:
 				key = filepath.Base(args[1])
 			}
 
-			err = sc.mpu(bucket, key, objectContentType, partSize<<20, fd, metadata)
+			err = sc.mpu(ctx, bucket, key, objectContentType, partSize<<20, fd, metadata)
 
 			return sc.errorHandler(err)
 		},
@@ -986,7 +990,7 @@ EnvVar:
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			err = sc.getObjectLockConfig(args[0])
+			err = sc.getObjectLockConfig(ctx, args[0])
 			return sc.errorHandler(err)
 		},
 	}
@@ -1004,7 +1008,7 @@ EnvVar:
 `,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			err = sc.putObjectLockConfig(args[0], args[1])
+			err = sc.putObjectLockConfig(ctx, args[0], args[1])
 			return sc.errorHandler(err)
 		},
 	}
