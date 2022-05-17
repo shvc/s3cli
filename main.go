@@ -56,6 +56,10 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 		return nil, errors.New("unknown endpoint")
 	}
 
+	if !strings.HasPrefix(sc.endpoint, "http://") && !strings.HasPrefix(sc.endpoint, "https://") {
+		sc.endpoint = "http://" + sc.endpoint
+	}
+
 	if sc.accessKey == "" {
 		sc.accessKey = os.Getenv("AWS_ACCESS_KEY_ID")
 		if sc.accessKey == "" {
