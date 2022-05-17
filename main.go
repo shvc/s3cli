@@ -46,6 +46,7 @@ var (
 	httpKeepAlive             = true
 	v2Sign                    = false
 	disableContentMd5Validate = false
+	noProxy                   = false
 )
 
 func newS3Client(sc *S3Cli) (*s3.S3, error) {
@@ -81,6 +82,16 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	if sc.accessKey != "" && sc.secretKey == "" {
 		return nil, errors.New("unknown secretKey")
 	}
+	tp := &http.Transport{
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+		Dial:                  (&net.Dialer{Timeout: time.Duration(dialTimeout) * time.Second}).Dial,
+		ResponseHeaderTimeout: time.Duration(responseHeaderTimeout) * time.Second,
+		DisableKeepAlives:     !httpKeepAlive,
+	}
+
+	if !noProxy {
+		tp.Proxy = http.ProxyFromEnvironment
+	}
 
 	cfg := &aws.Config{
 		Region:                        aws.String(sc.region),
@@ -88,12 +99,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 		S3ForcePathStyle:              aws.Bool(pathStyle),
 		S3DisableContentMD5Validation: aws.Bool(disableContentMd5Validate),
 		HTTPClient: &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-				Dial:                  (&net.Dialer{Timeout: time.Duration(dialTimeout) * time.Second}).Dial,
-				ResponseHeaderTimeout: time.Duration(responseHeaderTimeout) * time.Second,
-				DisableKeepAlives:     !httpKeepAlive,
-			},
+			Transport: tp,
 		},
 		EndpointResolver: endpoints.ResolverFunc(
 			func(service, region string, opts ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
@@ -106,6 +112,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 
 			}),
 	}
+
 	if sc.profile != "" {
 		cfg.Credentials = credentials.NewSharedCredentials("", sc.profile)
 		cfg.Credentials.Get()
@@ -182,6 +189,7 @@ EnvVar:
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http Keep-Alive")
 	rootCmd.PersistentFlags().BoolVarP(&v2Sign, "v2sign", "", false, "S3 signature v2")
+	rootCmd.PersistentFlags().BoolVarP(&noProxy, "noproxy", "", false, "S3 http client not use proxy")
 	rootCmd.PersistentFlags().BoolVarP(&disableContentMd5Validate, "no-md5-validate", "", false, "disable content md5 validate(header Content-Md5)")
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", defaultDialTimeout, "http dial timeout in seconds")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", defaultResponseHeaderTimeout, "http response header timeout in seconds")
