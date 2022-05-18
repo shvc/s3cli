@@ -82,6 +82,11 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	if sc.accessKey != "" && sc.secretKey == "" {
 		return nil, errors.New("unknown secretKey")
 	}
+
+	if sc.tokenKey == "" {
+		sc.tokenKey = os.Getenv("AWS_SESSION_TOKEN")
+	}
+
 	tp := &http.Transport{
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
 		Dial:                  (&net.Dialer{Timeout: time.Duration(dialTimeout) * time.Second}).Dial,
@@ -119,7 +124,8 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	} else if sc.accessKey == "" && sc.secretKey == "" {
 		cfg.Credentials = credentials.AnonymousCredentials
 	} else {
-		cfg.Credentials = credentials.NewStaticCredentials(sc.accessKey, sc.secretKey, "")
+		credentials.NewEnvCredentials()
+		cfg.Credentials = credentials.NewStaticCredentials(sc.accessKey, sc.secretKey, sc.tokenKey)
 	}
 	sess := session.Must(session.NewSession(cfg))
 
@@ -165,7 +171,9 @@ EnvVar:
 	AWS_ACCESS_KEY_ID=ak         (only read if flag --ak and --profile not set)
 	AWS_ACCESS_KEY=ak            (only read if AWS_ACCESS_KEY_ID is not set)
 	AWS_SECRET_ACCESS_KEY=sk     (only read if flag --sk and --profile not set)
-	AWS_SECRET_KEY=sk            (only read if AWS_SECRET_ACCESS_KEY is not set)`,
+	AWS_SECRET_KEY=sk            (only read if AWS_SECRET_ACCESS_KEY is not set)
+	AWS_SESSION_TOKEN=token      (only read if --tk is not set)
+	`,
 		Version: version,
 		Hidden:  true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -186,6 +194,7 @@ EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.region, "region", "R", s3.BucketLocationConstraintCnNorth1, "S3 region")
 	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "ak", "a", "", "S3 Access Key(only read if profile not set)")
 	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "sk", "s", "", "S3 Secret Key(only read if profile not set)")
+	rootCmd.PersistentFlags().StringVarP(&sc.tokenKey, "tk", "", "", "S3 session token")
 	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
 	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http Keep-Alive")
 	rootCmd.PersistentFlags().BoolVarP(&v2Sign, "v2sign", "", false, "S3 signature v2")

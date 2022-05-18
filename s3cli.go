@@ -42,6 +42,7 @@ type S3Cli struct {
 	endpoint   string // Server endpoine(URL)
 	accessKey  string // access-key
 	secretKey  string // secret-key
+	tokenKey   string
 	region     string
 	presign    bool // just presign
 	presignExp time.Duration
