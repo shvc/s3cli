@@ -98,43 +98,49 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 		tp.Proxy = http.ProxyFromEnvironment
 	}
 
-	cfg := &aws.Config{
-		Region:                        aws.String(sc.region),
-		MaxRetries:                    aws.Int(0),
-		S3ForcePathStyle:              aws.Bool(pathStyle),
-		S3DisableContentMD5Validation: aws.Bool(disableContentMd5Validate),
-		HTTPClient: &http.Client{
-			Transport: tp,
+	sessionOptions := session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+		Config: aws.Config{
+			MaxRetries:                    aws.Int(0),
+			S3ForcePathStyle:              aws.Bool(pathStyle),
+			S3DisableContentMD5Validation: aws.Bool(disableContentMd5Validate),
+			HTTPClient: &http.Client{
+				Transport: tp,
+			},
+			EndpointResolver: endpoints.ResolverFunc(
+				func(service, region string, opts ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
+					if service == "s3" {
+						return endpoints.ResolvedEndpoint{
+							URL:           sc.endpoint,
+							SigningRegion: region,
+							SigningName:   service,
+							SigningMethod: "v4",
+						}, nil
+					}
+					return endpoints.DefaultResolver().EndpointFor(service, region, opts...)
+				}),
 		},
-		EndpointResolver: endpoints.ResolverFunc(
-			func(service, region string, opts ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
-				return endpoints.ResolvedEndpoint{
-					URL:           sc.endpoint,
-					SigningRegion: sc.region,
-					SigningName:   service,
-					SigningMethod: "v4",
-				}, nil
-
-			}),
+	}
+	if sc.region != "" {
+		sessionOptions.Config.Region = aws.String(sc.region)
 	}
 
 	if sc.profile != "" {
-		cfg.Credentials = credentials.NewSharedCredentials("", sc.profile)
-		cfg.Credentials.Get()
+		sessionOptions.Profile = sc.profile
 	} else if sc.accessKey == "" && sc.secretKey == "" {
-		cfg.Credentials = credentials.AnonymousCredentials
+		sessionOptions.Config.Credentials = credentials.AnonymousCredentials
 	} else {
 		credentials.NewEnvCredentials()
-		cfg.Credentials = credentials.NewStaticCredentials(sc.accessKey, sc.secretKey, sc.tokenKey)
+		sessionOptions.Config.Credentials = credentials.NewStaticCredentials(sc.accessKey, sc.secretKey, sc.tokenKey)
 	}
-	sess := session.Must(session.NewSession(cfg))
+	sess := session.Must(session.NewSessionWithOptions(sessionOptions))
 
 	if sc.debug {
 		sess.Config.LogLevel = aws.LogLevel(aws.LogDebug)
 	}
 	svc := s3.New(sess)
 	if v2Sign {
-		cred, _ := cfg.Credentials.Get()
+		cred, _ := sessionOptions.Config.Credentials.Get()
 		svc.Handlers.Sign.Clear()
 		// auto fill content-length header
 		svc.Handlers.Sign.PushBackNamed(corehandlers.BuildContentLengthHandler)
