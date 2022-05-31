@@ -1252,7 +1252,7 @@ func (sc *S3Cli) renameObject(ctx context.Context, source, bucket, key string) e
 }
 
 // copyObjects copy Object to destBucket/key
-func (sc *S3Cli) copyObject(ctx context.Context, source, dstBucket, dstKey, contentType string, metadata map[string]*string) error {
+func (sc *S3Cli) copyObject(ctx context.Context, source, dstBucket, dstKey, contentType string, metadata map[string]*string, mdRp bool) error {
 	ci := &s3.CopyObjectInput{
 		CopySource: aws.String(source),
 		Bucket:     aws.String(dstBucket), // The name of the destination bucket.
@@ -1262,9 +1262,13 @@ func (sc *S3Cli) copyObject(ctx context.Context, source, dstBucket, dstKey, cont
 	if contentType != "" {
 		ci.ContentType = aws.String(contentType)
 	}
-	if ci.Metadata != nil || ci.ContentType != nil {
+
+	if mdRp {
 		ci.MetadataDirective = aws.String(s3.MetadataDirectiveReplace)
+	} else {
+		ci.MetadataDirective = aws.String(s3.MetadataDirectiveCopy)
 	}
+
 	req, resp := sc.Client.CopyObjectRequest(ci)
 	req.SetContext(ctx)
 

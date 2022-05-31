@@ -182,7 +182,7 @@ func Test_renameObject(t *testing.T) {
 func Test_copyObject(t *testing.T) {
 	source := fmt.Sprintf("%s/%s", testBucketName, testObjectKey)
 	newKey := "testCopyObjectKey"
-	if err := s3cliTest.copyObject(context.Background(), source, testBucketName, newKey, "", nil); err != nil {
+	if err := s3cliTest.copyObject(context.Background(), source, testBucketName, newKey, "", nil, false); err != nil {
 		t.Errorf("copyObject failed: %s", err)
 		return
 	}

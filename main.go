@@ -808,6 +808,7 @@ EnvVar:
 	}
 	rootCmd.AddCommand(renameObjectCmd)
 
+	var copyObjectReplaceMetadata bool
 	copyObjectCmd := &cobra.Command{
 		Use:     "copy <bucket/key> <bucket/key>",
 		Aliases: []string{"cp"},
@@ -844,11 +845,12 @@ EnvVar:
 				}
 			}
 
-			return sc.errorHandler(sc.copyObject(ctx, args[0], dstBucket, dstKey, objectContentType, metadata))
+			return sc.errorHandler(sc.copyObject(ctx, args[0], dstBucket, dstKey, objectContentType, metadata, copyObjectReplaceMetadata))
 		},
 	}
 	copyObjectCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "new Object user metadata(format Key:Value)")
 	copyObjectCmd.Flags().StringVar(&objectContentType, "content-type", "", "new Object content-type")
+	copyObjectCmd.Flags().BoolVar(&copyObjectReplaceMetadata, "replace-md", false, "replace metadata(must be true if src and dst is the same file)")
 	rootCmd.AddCommand(copyObjectCmd)
 
 	deleteObjectCmd := &cobra.Command{
