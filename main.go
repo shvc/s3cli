@@ -849,7 +849,7 @@ EnvVar:
 		},
 	}
 	copyObjectCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "new Object user metadata(format Key:Value)")
-	copyObjectCmd.Flags().StringVar(&objectContentType, "content-type", "", "new Object content-type")
+	copyObjectCmd.Flags().StringVar(&objectContentType, "content-type", "", "new Object Content-Type")
 	copyObjectCmd.Flags().BoolVar(&copyObjectReplaceMetadata, "replace-md", false, "replace metadata(must be true if src and dst is the same file)")
 	rootCmd.AddCommand(copyObjectCmd)
 
