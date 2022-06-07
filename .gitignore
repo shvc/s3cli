@@ -15,6 +15,7 @@
 /tmp
 /testkey
 /.vscode
+.DS_Store
 
 # binary file
 /s3cli
