@@ -36,14 +36,14 @@ var (
 	version = "1.2.3"
 	// endpoint ENV Var
 	endpointEnvVar = "S3_ENDPOINT"
-	// With ForcePathStyle(pathStyle=true):
+	// With virtualHostStyle=false:
 	// 	https://s3.us-west-2.amazonaws.com/BUCKET/KEY
-	// Without ForcePathStyle(pathStyle=false):
+	// Without virtualHostStyle=true:
 	// 	https://BUCKET.s3.us-west-2.amazonaws.com/KEY
-	pathStyle                 = true
+	virtualHostStyle          = false
 	dialTimeout               int
 	responseHeaderTimeout     int
-	httpKeepAlive             = true
+	httpKeepAlive             = false
 	v2Sign                    = false
 	disableContentMd5Validate = false
 	noProxy                   = false
@@ -102,7 +102,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 		SharedConfigState: session.SharedConfigEnable,
 		Config: aws.Config{
 			MaxRetries:                    aws.Int(0),
-			S3ForcePathStyle:              aws.Bool(pathStyle),
+			S3ForcePathStyle:              aws.Bool(!virtualHostStyle),
 			S3DisableContentMD5Validation: aws.Bool(disableContentMd5Validate),
 			HTTPClient: &http.Client{
 				Transport: tp,
@@ -201,8 +201,8 @@ EnvVar:
 	rootCmd.PersistentFlags().StringVarP(&sc.accessKey, "ak", "a", "", "S3 Access Key(only read if profile not set)")
 	rootCmd.PersistentFlags().StringVarP(&sc.secretKey, "sk", "s", "", "S3 Secret Key(only read if profile not set)")
 	rootCmd.PersistentFlags().StringVarP(&sc.tokenKey, "tk", "", "", "S3 session token")
-	rootCmd.PersistentFlags().BoolVarP(&pathStyle, "path-style", "", true, "use path style")
-	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", true, "http Keep-Alive")
+	rootCmd.PersistentFlags().BoolVarP(&virtualHostStyle, "vhost-style", "", false, "enable virtual host style(disable path-style)")
+	rootCmd.PersistentFlags().BoolVarP(&httpKeepAlive, "http-keep-alive", "", false, "http Keep-Alive")
 	rootCmd.PersistentFlags().BoolVarP(&v2Sign, "v2sign", "", false, "S3 signature v2")
 	rootCmd.PersistentFlags().BoolVarP(&noProxy, "noproxy", "", false, "S3 http client not use proxy")
 	rootCmd.PersistentFlags().BoolVarP(&disableContentMd5Validate, "no-md5-validate", "", false, "disable content md5 validate(header Content-Md5)")
