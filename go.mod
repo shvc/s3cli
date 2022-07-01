@@ -3,9 +3,9 @@ module github.com/shvc/s3cli
 go 1.17
 
 require (
-	github.com/aws/aws-sdk-go v1.44.27
-	github.com/johannesboyne/gofakes3 v0.0.0-20220517215058-83a58ec253b6
-	github.com/spf13/cobra v1.4.0
+	github.com/aws/aws-sdk-go v1.44.46
+	github.com/johannesboyne/gofakes3 v0.0.0-20220627085814-c3ac35da23b2
+	github.com/spf13/cobra v1.5.0
 
 )
 
