@@ -130,7 +130,6 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	} else if sc.accessKey == "" && sc.secretKey == "" {
 		sessionOptions.Config.Credentials = credentials.AnonymousCredentials
 	} else {
-		credentials.NewEnvCredentials()
 		sessionOptions.Config.Credentials = credentials.NewStaticCredentials(sc.accessKey, sc.secretKey, sc.tokenKey)
 	}
 	sess := session.Must(session.NewSessionWithOptions(sessionOptions))
@@ -183,12 +182,9 @@ EnvVar:
 		Version: version,
 		Hidden:  true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			client, err := newS3Client(&sc)
-			if err != nil {
-				return sc.errorHandler(err)
-			}
-			sc.Client = client
-			return nil
+			var err error
+			sc.Client, err = newS3Client(&sc)
+			return err
 		},
 	}
 	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "show SDK debug log")
