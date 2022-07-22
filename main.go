@@ -181,7 +181,7 @@ EnvVar:
 	`,
 		Version: version,
 		Hidden:  true,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		PersistentPreRunE: func(*cobra.Command, []string) error {
 			var err error
 			sc.Client, err = newS3Client(&sc)
 			return err
@@ -311,7 +311,7 @@ EnvVar:
 * set Bucket policy(json http://awspolicygen.s3.amazonaws.com/policygen.html)
 	s3cli policy bucket-name '{json}'`,
 		Args: cobra.RangeArgs(1, 2),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) == 1 {
 				return sc.errorHandler(sc.bucketPolicyGet(ctx, args[0]))
 			}
@@ -335,7 +335,7 @@ EnvVar:
 	s3cli version bucket-name/key
 	`,
 		Args: cobra.RangeArgs(1, 2),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) == 1 {
 				bucket, prefix := sc.splitKeyValue(args[0], "/")
 				if prefix == "" {
@@ -371,7 +371,7 @@ EnvVar:
 	s3cli cors bucket-name cors.json
 `,
 		Args: cobra.RangeArgs(1, 2),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			bucket, _ := sc.splitKeyValue(args[0], "/")
 			if len(args) == 1 {
 				if corsDelete {
@@ -508,7 +508,7 @@ EnvVar:
 * all canned ACL(private,public-read,public-read-write,authenticated-read,aws-exec-read,bucket-owner-read,bucket-owner-full-control)
 `,
 		Args: cobra.MinimumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			bucket, key := sc.splitKeyValue(args[0], "/")
 			if key != "" { // Object ACL
 				if len(args) == 1 {
@@ -681,7 +681,7 @@ EnvVar:
 * list Object Versions with specified prefix
 	s3cli lv bucket-name/prefix`,
 		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			bucket, prefix := sc.splitKeyValue(args[0], "/")
 			return sc.errorHandler(sc.listObjectVersions(ctx, bucket, prefix))
 		},
@@ -718,7 +718,7 @@ EnvVar:
 	s3cli restore bucket-name/key versionID
 `,
 		Args: cobra.RangeArgs(1, 2),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			bucket, key := sc.splitKeyValue(args[0], "/")
 			version := ""
 			if len(args) > 1 {
@@ -794,7 +794,7 @@ EnvVar:
 * default destionation key
 	s3cli mv bucket-name/key1 bucket-name2`,
 		Args: cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			bucket, key := sc.splitKeyValue(args[1], "/")
 			if key == "" {
 				_, key = sc.splitKeyValue(args[0], "/")
@@ -817,7 +817,7 @@ EnvVar:
 * spedify destionation Key
 	s3cli copy bucket-src/key-src key-dst`,
 		Args: cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			var metadata map[string]*string
 			for _, v := range objectMetadata {
 				k, v := sc.splitKeyValue(v, ":")
@@ -896,7 +896,7 @@ EnvVar:
 * init(create) a MPU request
 	s3cli mpu-init bucket-name/key`,
 		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			bucket, key := sc.splitKeyValue(args[0], "/")
 			return sc.errorHandler(sc.mpuCreate(ctx, bucket, key))
 		},
@@ -915,7 +915,7 @@ EnvVar:
 * upload MPU part3 and part4
 	s3cli mpu-upload bucket-name/key UploadId 3:localfile3 4:localfile4`,
 		Args: cobra.MinimumNArgs(3),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			files := map[int64]string{}
 			for _, v := range args[2:] {
 				i, filename := sc.splitKeyValue(v, ":")
@@ -943,7 +943,7 @@ EnvVar:
 * abort a mpu request
 	s3cli mpu-abort bucket-name/key UploadId`,
 		Args: cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			bucket, key := sc.splitKeyValue(args[0], "/")
 			if bucket == "" {
 				return sc.errorHandler(fmt.Errorf("unknown bucket <bucket/key>(%v)", args[0]))
@@ -964,7 +964,7 @@ EnvVar:
 * list MPU
 	s3cli mpu-list bucket-name/prefix`,
 		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			bucket, prefix := sc.splitKeyValue(args[0], "/")
 			if bucket == "" {
 				return sc.errorHandler(fmt.Errorf("unknown bucket <bucket/key>(%v)", args[0]))
@@ -982,7 +982,7 @@ EnvVar:
 * complete a MPU request
 	s3cli mpu-complete bucket-name/key UploadId etag01 etag02 etag03`,
 		Args: cobra.MinimumNArgs(3),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			bucket, key := sc.splitKeyValue(args[0], "/")
 			if bucket == "" {
 				return sc.errorHandler(fmt.Errorf("unknown bucket <bucket/key>(%v)", args[0]))
@@ -1059,7 +1059,7 @@ EnvVar:
 	s3cli get-object-lock-configuration bucket
 `,
 		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
+		RunE: func(_ *cobra.Command, args []string) (err error) {
 			err = sc.getObjectLockConfig(ctx, args[0])
 			return sc.errorHandler(err)
 		},
@@ -1077,7 +1077,7 @@ EnvVar:
 	s3cli put-object-lock-configuration bucket Disable
 `,
 		Args: cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
+		RunE: func(_ *cobra.Command, args []string) (err error) {
 			err = sc.putObjectLockConfig(ctx, args[0], args[1])
 			return sc.errorHandler(err)
 		},

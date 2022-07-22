@@ -876,7 +876,7 @@ func (sc *S3Cli) listAllObjects(ctx context.Context, bucket, prefix, delimiter s
 		Bucket:    aws.String(bucket),
 		Prefix:    aws.String(prefix),
 		Delimiter: aws.String(delimiter),
-	}, func(p *s3.ListObjectsOutput, last bool) (shouldContinue bool) {
+	}, func(p *s3.ListObjectsOutput, _ bool) (shouldContinue bool) {
 		i++
 		if sc.verboseOutput() {
 			fmt.Println(p)
@@ -940,7 +940,7 @@ func (sc *S3Cli) listAllObjectsV2(ctx context.Context, bucket, prefix, delimiter
 	if delimiter != "" {
 		listInput.SetDelimiter(delimiter)
 	}
-	err := sc.Client.ListObjectsV2PagesWithContext(ctx, listInput, func(p *s3.ListObjectsV2Output, last bool) (shouldContinue bool) {
+	err := sc.Client.ListObjectsV2PagesWithContext(ctx, listInput, func(p *s3.ListObjectsV2Output, _ bool) (shouldContinue bool) {
 		i++
 		if sc.verboseOutput() {
 			fmt.Println(p)
