@@ -1059,14 +1059,23 @@ func (sc *S3Cli) listObjects(ctx context.Context, bucket, prefix, delimiter, mar
 
 // listObjectsV2 (S3 listBucket)list Objects in specified bucket
 func (sc *S3Cli) listObjectsV2(ctx context.Context, bucket, prefix, delimiter, marker string, maxkeys int64, index, owner bool, startTime, endTime time.Time) error {
-	req, resp := sc.Client.ListObjectsV2Request(&s3.ListObjectsV2Input{
-		Bucket:     aws.String(bucket),
-		Prefix:     aws.String(prefix),
-		StartAfter: aws.String(marker),
-		Delimiter:  aws.String(delimiter),
-		MaxKeys:    aws.Int64(maxkeys),
-		FetchOwner: aws.Bool(owner),
-	})
+	listInput := &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+	}
+	if prefix != "" {
+		listInput.SetPrefix(prefix)
+	}
+	if delimiter != "" {
+		listInput.SetDelimiter(delimiter)
+	}
+	if marker != "" {
+		listInput.SetStartAfter(marker)
+	}
+	if maxkeys > 0 {
+		listInput.SetMaxKeys(maxkeys)
+	}
+
+	req, resp := sc.Client.ListObjectsV2Request(listInput)
 	req.SetContext(ctx)
 
 	if sc.presign {
