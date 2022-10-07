@@ -62,6 +62,12 @@ install: default
 clean:
 	rm -rf *zip ${APP}
 
+## image: build docker image
+.PHONY: image
+image:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a ${LDFLAGS}
+	docker build -t shvc/${APP}:${VERSION} -f Dockerfile .
+
 ## help: prints this help message
 .PHONY: help
 help:
