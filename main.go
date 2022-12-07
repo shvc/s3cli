@@ -43,6 +43,7 @@ var (
 	virtualHostStyle          = false
 	dialTimeout               int
 	responseHeaderTimeout     int
+	retryNum                  int
 	httpKeepAlive             = false
 	v2Sign                    = false
 	disableContentMd5Validate = false
@@ -101,7 +102,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	sessionOptions := session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 		Config: aws.Config{
-			MaxRetries:                    aws.Int(0),
+			MaxRetries:                    aws.Int(retryNum),
 			S3ForcePathStyle:              aws.Bool(!virtualHostStyle),
 			S3DisableContentMD5Validation: aws.Bool(disableContentMd5Validate),
 			HTTPClient: &http.Client{
@@ -206,6 +207,7 @@ EnvVar:
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", defaultResponseHeaderTimeout, "http response header timeout in seconds")
 	rootCmd.PersistentFlags().StringArrayVarP(&sc.header, "header", "H", nil, "Pass custom header(s) to server(format Key:Value)")
 	rootCmd.PersistentFlags().StringArrayVarP(&sc.query, "query", "Q", nil, "Pass custom query parameter(s) to server(format Key=Value)")
+	rootCmd.PersistentFlags().IntVar(&retryNum, "retry", retryNum, "retry number")
 	// presign(V2) command
 	presignCmd := &cobra.Command{
 		Use:   "presign <bucket/key>",
