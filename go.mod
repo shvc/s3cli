@@ -1,4 +1,4 @@
-module github.com/shvc/s3cli
+module s3cli
 
 go 1.19
 
