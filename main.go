@@ -89,7 +89,9 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	}
 
 	tp := &http.Transport{
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
 		Dial:                  (&net.Dialer{Timeout: time.Duration(dialTimeout) * time.Second}).Dial,
 		ResponseHeaderTimeout: time.Duration(responseHeaderTimeout) * time.Second,
 		DisableKeepAlives:     !httpKeepAlive,
