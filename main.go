@@ -47,6 +47,7 @@ var (
 	httpKeepAlive             = false
 	v2Sign                    = false
 	disableContentMd5Validate = false
+	cleanURI                  = false
 	noProxy                   = false
 )
 
@@ -104,9 +105,10 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	sessionOptions := session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 		Config: aws.Config{
-			MaxRetries:                    aws.Int(retryNum),
-			S3ForcePathStyle:              aws.Bool(!virtualHostStyle),
-			S3DisableContentMD5Validation: aws.Bool(disableContentMd5Validate),
+			MaxRetries:                     aws.Int(retryNum),
+			S3ForcePathStyle:               aws.Bool(!virtualHostStyle),
+			S3DisableContentMD5Validation:  aws.Bool(disableContentMd5Validate),
+			DisableRestProtocolURICleaning: aws.Bool(!cleanURI),
 			HTTPClient: &http.Client{
 				Transport: tp,
 			},
@@ -205,6 +207,7 @@ EnvVar:
 	rootCmd.PersistentFlags().BoolVarP(&v2Sign, "v2sign", "", false, "Use S3 signature v2")
 	rootCmd.PersistentFlags().BoolVarP(&noProxy, "noproxy", "", false, "disable http proxy")
 	rootCmd.PersistentFlags().BoolVarP(&disableContentMd5Validate, "no-md5-validate", "", false, "disable content md5 validate(header Content-Md5)")
+	rootCmd.PersistentFlags().BoolVarP(&cleanURI, "clean-uri", "", false, "clean the URL path when making S3 rest requests")
 	rootCmd.PersistentFlags().IntVarP(&dialTimeout, "dial-timeout", "", defaultDialTimeout, "http dial timeout in seconds")
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", defaultResponseHeaderTimeout, "http response header timeout in seconds")
 	rootCmd.PersistentFlags().StringArrayVarP(&sc.header, "header", "H", nil, "Pass custom header(s) to server(format Key:Value)")
