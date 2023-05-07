@@ -39,7 +39,7 @@ const (
 // S3Cli represent a S3Cli Client
 type S3Cli struct {
 	profile    string // profile in credentials file
-	endpoint   string // Server endpoine(URL)
+	endpoint   string // Server endpoint(URL)
 	accessKey  string // access-key
 	secretKey  string // secret-key
 	tokenKey   string
@@ -49,7 +49,7 @@ type S3Cli struct {
 	output     string
 	header     []string // custom header(s)
 	query      []string // custom query
-	debug      bool
+	debug      int
 	Client     *s3.S3 // manual init this field
 }
 
@@ -75,7 +75,7 @@ func (sc *S3Cli) addCustomHeader(req *http.Request) {
 	req.URL.RawQuery = q.Encode()
 }
 
-// presignV2Raw presigne URL with raw(not escape) key(Object name).
+// presignV2Raw presign URL with raw(not escape) key(Object name).
 func (sc *S3Cli) presignV2Raw(method, bucketKey, contentType string) (string, error) {
 	if bucketKey == "" || bucketKey[0] == '/' {
 		return "", fmt.Errorf("invalid bucket/key: %s", bucketKey)
@@ -1664,7 +1664,7 @@ func (sc *S3Cli) mpuList(ctx context.Context, bucket, prefix string) error {
 	return err
 }
 
-// mpuComplete completa Multi-Part-Upload
+// mpuComplete complete Multi-Part-Upload
 func (sc *S3Cli) mpuComplete(ctx context.Context, bucket, key, uid string, etags []string) error {
 	parts := make([]*s3.CompletedPart, len(etags))
 	for i, v := range etags {

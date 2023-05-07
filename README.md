@@ -28,7 +28,7 @@ s3cli delete bucket-name
 ```
 
 #### Object
-- upload(put) Objcet(s)  
+- upload(put) Object(s)  
 ```shell
 # upload file(s)
 s3cli upload bucket-name/k0 --data KKKK          # upload a Object(k0) with content KKKK
@@ -58,7 +58,7 @@ s3cli list bucket-name --all     # list all Objects
 s3cli list bucket-name/prefix    # list Objects with specified prefix
 ```
 
-- delete(rm) Object(s)  
+- delete(rm) Object(s)
 ```shell
 # delete Object(s)
 s3cli delete bucket-name/k0                    # delete an Object(k0)

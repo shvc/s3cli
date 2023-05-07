@@ -12,9 +12,16 @@ import (
 	"time"
 )
 
+// https://docs.aws.amazon.com/AmazonS3/latest/userguide/RESTAuthentication.html
+// The subresources that must be included when constructing the CanonicalizedResource Element are
+// acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, uploadId,
+// uploads, versionId, versioning, versions, and website.
+
+// The delete query string parameter must be included when you create the CanonicalizedResource for a multi-object Delete request.
 // URL parameters that need to be added to the signature
 var s3ParamsToSign = map[string]struct{}{
 	"acl":                          {},
+	"delete":                       {},
 	"location":                     {},
 	"logging":                      {},
 	"notification":                 {},
@@ -35,8 +42,8 @@ var s3ParamsToSign = map[string]struct{}{
 	"response-content-encoding":    {},
 }
 
-// presignV2 presigne URL with escaped key(Object name).
-func v2Presign(AccessKey, SecretKey string, expireTime time.Duration, req *http.Request) {
+// presignV2 presign URL with escaped key(Object name).
+func v2Presign(AccessKey, SecretKey string, expireTime time.Duration, req *http.Request, debug int) {
 	exp := strconv.FormatInt(time.Now().Unix()+int64(expireTime.Seconds()), 10)
 
 	q := req.URL.Query()
@@ -46,6 +53,7 @@ func v2Presign(AccessKey, SecretKey string, expireTime time.Duration, req *http.
 
 	contentMd5 := req.Header.Get("Content-MD5")
 	strToSign := fmt.Sprintf("%s\n%s\n%s\n%v\n%s", req.Method, contentMd5, contentType, exp, req.URL.EscapedPath())
+	logSigningInfo(strToSign, debug)
 
 	mac := hmac.New(sha1.New, []byte(SecretKey))
 	mac.Write([]byte(strToSign))
@@ -57,7 +65,7 @@ func v2Presign(AccessKey, SecretKey string, expireTime time.Duration, req *http.
 // sign signs requests using v2 auth
 //
 // Cobbled together from goamz and aws-sdk-go
-func sign(AccessKey, SecretKey string, req *http.Request) {
+func sign(AccessKey, SecretKey string, req *http.Request, debug int) {
 	// Set date
 	date := time.Now().UTC().Format(time.RFC1123)
 	req.Header.Set("Date", date)
@@ -125,6 +133,7 @@ func sign(AccessKey, SecretKey string, req *http.Request) {
 
 	// Make signature
 	payload := req.Method + "\n" + md5 + "\n" + contentType + "\n" + date + "\n" + joinedHeadersToSign + uri
+	logSigningInfo(payload, debug)
 	hash := hmac.New(sha1.New, []byte(SecretKey))
 	_, _ = hash.Write([]byte(payload))
 	signature := make([]byte, base64.StdEncoding.EncodedLen(hash.Size()))
@@ -133,3 +142,36 @@ func sign(AccessKey, SecretKey string, req *http.Request) {
 	// Set signature in request
 	req.Header.Set("Authorization", "AWS "+AccessKey+":"+string(signature))
 }
+
+const logSignInfoMsg = `DEBUG: Request Signature:
+---[ STRING TO SIGN ]--------------------------------
+%s
+-----------------------------------------------------
+`
+
+func logSigningInfo(stringToSign string, debug int) {
+	if debug < 2 {
+		return
+	}
+	fmt.Printf(logSignInfoMsg, stringToSign)
+}
+
+/*
+
+Authorization = "AWS" + " " + AWSAccessKeyId + ":" + Signature;
+
+Signature = Base64( HMAC-SHA1( UTF-8-Encoding-Of(YourSecretAccessKey), UTF-8-Encoding-Of( StringToSign ) ) );
+
+StringToSign = HTTP-Verb + "\n" +
+	Content-MD5 + "\n" +
+	Content-Type + "\n" +
+	Date + "\n" +
+	CanonicalizedAmzHeaders +
+	CanonicalizedResource;
+
+CanonicalizedResource = [ "/" + Bucket ] +
+	<HTTP-Request-URI, from the protocol name up to the query string> +
+	[ subresource, if present. For example "?acl", "?location", or "?logging"];
+
+CanonicalizedAmzHeaders = <described below>
+*/

@@ -1,6 +1,6 @@
 APP?=$(shell basename ${CURDIR})
 BUILDDATE=$(shell date +'%Y-%m-%dT%H:%M:%SZ')
-VERSION=2.2.12
+VERSION=2.2.13
 LONGVER=${VERSION}@${BUILDDATE}@$(shell git rev-parse --short HEAD)
 
 LDFLAGS=-ldflags "-s -w -X main.version=${LONGVER}"

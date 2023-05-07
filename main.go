@@ -137,12 +137,12 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 	} else {
 		sessionOptions.Config.Credentials = credentials.NewStaticCredentials(sc.accessKey, sc.secretKey, sc.tokenKey)
 	}
-	sess := session.Must(session.NewSessionWithOptions(sessionOptions))
+	ses := session.Must(session.NewSessionWithOptions(sessionOptions))
 
-	if sc.debug {
-		sess.Config.LogLevel = aws.LogLevel(aws.LogDebug)
+	if sc.debug > 0 {
+		ses.Config.LogLevel = aws.LogLevel(aws.LogDebug + aws.LogLevelType(sc.debug-1))
 	}
-	svc := s3.New(sess)
+	svc := s3.New(ses)
 	if v2Sign {
 		cred, _ := sessionOptions.Config.Credentials.Get()
 		svc.Handlers.Sign.Clear()
@@ -153,9 +153,9 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 				return
 			}
 			if req.ExpireTime > 0 {
-				v2Presign(cred.AccessKeyID, cred.SecretAccessKey, req.ExpireTime, req.HTTPRequest)
+				v2Presign(cred.AccessKeyID, cred.SecretAccessKey, req.ExpireTime, req.HTTPRequest, sc.debug)
 			} else {
-				sign(cred.AccessKeyID, cred.SecretAccessKey, req.HTTPRequest)
+				sign(cred.AccessKeyID, cred.SecretAccessKey, req.HTTPRequest, sc.debug)
 			}
 		})
 	}
@@ -192,7 +192,7 @@ EnvVar:
 			return err
 		},
 	}
-	rootCmd.PersistentFlags().BoolVarP(&sc.debug, "debug", "", false, "show SDK debug log")
+	rootCmd.PersistentFlags().IntVarP(&sc.debug, "debug", "", 0, "show SDK debug log")
 	rootCmd.PersistentFlags().StringVarP(&sc.output, "output", "o", outputSimple, "output format(verbose,simple,json,line)")
 	rootCmd.PersistentFlags().BoolVarP(&sc.presign, "presign", "", false, "presign Request and exit")
 	rootCmd.PersistentFlags().DurationVarP(&sc.presignExp, "presign-exp", "", 24*time.Hour, "presign Request expiration duration")
@@ -798,7 +798,7 @@ EnvVar:
 		Long: `rename Bucket/key to Bucket/key usage:
 * specify destination key
 	s3cli mv bucket-name/key1 bucket-name2/key2
-* default destionation key
+* default destination key
 	s3cli mv bucket-name/key1 bucket-name2`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -817,11 +817,11 @@ EnvVar:
 		Aliases: []string{"cp"},
 		Short:   "copy Object",
 		Long: `copy Bucket/key to Bucket/key usage:
-* spedify destination Bucket and Key
+* specify destination Bucket and Key
 	s3cli copy bucket-src/key-src bucket-dst/key-dst
-* spedify destination Bucket
+* specify destination Bucket
 	s3cli copy bucket-src/key-src bucket-dst/
-* spedify destionation Key
+* specify destination Key
 	s3cli copy bucket-src/key-src key-dst`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -899,7 +899,7 @@ EnvVar:
 		Use:     "mpu-init <bucket/key>",
 		Short:   "init(create) a MPU request",
 		Aliases: []string{"mi"},
-		Long: `create a mutiPartUpload request usage:
+		Long: `create a multiPartUpload request usage:
 * init(create) a MPU request
 	s3cli mpu-init bucket-name/key`,
 		Args: cobra.ExactArgs(1),
@@ -967,7 +967,7 @@ EnvVar:
 		Use:     "mpu-list <bucket/prefix>",
 		Aliases: []string{"ml"},
 		Short:   "list MPU",
-		Long: `list mutiPartUploads usage:
+		Long: `list multiPartUploads usage:
 * list MPU
 	s3cli mpu-list bucket-name/prefix`,
 		Args: cobra.ExactArgs(1),
