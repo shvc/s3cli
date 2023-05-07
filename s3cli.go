@@ -1322,9 +1322,10 @@ func (sc *S3Cli) deletePrefix(ctx context.Context, bucket, prefix string) error 
 		if sc.verboseOutput() {
 			fmt.Printf("Got %d Objects, ", objectNum)
 		}
-		objects := make([]*s3.ObjectIdentifier, 0, 1000)
-		for _, obj := range resp.Contents {
-			objects = append(objects, &s3.ObjectIdentifier{Key: obj.Key})
+
+		objects := make([]*s3.ObjectIdentifier, objectNum)
+		for i, obj := range resp.Contents {
+			objects[i] = &s3.ObjectIdentifier{Key: obj.Key}
 		}
 		doi := &s3.DeleteObjectsInput{
 			Bucket: aws.String(bucket),
