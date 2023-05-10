@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"log"
-	mand "math/rand"
+	mrand "math/rand"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -26,7 +26,7 @@ var s3cliTest = S3Cli{
 }
 
 func TestMain(m *testing.M) {
-	mand.Seed(time.Now().UTC().UnixNano())
+	mrand.Seed(time.Now().UTC().UnixNano())
 	// init fake s3
 	s3Backend = s3mem.New()
 	faker := gofakes3.New(s3Backend)

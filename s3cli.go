@@ -1304,16 +1304,16 @@ func (sc *S3Cli) copyObject(ctx context.Context, source, dstBucket, dstKey, cont
 // deletePrefix delete Objects with prefix
 func (sc *S3Cli) deletePrefix(ctx context.Context, bucket, prefix string) error {
 	var objNum int64
-	loi := &s3.ListObjectsInput{
+	listObjectsInput := &s3.ListObjectsInput{
 		Bucket: aws.String(bucket),
 		Prefix: aws.String(prefix),
 	}
 	for {
-		req, resp := sc.Client.ListObjectsRequest(loi)
+		req, resp := sc.Client.ListObjectsRequest(listObjectsInput)
 		req.SetContext(ctx)
 		err := req.Send()
 		if err != nil {
-			return fmt.Errorf("list object failed: %w", err)
+			return fmt.Errorf("list objects failed: %w", err)
 		}
 		objectNum := len(resp.Contents)
 		if objectNum == 0 {
@@ -1327,14 +1327,14 @@ func (sc *S3Cli) deletePrefix(ctx context.Context, bucket, prefix string) error 
 		for i, obj := range resp.Contents {
 			objects[i] = &s3.ObjectIdentifier{Key: obj.Key}
 		}
-		doi := &s3.DeleteObjectsInput{
+		deleteObjectsInput := &s3.DeleteObjectsInput{
 			Bucket: aws.String(bucket),
 			Delete: &s3.Delete{
 				Quiet:   aws.Bool(true),
 				Objects: objects,
 			},
 		}
-		deleteReq, _ := sc.Client.DeleteObjectsRequest(doi)
+		deleteReq, _ := sc.Client.DeleteObjectsRequest(deleteObjectsInput)
 		if e := deleteReq.Send(); e != nil {
 			fmt.Printf("delete Objects failed: %s", e)
 		} else {
@@ -1345,13 +1345,16 @@ func (sc *S3Cli) deletePrefix(ctx context.Context, bucket, prefix string) error 
 		}
 
 		if resp.NextMarker != nil {
-			loi.Marker = resp.NextMarker
-		} else if resp.IsTruncated != nil && *resp.IsTruncated {
-			loi.Marker = resp.Contents[objectNum-1].Key
-		} else {
-			break
+			listObjectsInput.Marker = resp.NextMarker
+			continue
 		}
+		if resp.IsTruncated != nil && *resp.IsTruncated {
+			listObjectsInput.Marker = resp.Contents[objectNum-1].Key
+			continue
+		}
+		break
 	}
+
 	return nil
 }
 
