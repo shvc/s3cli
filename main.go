@@ -1006,6 +1006,7 @@ EnvVar:
 	}
 	rootCmd.AddCommand(mpuCompleteCmd)
 
+	var mpuConcurrency = s3manager.DefaultUploadConcurrency
 	mpuCmd := &cobra.Command{
 		Use:   "mpu <bucket[/key]> [file]",
 		Short: "mpu Object(mpu-create, mpu-upload and mpu-complete)",
@@ -1046,13 +1047,14 @@ EnvVar:
 				key = filepath.Base(args[1])
 			}
 
-			err = sc.mpu(ctx, bucket, key, objectContentType, partSize<<20, fd, metadata)
+			err = sc.mpu(ctx, bucket, key, objectContentType, partSize<<20, mpuConcurrency, fd, metadata)
 
 			return sc.errorHandler(err)
 		},
 	}
 	mpuCmd.Flags().StringVar(&objectContentType, "content-type", "", "Object content-type(auto detect if not specified)")
 	mpuCmd.Flags().Int64("part-size", s3manager.MinUploadPartSize>>20, "MPU part-size in MB")
+	mpuCmd.Flags().IntVar(&mpuConcurrency, "concurrency", mpuConcurrency, "MPU concurrency num")
 	mpuCmd.Flags().StringArrayVar(&objectMetadata, "md", nil, "Object user metadata(format Key:Value)")
 	rootCmd.AddCommand(mpuCmd)
 
