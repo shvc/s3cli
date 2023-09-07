@@ -1703,9 +1703,10 @@ func (sc *S3Cli) mpuComplete(ctx context.Context, bucket, key, uid string, etags
 	return err
 }
 
-func (sc *S3Cli) mpu(ctx context.Context, bucket, key, contentType string, partSize int64, r io.Reader, metadata map[string]*string) error {
+func (sc *S3Cli) mpu(ctx context.Context, bucket, key, contentType string, partSize int64, concurrency int, r io.Reader, metadata map[string]*string) error {
 	uploader := s3manager.NewUploaderWithClient(sc.Client, func(u *s3manager.Uploader) {
 		u.PartSize = partSize
+		u.Concurrency = concurrency
 	})
 
 	mi := &s3manager.UploadInput{

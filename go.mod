@@ -1,10 +1,10 @@
 module s3cli
 
-go 1.20
+go 1.21
 
 require (
-	github.com/aws/aws-sdk-go v1.44.307
-	github.com/johannesboyne/gofakes3 v0.0.0-20230506070712-04da935ef877
+	github.com/aws/aws-sdk-go v1.45.2
+	github.com/johannesboyne/gofakes3 v0.0.0-20230905042043-42c772b34232
 	github.com/spf13/cobra v1.7.0
 )
 
