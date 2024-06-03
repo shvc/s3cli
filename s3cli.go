@@ -679,7 +679,7 @@ func (sc *S3Cli) putObject(ctx context.Context, bucket, key, contentType string,
 }
 
 // headObject head a Object
-func (sc *S3Cli) headObject(ctx context.Context, bucket, key string, mtime, mtimestamp bool) error {
+func (sc *S3Cli) headObject(ctx context.Context, bucket, key string, mtime, mTimestamp bool) error {
 	req, resp := sc.Client.HeadObjectRequest(&s3.HeadObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
@@ -706,7 +706,7 @@ func (sc *S3Cli) headObject(ctx context.Context, bucket, key string, mtime, mtim
 
 	if mtime {
 		fmt.Println(resp.LastModified)
-	} else if mtimestamp {
+	} else if mTimestamp {
 		fmt.Println(resp.LastModified.Unix())
 	} else if sc.lineOutput() {
 		fmt.Printf("%d\t%s\n", aws.Int64Value(resp.ContentLength), resp.LastModified)
@@ -984,7 +984,7 @@ func (sc *S3Cli) listAllObjectsV2(ctx context.Context, bucket, prefix, delimiter
 }
 
 // listObjects (S3 listBucket)list Objects in specified bucket
-func (sc *S3Cli) listObjects(ctx context.Context, bucket, prefix, delimiter, marker string, maxkeys int64, index bool, startTime, endTime time.Time) error {
+func (sc *S3Cli) listObjects(ctx context.Context, bucket, prefix, delimiter, marker string, maxKeys int64, index bool, startTime, endTime time.Time) error {
 	listInput := &s3.ListObjectsInput{
 		Bucket: aws.String(bucket),
 	}
@@ -997,8 +997,8 @@ func (sc *S3Cli) listObjects(ctx context.Context, bucket, prefix, delimiter, mar
 	if marker != "" {
 		listInput.SetMarker(marker)
 	}
-	if maxkeys > 0 {
-		listInput.SetMaxKeys(maxkeys)
+	if maxKeys > 0 {
+		listInput.SetMaxKeys(maxKeys)
 	}
 	req, resp := sc.Client.ListObjectsRequest(listInput)
 	req.SetContext(ctx)
@@ -1058,7 +1058,7 @@ func (sc *S3Cli) listObjects(ctx context.Context, bucket, prefix, delimiter, mar
 }
 
 // listObjectsV2 (S3 listBucket)list Objects in specified bucket
-func (sc *S3Cli) listObjectsV2(ctx context.Context, bucket, prefix, delimiter, marker string, maxkeys int64, index, owner bool, startTime, endTime time.Time) error {
+func (sc *S3Cli) listObjectsV2(ctx context.Context, bucket, prefix, delimiter, marker string, maxKeys int64, index, owner bool, startTime, endTime time.Time) error {
 	listInput := &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucket),
 	}
@@ -1071,8 +1071,8 @@ func (sc *S3Cli) listObjectsV2(ctx context.Context, bucket, prefix, delimiter, m
 	if marker != "" {
 		listInput.SetStartAfter(marker)
 	}
-	if maxkeys > 0 {
-		listInput.SetMaxKeys(maxkeys)
+	if maxKeys > 0 {
+		listInput.SetMaxKeys(maxKeys)
 	}
 
 	req, resp := sc.Client.ListObjectsV2Request(listInput)
@@ -1133,13 +1133,13 @@ func (sc *S3Cli) listObjectsV2(ctx context.Context, bucket, prefix, delimiter, m
 
 // listObjectVersions list Objects versions in Bucket
 func (sc *S3Cli) listObjectVersions(ctx context.Context, bucket, prefix string) error {
-	lovi := &s3.ListObjectVersionsInput{
+	input := &s3.ListObjectVersionsInput{
 		Bucket: aws.String(bucket),
 	}
 	if prefix != "" {
-		lovi.Prefix = aws.String(prefix)
+		input.Prefix = aws.String(prefix)
 	}
-	req, resp := sc.Client.ListObjectVersionsRequest(lovi)
+	req, resp := sc.Client.ListObjectVersionsRequest(input)
 	req.SetContext(ctx)
 
 	if sc.presign {
@@ -1567,7 +1567,7 @@ func (sc *S3Cli) mpuCreate(ctx context.Context, bucket, key string) error {
 // mpuUpload do a Multi-Part-Upload
 func (sc *S3Cli) mpuUpload(ctx context.Context, bucket, key, uid string, file map[int64]string) error {
 	wg := sync.WaitGroup{}
-	for i, localfile := range file {
+	for i, localFile := range file {
 		wg.Add(1)
 		go func(num int64, filename string) {
 			defer wg.Done()
@@ -1597,7 +1597,7 @@ func (sc *S3Cli) mpuUpload(ctx context.Context, bucket, key, uid string, file ma
 			} else {
 				fmt.Printf("%2d success %s\n", num, aws.StringValue(resp.ETag))
 			}
-		}(i, localfile)
+		}(i, localFile)
 	}
 	wg.Wait()
 	return nil
@@ -1669,9 +1669,9 @@ func (sc *S3Cli) mpuList(ctx context.Context, bucket, prefix string) error {
 }
 
 // mpuComplete complete Multi-Part-Upload
-func (sc *S3Cli) mpuComplete(ctx context.Context, bucket, key, uid string, etags []string) error {
-	parts := make([]*s3.CompletedPart, len(etags))
-	for i, v := range etags {
+func (sc *S3Cli) mpuComplete(ctx context.Context, bucket, key, uid string, eTags []string) error {
+	parts := make([]*s3.CompletedPart, len(eTags))
+	for i, v := range eTags {
 		parts[i] = &s3.CompletedPart{
 			PartNumber: aws.Int64(int64(i + 1)),
 			ETag:       aws.String(v),
