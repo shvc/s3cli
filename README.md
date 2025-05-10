@@ -4,7 +4,7 @@ s3cli is a command-line tool for AWS S3 compatible storage service.
 It is based on [aws-sdk-go](https://github.com/aws/aws-sdk-go)
 
 ## Usage
-#### Bucket 
+#### Bucket operations  
 ```shell
 # create bucket
 s3cli -e http://192.168.55.2:9020 create-bucket bucket-name
@@ -27,7 +27,7 @@ s3cli version bucket-name
 s3cli delete bucket-name
 ```
 
-#### Object
+#### Object operations  
 - upload(put) Object(s)  
 ```shell
 # upload file(s)
