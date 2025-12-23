@@ -49,6 +49,7 @@ var (
 	disableContentMd5Validate = false
 	cleanURI                  = false
 	noProxy                   = false
+	insecureSkipVerify        = true // Skip TLS certificate verification (use with caution)
 )
 
 func newS3Client(sc *S3Cli) (*s3.S3, error) {
@@ -91,7 +92,7 @@ func newS3Client(sc *S3Cli) (*s3.S3, error) {
 
 	tp := &http.Transport{
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: insecureSkipVerify,
 		},
 		Dial:                  (&net.Dialer{Timeout: time.Duration(dialTimeout) * time.Second}).Dial,
 		ResponseHeaderTimeout: time.Duration(responseHeaderTimeout) * time.Second,
@@ -212,6 +213,7 @@ EnvVar:
 	rootCmd.PersistentFlags().IntVarP(&responseHeaderTimeout, "response-header-timeout", "", defaultResponseHeaderTimeout, "http response header timeout in seconds")
 	rootCmd.PersistentFlags().StringArrayVarP(&sc.header, "header", "H", nil, "Pass custom header(s) to server(format Key:Value)")
 	rootCmd.PersistentFlags().StringArrayVarP(&sc.query, "query", "Q", nil, "Pass custom query parameter(s) to server(format Key=Value)")
+	rootCmd.PersistentFlags().BoolVarP(&insecureSkipVerify, "insecure", "k", false, "Skip TLS certificate verification (WARNING: vulnerable to MITM attacks)")
 	rootCmd.PersistentFlags().IntVar(&retryNum, "retry", retryNum, "retry number")
 	// presign(V2) command
 	presignCmd := &cobra.Command{
