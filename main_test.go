@@ -44,7 +44,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	_, err = s3Backend.PutObject(testBucketName, testObjectKey, nil, bytes.NewReader(testObjectContent), int64(len(testObjectContent)))
+	_, err = s3Backend.PutObject(testBucketName, testObjectKey, nil, bytes.NewReader(testObjectContent), int64(len(testObjectContent)), nil)
 	if err != nil {
 		log.Fatal("backend PutObject error: ", err)
 		os.Exit(1)

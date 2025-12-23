@@ -36,7 +36,8 @@ const (
 	outputJ       = "j"
 )
 
-// S3Cli represent a S3Cli Client
+// S3Cli represents an S3 client with configuration for connecting to S3-compatible storage services.
+// It supports AWS Signature V2 and V4 authentication, custom endpoints, and various output formats.
 type S3Cli struct {
 	profile    string // profile in credentials file
 	endpoint   string // Server endpoint(URL)
@@ -53,6 +54,8 @@ type S3Cli struct {
 	Client     *s3.S3 // manual init this field
 }
 
+// splitKeyValue splits a string into two parts using the given separator.
+// Returns the key and value, or the original string as key with empty value if separator not found.
 func (sc *S3Cli) splitKeyValue(data, sep string) (string, string) {
 	bo := strings.SplitN(data, sep, 2)
 	if len(bo) == 2 {
@@ -61,6 +64,7 @@ func (sc *S3Cli) splitKeyValue(data, sep string) (string, string) {
 	return data, ""
 }
 
+// addCustomHeader adds custom headers and query parameters from the S3Cli configuration to the HTTP request.
 func (sc *S3Cli) addCustomHeader(req *http.Request) {
 	for _, h := range sc.header {
 		hk, hv := sc.splitKeyValue(h, ":")
@@ -75,7 +79,8 @@ func (sc *S3Cli) addCustomHeader(req *http.Request) {
 	req.URL.RawQuery = q.Encode()
 }
 
-// presignV2Raw presign URL with raw(not escape) key(Object name).
+// presignV2Raw generates a presigned URL using AWS Signature V2 with an unescaped (raw) key.
+// This is useful for keys containing special characters that would otherwise be URL-encoded.
 func (sc *S3Cli) presignV2Raw(method, bucketKey, contentType string) (string, error) {
 	if bucketKey == "" || bucketKey[0] == '/' {
 		return "", fmt.Errorf("invalid bucket/key: %s", bucketKey)
@@ -107,7 +112,8 @@ func (sc *S3Cli) presignV2Raw(method, bucketKey, contentType string) (string, er
 	return u.String(), nil
 }
 
-// errorHandler
+// errorHandler formats and returns errors based on the configured output mode.
+// In verbose mode, the error is returned as-is. In other modes, it's printed and nil is returned.
 func (sc *S3Cli) errorHandler(err error) error {
 	if sc.verboseOutput() {
 		return err
@@ -118,6 +124,7 @@ func (sc *S3Cli) errorHandler(err error) error {
 	return nil
 }
 
+// jsonOutput returns true if the output format is set to JSON.
 func (sc *S3Cli) jsonOutput() (v bool) {
 	if sc.output == outputJson || sc.output == outputJ {
 		v = true
@@ -125,6 +132,7 @@ func (sc *S3Cli) jsonOutput() (v bool) {
 	return
 }
 
+// verboseOutput returns true if the output format is set to verbose.
 func (sc *S3Cli) verboseOutput() (v bool) {
 	if sc.output == outputVerbose || sc.output == outputV {
 		v = true
@@ -132,6 +140,7 @@ func (sc *S3Cli) verboseOutput() (v bool) {
 	return
 }
 
+// lineOutput returns true if the output format is set to line.
 func (sc *S3Cli) lineOutput() (v bool) {
 	if sc.output == outputLine || sc.output == outputL {
 		v = true
@@ -139,6 +148,7 @@ func (sc *S3Cli) lineOutput() (v bool) {
 	return
 }
 
+// simpleOutput returns true if the output format is set to simple (default).
 func (sc *S3Cli) simpleOutput() (v bool) {
 	if sc.output == outputSimple || sc.output == outputS {
 		v = true
@@ -146,7 +156,8 @@ func (sc *S3Cli) simpleOutput() (v bool) {
 	return
 }
 
-// bucketCreate create a Bucket
+// bucketCreate creates one or more S3 buckets with the configured region location constraint.
+// If presign is enabled, returns a presigned URL instead of creating the bucket.
 func (sc *S3Cli) bucketCreate(ctx context.Context, buckets []string) error {
 	for _, b := range buckets {
 		createBucketInput := &s3.CreateBucketInput{
@@ -178,7 +189,8 @@ func (sc *S3Cli) bucketCreate(ctx context.Context, buckets []string) error {
 	return nil
 }
 
-// bucketList list all my Buckets
+// bucketList lists all buckets in the S3 account.
+// If presign is enabled, returns a presigned URL instead of listing buckets.
 func (sc *S3Cli) bucketList(ctx context.Context) error {
 	req, resp := sc.Client.ListBucketsRequest(&s3.ListBucketsInput{})
 	req.SetContext(ctx)
@@ -627,7 +639,9 @@ func (sc *S3Cli) putBucketCors(ctx context.Context, bucket, cfgFile string) erro
 	return err
 }
 
-// putObject upload a Object
+// putObject uploads an object to S3 with the specified bucket, key, content type, and metadata.
+// If stream is true, sets ContentLength to 0 for streaming uploads.
+// If presign is enabled, returns a presigned URL instead of uploading the object.
 func (sc *S3Cli) putObject(ctx context.Context, bucket, key, contentType string, metadata map[string]*string, stream bool, r io.ReadSeeker) error {
 	var objContentType *string
 	if contentType != "" {
@@ -1301,7 +1315,8 @@ func (sc *S3Cli) copyObject(ctx context.Context, source, dstBucket, dstKey, cont
 	return nil
 }
 
-// deletePrefix delete Objects with prefix
+// deletePrefix deletes all objects with the specified prefix in the given bucket.
+// It handles pagination automatically and returns an error if any delete operation fails.
 func (sc *S3Cli) deletePrefix(ctx context.Context, bucket, prefix string) error {
 	var objNum int64
 	listObjectsInput := &s3.ListObjectsInput{
@@ -1335,11 +1350,10 @@ func (sc *S3Cli) deletePrefix(ctx context.Context, bucket, prefix string) error 
 			},
 		}
 		deleteReq, _ := sc.Client.DeleteObjectsRequest(deleteObjectsInput)
-		if e := deleteReq.Send(); e != nil {
-			fmt.Printf("delete Objects failed: %s", e)
-		} else {
-			objNum = objNum + int64(objectNum)
+		if err := deleteReq.Send(); err != nil {
+			return fmt.Errorf("delete Objects failed: %w", err)
 		}
+		objNum = objNum + int64(objectNum)
 		if sc.verboseOutput() {
 			fmt.Printf("%d Objects deleted\n", objNum)
 		}
@@ -1564,9 +1578,12 @@ func (sc *S3Cli) mpuCreate(ctx context.Context, bucket, key string) error {
 	return err
 }
 
-// mpuUpload do a Multi-Part-Upload
+// mpuUpload performs a multi-part upload by uploading multiple file parts concurrently.
+// The file map contains part numbers as keys and local file paths as values.
+// Returns an error if any part fails to upload, with details about the number of failed parts.
 func (sc *S3Cli) mpuUpload(ctx context.Context, bucket, key, uid string, file map[int64]string) error {
 	wg := sync.WaitGroup{}
+	errCh := make(chan error, len(file))
 	for i, localFile := range file {
 		wg.Add(1)
 		go func(num int64, filename string) {
@@ -1574,6 +1591,7 @@ func (sc *S3Cli) mpuUpload(ctx context.Context, bucket, key, uid string, file ma
 			fd, err := os.Open(filename)
 			if err != nil {
 				fmt.Printf("%2d   error %s\n", num, err)
+				errCh <- err
 				return
 			}
 			defer fd.Close()
@@ -1589,6 +1607,7 @@ func (sc *S3Cli) mpuUpload(ctx context.Context, bucket, key, uid string, file ma
 			err = req.Send()
 			if err != nil {
 				fmt.Printf("%2d   error %s\n", num, err)
+				errCh <- err
 				return
 			}
 
@@ -1597,9 +1616,27 @@ func (sc *S3Cli) mpuUpload(ctx context.Context, bucket, key, uid string, file ma
 			} else {
 				fmt.Printf("%2d success %s\n", num, aws.StringValue(resp.ETag))
 			}
+			errCh <- nil
 		}(i, localFile)
 	}
-	wg.Wait()
+	// Close error channel after all goroutines complete
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	// Collect all errors
+	var errors []error
+	for err := range errCh {
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("mpuUpload: %d part(s) failed, first error: %w", len(errors), errors[0])
+	}
+
 	return nil
 }
 

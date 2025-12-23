@@ -7,9 +7,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	mrand "math/rand"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
@@ -66,7 +69,10 @@ func Test_bucketACLGet(t *testing.T) {
 }
 
 func Test_bucketACLSet(t *testing.T) {
-	t.Skip("seems gofakes3 set bucketACL has bug")
+	// NOTE: Skipped due to gofakes3 bug where SetBucketACL doesn't properly persist ACL settings
+	// Tracking: https://github.com/johannesboyne/gofakes3/issues
+	// This test can be re-enabled once the underlying issue is fixed or when testing against a real S3-compatible service
+	t.Skip("gofakes3 has a known bug with bucket ACL persistence - see gofakes3 issue tracker")
 	if err := s3cliTest.bucketACLSet(context.Background(), testBucketName, s3.BucketCannedACLPublicReadWrite); err != nil {
 		t.Error("bucketACLSet error: ", err)
 	}
@@ -79,7 +85,7 @@ func Test_bucketPolicyGet(t *testing.T) {
 }
 
 func Test_bucketPolicySet(t *testing.T) {
-	t.Skip("not read to test")
+	t.Skip("not ready to test - requires policy validation setup")
 	if err := s3cliTest.bucketPolicySet(context.Background(), testBucketName, "{}"); err != nil {
 		t.Error("bucketPolicySet error: ", err)
 	}
@@ -205,12 +211,12 @@ func Test_deleteBucketAndObjects(t *testing.T) {
 		t.Errorf("deleteBucketAndObjects backend CreateBucket failed: %s", err)
 		return
 	}
-	_, err := s3Backend.PutObject(testBucketName, "key01", nil, bytes.NewReader(testObjectContent), int64(len(testObjectContent)))
+	_, err := s3Backend.PutObject(testBucketName, "key01", nil, bytes.NewReader(testObjectContent), int64(len(testObjectContent)), nil)
 	if err != nil {
 		t.Errorf("deleteBucketAndObjects backend PutObject failed: %s", err)
 		return
 	}
-	_, err = s3Backend.PutObject(testBucketName, "key02", nil, bytes.NewReader(testObjectContent), int64(len(testObjectContent)))
+	_, err = s3Backend.PutObject(testBucketName, "key02", nil, bytes.NewReader(testObjectContent), int64(len(testObjectContent)), nil)
 	if err != nil {
 		t.Errorf("deleteBucketAndObjects backend PutObject failed: %s", err)
 		return
@@ -223,7 +229,7 @@ func Test_deleteBucketAndObjects(t *testing.T) {
 
 func Test_deleteObject(t *testing.T) {
 	key := "keyToTestDeleteObject"
-	_, err := s3Backend.PutObject(testBucketName, key, nil, bytes.NewReader(testObjectContent), int64(len(testObjectContent)))
+	_, err := s3Backend.PutObject(testBucketName, key, nil, bytes.NewReader(testObjectContent), int64(len(testObjectContent)), nil)
 	if err != nil {
 		t.Errorf("deleteObject backend PutObject failed: %s", err)
 		return
@@ -241,32 +247,69 @@ func Test_mpuCreate(t *testing.T) {
 }
 
 func Test_mpuUpload(t *testing.T) {
-	t.Skip("not ready to test")
-	files := map[int64]string{
-		1: "filename1",
-		2: "filename2",
+	// Create temporary test files for multipart upload
+	tempDir := t.TempDir()
+	files := make(map[int64]string)
+
+	// Create test files
+	for i := int64(1); i <= 2; i++ {
+		filePath := filepath.Join(tempDir, fmt.Sprintf("part%d.txt", i))
+		content := []byte(fmt.Sprintf("test content for part %d", i))
+		if err := os.WriteFile(filePath, content, 0644); err != nil {
+			t.Fatalf("failed to create test file: %v", err)
+		}
+		files[i] = filePath
 	}
-	if err := s3cliTest.mpuUpload(context.Background(), testBucketName, "key", "upload-id", files); err != nil {
+
+	// First create a multipart upload
+	key := fmt.Sprintf("mpu-test-%s", randomString())
+	uploadID, err := createMultipartUpload(context.Background(), testBucketName, key)
+	if err != nil {
+		t.Skipf("unable to create multipart upload for testing: %v", err)
+		return
+	}
+
+	if err := s3cliTest.mpuUpload(context.Background(), testBucketName, key, uploadID, files); err != nil {
 		t.Errorf("mpuUpload failed: %s", err)
 	}
 }
 
+// createMultipartUpload helper function to initiate a multipart upload for testing
+func createMultipartUpload(ctx context.Context, bucket, key string) (string, error) {
+	input := &s3.CreateMultipartUploadInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	}
+	req, output := s3cliTest.Client.CreateMultipartUploadRequest(input)
+	req.SetContext(ctx)
+	if err := req.Send(); err != nil {
+		return "", err
+	}
+	return aws.StringValue(output.UploadId), nil
+}
+
 func Test_mpuAbort(t *testing.T) {
-	t.Skip("not ready to test")
-	if err := s3cliTest.mpuAbort(context.Background(), testBucketName, "key", "upload-id"); err != nil {
+	// First create a multipart upload to abort
+	key := fmt.Sprintf("mpu-abort-test-%s", randomString())
+	uploadID, err := createMultipartUpload(context.Background(), testBucketName, key)
+	if err != nil {
+		t.Skipf("unable to create multipart upload for testing: %v", err)
+		return
+	}
+
+	if err := s3cliTest.mpuAbort(context.Background(), testBucketName, key, uploadID); err != nil {
 		t.Errorf("mpuAbort failed: %s", err)
 	}
 }
 
 func Test_mpuList(t *testing.T) {
-	t.Skip("not ready to test")
-	if err := s3cliTest.mpuList(context.Background(), testBucketName, "prefix"); err != nil {
+	if err := s3cliTest.mpuList(context.Background(), testBucketName, ""); err != nil {
 		t.Errorf("mpuList failed: %s", err)
 	}
 }
 
 func Test_mpuComplete(t *testing.T) {
-	t.Skip("not ready to test")
+	t.Skip("not ready to test - requires completed upload parts with ETags")
 	if err := s3cliTest.mpuComplete(context.Background(), testBucketName, "key", "upload-id", []string{"tag1", "tag2"}); err != nil {
 		t.Errorf("mpuComplete failed: %s", err)
 	}

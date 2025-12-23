@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
-// https://docs.aws.amazon.com/AmazonS3/latest/userguide/RESTAuthentication.html
+// AWS Signature Version 2 uses SHA-1 HMAC as specified in the AWS S3 API documentation.
+// Note: SHA-1 is used here because it is required by the AWS Signature V2 protocol specification.
+// For new applications, prefer AWS Signature Version 4 which uses SHA-256.
+// See: https://docs.aws.amazon.com/AmazonS3/latest/userguide/RESTAuthentication.html
 // The subresources that must be included when constructing the CanonicalizedResource Element are
 // acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, uploadId,
 // uploads, versionId, versioning, versions, and website.
@@ -56,7 +59,10 @@ func v2Presign(AccessKey, SecretKey string, expireTime time.Duration, req *http.
 	logSigningInfo(strToSign, debug)
 
 	mac := hmac.New(sha1.New, []byte(SecretKey))
-	mac.Write([]byte(strToSign))
+	if _, err := mac.Write([]byte(strToSign)); err != nil {
+		// HMAC.Write never returns an error, but check for completeness
+		return
+	}
 
 	q.Set("Signature", base64.StdEncoding.EncodeToString(mac.Sum(nil)))
 	req.URL.RawQuery = q.Encode()
@@ -135,7 +141,10 @@ func sign(AccessKey, SecretKey string, req *http.Request, debug int) {
 	payload := req.Method + "\n" + md5 + "\n" + contentType + "\n" + date + "\n" + joinedHeadersToSign + uri
 	logSigningInfo(payload, debug)
 	hash := hmac.New(sha1.New, []byte(SecretKey))
-	_, _ = hash.Write([]byte(payload))
+	if _, err := hash.Write([]byte(payload)); err != nil {
+		// HMAC.Write never returns an error, but check for completeness
+		return
+	}
 	signature := make([]byte, base64.StdEncoding.EncodedLen(hash.Size()))
 	base64.StdEncoding.Encode(signature, hash.Sum(nil))
 
