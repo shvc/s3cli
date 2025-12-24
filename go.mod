@@ -1,6 +1,6 @@
 module s3cli
 
-go 1.21
+go 1.24
 
 require (
 	github.com/aws/aws-sdk-go v1.55.8
